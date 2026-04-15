@@ -1,0 +1,58 @@
+# OS
+.DS_Store
+
+# Root editor folders
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Backend
+backend/dist/
+backend/node_modules/
+backend/build/
+backend/coverage/
+backend/.nyc_output/
+backend/logs/
+backend/.temp/
+backend/.tmp/
+backend/pids/
+backend/*.pid
+backend/*.seed
+backend/*.pid.lock
+backend/report.*.*.*.*.json
+backend/generated/prisma/
+backend/.env
+backend/.env.development.local
+backend/.env.test.local
+backend/.env.production.local
+backend/.env.local
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/coverage/
+frontend/.pnp
+frontend/.pnp.*
+frontend/.yarn/*
+!frontend/.yarn/patches
+!frontend/.yarn/plugins
+!frontend/.yarn/releases
+!frontend/.yarn/versions
+frontend/.vercel/
+frontend/*.pem
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+frontend/.env*
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*

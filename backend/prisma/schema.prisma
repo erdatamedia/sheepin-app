@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  OFFICER
+  FARMER
+}
+
+enum LocationSource {
+  GPS
+  MAP_PICKER
+  MANUAL
+}
+
+enum SheepGender {
+  MALE
+  FEMALE
+}
+
+enum SheepStatus {
+  ACTIVE
+  SOLD
+  DEAD
+  CULLED
+}
+
+enum HealthStatus {
+  HEALTHY
+  SICK
+  RECOVERING
+}
+
+enum ReproductionStatus {
+  OPEN
+  MATED
+  PREGNANT
+  LAMBED
+}
+
+model User {
+  id                String          @id @default(cuid())
+  name              String
+  email             String?         @unique
+  password          String?
+  loginCode         String?         @unique
+  photoUrl          String?
+  phone             String?
+  address           String?
+  groupName         String?
+  province          String?
+  regency           String?
+  district          String?
+  village           String?
+  addressDetail     String?
+  latitude          Float?
+  longitude         Float?
+  locationSource    LocationSource?
+  locationUpdatedAt DateTime?
+  role              UserRole        @default(FARMER)
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  sheepCreated        Sheep[]             @relation("SheepCreatedBy")
+  sheepOwned          Sheep[]             @relation("SheepOwnedBy")
+  weightCreated       SheepWeight[]
+  bcsCreated          SheepBCS[]
+  healthCreated       SheepHealth[]
+  reproductionCreated SheepReproduction[]
+  activityLogs        ActivityLog[]
+
+  @@index([role, isActive, createdAt])
+}
+
+model Sheep {
+  id           String      @id @default(cuid())
+  sheepCode    String      @unique
+  name         String?
+  breed        String
+  gender       SheepGender
+  birthDate    DateTime?
+  color        String?
+  physicalMark String?
+  sireId       String?
+  damId        String?
+  location     String?
+  status       SheepStatus @default(ACTIVE)
+  photoUrl     String?
+  createdById  String
+  ownerUserId  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  createdBy     User                @relation("SheepCreatedBy", fields: [createdById], references: [id])
+  ownerUser     User?               @relation("SheepOwnedBy", fields: [ownerUserId], references: [id])
+  weights       SheepWeight[]
+  bcsRecords    SheepBCS[]
+  healthRecords SheepHealth[]
+  reproductions SheepReproduction[]
+  activityLogs  ActivityLog[]
+
+  @@index([ownerUserId, status])
+  @@index([createdById, createdAt])
+}
+
+model SheepWeight {
+  id          String   @id @default(cuid())
+  sheepId     String
+  recordDate  DateTime
+  weightKg    Float
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  sheep     Sheep @relation(fields: [sheepId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@index([sheepId, recordDate(sort: Desc)])
+  @@index([createdById, createdAt])
+}
+
+model SheepBCS {
+  id          String   @id @default(cuid())
+  sheepId     String
+  recordDate  DateTime
+  bcsScore    Int
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  sheep     Sheep @relation(fields: [sheepId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@index([sheepId, recordDate(sort: Desc)])
+  @@index([createdById, createdAt])
+}
+
+model SheepHealth {
+  id           String       @id @default(cuid())
+  sheepId      String
+  checkDate    DateTime
+  diseaseName  String?
+  treatment    String?
+  medicine     String?
+  healthStatus HealthStatus @default(HEALTHY)
+  note         String?
+  createdById  String
+  createdAt    DateTime     @default(now())
+
+  sheep     Sheep @relation(fields: [sheepId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@index([sheepId, checkDate(sort: Desc)])
+  @@index([createdById, createdAt])
+}
+
+model SheepReproduction {
+  id                 String             @id @default(cuid())
+  sheepId            String
+  matingDate         DateTime?
+  estimatedBirthDate DateTime?
+  lambingDate        DateTime?
+  maleParent         String?
+  totalLambBorn      Int?
+  totalLambWeaned    Int?
+  totalBirthWeight   Float?
+  totalWeaningWeight Float?
+  status             ReproductionStatus @default(OPEN)
+  note               String?
+  createdById        String
+  createdAt          DateTime           @default(now())
+
+  sheep     Sheep @relation(fields: [sheepId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@index([sheepId, createdAt(sort: Desc)])
+  @@index([createdById, createdAt])
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  sheepId     String?
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id])
+  sheep Sheep? @relation(fields: [sheepId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([sheepId, createdAt])
+}
