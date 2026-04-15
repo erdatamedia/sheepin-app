@@ -24,6 +24,7 @@ backend/*.seed
 backend/*.pid.lock
 backend/report.*.*.*.*.json
 backend/generated/prisma/
+backend/uploads/
 backend/.env
 backend/.env.development.local
 backend/.env.test.local
