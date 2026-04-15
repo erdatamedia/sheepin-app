@@ -118,4 +118,24 @@ export class MapService {
       data,
     };
   }
+
+  async distributionPublic() {
+    const distribution = await this.distribution();
+
+    return {
+      message: 'Data sebaran publik berhasil diambil',
+      data: distribution.data.map((item) => ({
+        userId: item.userId,
+        name: item.name,
+        groupName: item.groupName,
+        regency: item.regency,
+        district: item.district,
+        village: item.village,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        totalSheep: item.totalSheep,
+        activeSheep: item.activeSheep,
+      })),
+    };
+  }
 }

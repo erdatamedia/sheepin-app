@@ -4,10 +4,14 @@ import Link from 'next/link';
 import type { CSSProperties, ComponentType, ReactNode } from 'react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
-import type { MapDistributionResponse } from '@/lib/location';
+import type {
+  MapDistributionResponse,
+  PublicMapDistributionResponse,
+} from '@/lib/location';
 
 type Props = {
-  items: MapDistributionResponse['data'];
+  items: MapDistributionResponse['data'] | PublicMapDistributionResponse['data'];
+  publicView?: boolean;
 };
 
 const markerIcon = new L.Icon({
@@ -39,7 +43,7 @@ const LeafletTileLayer = TileLayer as ComponentType<{
   url: string;
 }>;
 
-export default function DistributionMap({ items }: Props) {
+export default function DistributionMap({ items, publicView = false }: Props) {
   const center: [number, number] =
     items.length > 0
       ? [items[0].latitude, items[0].longitude]
@@ -66,7 +70,7 @@ export default function DistributionMap({ items }: Props) {
             <LeafletPopup>
               <div className="min-w-[250px] space-y-2 text-sm">
                 <p className="font-semibold">{item.name}</p>
-                <p>{item.loginCode || '-'}</p>
+                {!publicView && 'loginCode' in item && <p>{item.loginCode || '-'}</p>}
                 <p>{item.groupName || '-'}</p>
                 <p>
                   {[item.village, item.district, item.regency]
@@ -76,34 +80,53 @@ export default function DistributionMap({ items }: Props) {
                 <hr />
                 <p>Total ternak: {item.totalSheep}</p>
                 <p>Ternak aktif: {item.activeSheep}</p>
-                <p>Layak bibit: {item.eligibleBreeding}</p>
-                <p>Perlu pemantauan: {item.monitoring}</p>
-                <p>Belum direkomendasikan: {item.notRecommended}</p>
+                {!publicView && 'eligibleBreeding' in item && (
+                  <p>Layak bibit: {item.eligibleBreeding}</p>
+                )}
+                {!publicView && 'monitoring' in item && (
+                  <p>Perlu pemantauan: {item.monitoring}</p>
+                )}
+                {!publicView && 'notRecommended' in item && (
+                  <p>Belum direkomendasikan: {item.notRecommended}</p>
+                )}
 
-                <div className="grid gap-2 pt-2">
-                  <Link
-                    href={`/farmers/${item.userId}`}
-                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                  >
-                    Lihat Detail Peternak
-                  </Link>
+                {!publicView ? (
+                  <div className="grid gap-2 pt-2">
+                    <Link
+                      href={`/farmers/${item.userId}`}
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Lihat Detail Peternak
+                    </Link>
 
-                  <Link
-                    href="/sheep"
-                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                  >
-                    Lihat Data Ternak
-                  </Link>
+                    <Link
+                      href="/sheep"
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Lihat Data Ternak
+                    </Link>
 
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${item.latitude},${item.longitude}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                  >
-                    Buka Rute di Google Maps
-                  </a>
-                </div>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${item.latitude},${item.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Buka Rute di Google Maps
+                    </a>
+                  </div>
+                ) : (
+                  <div className="pt-2">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${item.latitude},${item.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Buka Titik di Google Maps
+                    </a>
+                  </div>
+                )}
               </div>
             </LeafletPopup>
           </LeafletMarker>

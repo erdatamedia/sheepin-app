@@ -54,6 +54,22 @@ export type MapDistributionResponse = {
   }>;
 };
 
+export type PublicMapDistributionResponse = {
+  message: string;
+  data: Array<{
+    userId: string;
+    name: string;
+    groupName?: string | null;
+    regency?: string | null;
+    district?: string | null;
+    village?: string | null;
+    latitude: number;
+    longitude: number;
+    totalSheep: number;
+    activeSheep: number;
+  }>;
+};
+
 export async function getMyLocation() {
   const response = await api.get<MyLocationResponse>('/users/me/location');
   return response.data;
@@ -69,5 +85,12 @@ export async function updateMyLocation(payload: UpdateMyLocationPayload) {
 
 export async function getMapDistribution() {
   const response = await api.get<MapDistributionResponse>('/map/distribution');
+  return response.data;
+}
+
+export async function getPublicMapDistribution() {
+  const response = await api.get<PublicMapDistributionResponse>(
+    '/map/distribution-public',
+  );
   return response.data;
 }
