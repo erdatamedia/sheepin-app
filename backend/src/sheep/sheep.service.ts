@@ -14,9 +14,12 @@ import { UpdateSheepDto } from './dto/update-sheep.dto';
 export class SheepService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateSheepDto, userId: string) {
-    if (dto.ownerUserId) {
-      await this.ensureFarmerExists(dto.ownerUserId);
+  async create(dto: CreateSheepDto, user: { id: string; role: UserRole }) {
+    const ownerUserId =
+      user.role === UserRole.FARMER ? user.id : dto.ownerUserId;
+
+    if (ownerUserId) {
+      await this.ensureFarmerExists(ownerUserId);
     }
 
     const sheep = await this.prisma.sheep.create({
@@ -33,8 +36,8 @@ export class SheepService {
         location: dto.location,
         status: dto.status ?? 'ACTIVE',
         photoUrl: dto.photoUrl,
-        createdById: userId,
-        ownerUserId: dto.ownerUserId,
+        createdById: user.id,
+        ownerUserId,
       },
       include: {
         createdBy: {

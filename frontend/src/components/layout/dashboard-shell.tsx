@@ -76,12 +76,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       roles: ['ADMIN', 'OFFICER'],
     },
     {
-      href: '/profile',
-      label: 'Profil',
-      icon: UserCircle2,
-      roles: ['ADMIN', 'OFFICER', 'FARMER'],
-    },
-    {
       href: '/location',
       label: 'Lokasi',
       icon: MapPin,
@@ -118,12 +112,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       href: '/history',
       label: 'Riwayat',
       icon: History,
-      roles: ['ADMIN', 'OFFICER', 'FARMER'],
-    },
-    {
-      href: '/profile',
-      label: 'Profil',
-      icon: UserCircle2,
       roles: ['ADMIN', 'OFFICER', 'FARMER'],
     },
     {
@@ -217,7 +205,42 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
-          <div className="mx-auto max-w-7xl">{children}</div>
+          <div className="mx-auto max-w-7xl">
+            {me && (
+              <div className="mb-5 flex justify-end">
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center gap-3 rounded-[22px] border border-[color:rgba(86,74,50,0.12)] bg-white/82 px-3 py-2 text-left shadow-[0_10px_24px_rgba(53,43,24,0.05)] transition hover:bg-white"
+                >
+                  {me.photoUrl ? (
+                    <img
+                      src={me.photoUrl}
+                      alt={me.name}
+                      className="h-10 w-10 rounded-2xl border border-[color:rgba(86,74,50,0.12)] object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[color:var(--accent)] text-sm font-semibold text-white">
+                      {me.name
+                        .split(' ')
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join('')
+                        .toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900">{me.name}</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">
+                      {labelPeran(me.role)}
+                    </p>
+                  </div>
+                  <UserCircle2 size={18} className="text-[color:var(--accent)]" />
+                </Link>
+              </div>
+            )}
+
+            {children}
+          </div>
         </main>
       </div>
 

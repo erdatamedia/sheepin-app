@@ -58,6 +58,7 @@ export default function SheepPage() {
     photoUrl: '',
     ownerUserId: '',
   });
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -131,6 +132,8 @@ export default function SheepPage() {
     }
   };
 
+  const canCreateSheep =
+    me?.role === 'ADMIN' || me?.role === 'OFFICER' || me?.role === 'FARMER';
   const canManageSheep = me?.role === 'ADMIN' || me?.role === 'OFFICER';
 
   if (me?.role === 'FARMER') {
@@ -146,7 +149,15 @@ export default function SheepPage() {
                 Pilih ternak yang ingin dicatat hari ini
               </p>
             </div>
-            <Badge variant="info">Aktif: {activeMySheep.length}</Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="info">Aktif: {activeMySheep.length}</Badge>
+              <Button
+                type="button"
+                onClick={() => setShowCreateForm((value) => !value)}
+              >
+                {showCreateForm ? 'Tutup Form' : 'Tambah Ternak'}
+              </Button>
+            </div>
           </div>
 
           <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -186,6 +197,75 @@ export default function SheepPage() {
               />
             </div>
           </Card>
+
+          {showCreateForm && (
+            <Card className="mb-6 space-y-4 bg-[color:var(--surface-strong)]">
+              <div className="flex items-center gap-2">
+                <Plus size={18} className="text-[color:var(--accent)]" />
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Tambah Ternak Baru</h2>
+                  <p className="text-sm text-[color:var(--ink-muted)]">
+                    Ternak yang Anda tambahkan akan langsung terhubung ke akun peternak ini.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  placeholder="Kode ternak"
+                  value={form.sheepCode}
+                  onChange={(e) => setForm({ ...form, sheepCode: e.target.value })}
+                />
+                <Input
+                  placeholder="Nama ternak"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+                <Input
+                  placeholder="Breed / rumpun"
+                  value={form.breed}
+                  onChange={(e) => setForm({ ...form, breed: e.target.value })}
+                />
+                <select
+                  className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  value={form.gender}
+                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                >
+                  <option value="MALE">Jantan</option>
+                  <option value="FEMALE">Betina</option>
+                </select>
+              </div>
+
+              <PhotoUploadField
+                label="Foto ternak"
+                value={form.photoUrl}
+                onChange={(value) => setForm({ ...form, photoUrl: value })}
+                helperText="Unggah foto ternak agar identifikasi di kandang lebih cepat."
+                emptyLabel="FOTO"
+              />
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleSubmit}>Simpan Ternak</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setForm({
+                      sheepCode: '',
+                      name: '',
+                      breed: '',
+                      gender: 'MALE',
+                      photoUrl: '',
+                      ownerUserId: '',
+                    });
+                  }}
+                >
+                  Batal
+                </Button>
+              </div>
+            </Card>
+          )}
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {loading ? (
@@ -261,10 +341,10 @@ export default function SheepPage() {
     );
   }
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     try {
-      if (!canManageSheep) {
-        alert('Hanya admin/petugas yang dapat menambah ternak');
+      if (!canCreateSheep) {
+        alert('Anda tidak memiliki izin untuk menambah ternak');
         return;
       }
 
@@ -272,7 +352,10 @@ export default function SheepPage() {
         ...form,
         status: 'ACTIVE',
         photoUrl: form.photoUrl || undefined,
-        ownerUserId: form.ownerUserId || undefined,
+        ownerUserId:
+          me?.role === 'ADMIN' || me?.role === 'OFFICER'
+            ? form.ownerUserId || undefined
+            : undefined,
       });
 
       setForm({
@@ -283,13 +366,14 @@ export default function SheepPage() {
         photoUrl: '',
         ownerUserId: '',
       });
+      setShowCreateForm(false);
 
       fetchData();
     } catch (err) {
       console.error(err);
       alert(getApiErrorMessage(err, 'Gagal menambahkan data ternak'));
     }
-  };
+  }
 
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>

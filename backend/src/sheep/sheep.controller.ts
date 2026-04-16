@@ -25,9 +25,12 @@ export class SheepController {
   constructor(private readonly sheepService: SheepService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.OFFICER)
-  create(@Body() dto: CreateSheepDto, @CurrentUser() user: { id: string }) {
-    return this.sheepService.create(dto, user.id);
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  create(
+    @Body() dto: CreateSheepDto,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.create(dto, user);
   }
 
   @Get()
