@@ -26,6 +26,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Toast, useToast } from '@/components/ui/toast';
+import { LoadError } from '@/components/ui/load-error';
 import { Avatar } from '@/components/ui/avatar';
 import { BackLink } from '@/components/ui/back-link';
 import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
@@ -179,6 +180,7 @@ export default function SheepDetailPage() {
   const [farmers, setFarmers] = useState<FarmerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('weights');
+  const [failed, setFailed] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const { toast, notify } = useToast();
@@ -232,6 +234,7 @@ export default function SheepDetailPage() {
 
   const fetchAll = useCallback(async () => {
     try {
+      setFailed(false);
       const [meRes, sheepRes, weightsRes, bcsRes, healthRes, reproRes, evalRes] =
         await Promise.all([
           getMe(),
@@ -272,6 +275,7 @@ export default function SheepDetailPage() {
       });
     } catch (error) {
       console.error('Gagal memuat detail ternak:', error);
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -526,6 +530,18 @@ export default function SheepDetailPage() {
           <Skeleton className="h-20" />
         </div>
       </div>,
+    );
+  }
+
+  if (failed && !sheep) {
+    return shell(
+      <>
+        <BackLink href="/sheep" label="Ternak" />
+        <LoadError onRetry={() => {
+          setLoading(true);
+          void fetchAll();
+        }} />
+      </>,
     );
   }
 

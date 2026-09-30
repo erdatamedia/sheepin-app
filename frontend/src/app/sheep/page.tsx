@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { PawPrint, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,7 @@ export default function SheepPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [ownerFilter, setOwnerFilter] = useState('ALL');
   const [showFilters, setShowFilters] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [statusView, setStatusView] = useState<'ACTIVE' | 'ALL'>('ACTIVE');
 
   const [form, setForm] = useState<SheepFormState>(emptySheepForm);
@@ -94,6 +96,7 @@ export default function SheepPage() {
 
   const fetchData = async () => {
     try {
+      setFailed(false);
       const [res, meRes] = await Promise.all([api.get('/sheep'), getMe()]);
       setData(res.data.data || []);
       setMe(meRes);
@@ -107,6 +110,7 @@ export default function SheepPage() {
       }
     } catch (err) {
       console.error('Gagal memuat data sheep:', err);
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -282,6 +286,13 @@ export default function SheepPage() {
 
           {loading ? (
             <ListSkeleton />
+          ) : failed ? (
+            <LoadError
+              onRetry={() => {
+                setLoading(true);
+                void fetchData();
+              }}
+            />
           ) : mySheep.length === 0 ? (
             <EmptyState
               icon={PawPrint}
@@ -384,6 +395,13 @@ export default function SheepPage() {
 
         {loading ? (
           <ListSkeleton />
+        ) : failed ? (
+          <LoadError
+            onRetry={() => {
+              setLoading(true);
+              void fetchData();
+            }}
+          />
         ) : filteredData.length === 0 ? (
           <EmptyState
             icon={data.length === 0 ? PawPrint : Search}

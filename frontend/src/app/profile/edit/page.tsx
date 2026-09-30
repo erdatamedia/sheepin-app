@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
@@ -18,6 +19,7 @@ import { getApiErrorMessage } from '@/lib/api';
 export default function EditProfilePage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast, notify } = useToast();
   const [photoUrl, setPhotoUrl] = useState('');
@@ -28,27 +30,29 @@ export default function EditProfilePage() {
     address: '',
   });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const meRes = await getMe();
-        setMe(meRes);
-        setForm({
-          name: meRes.name || '',
-          phone: meRes.phone || '',
-          groupName: meRes.groupName || '',
-          address: meRes.address || '',
-        });
-        setPhotoUrl(meRes.photoUrl || '');
-      } catch (error) {
-        console.error('Gagal memuat profil:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+  const load = useCallback(async () => {
+    try {
+      setFailed(false);
+      const meRes = await getMe();
+      setMe(meRes);
+      setForm({
+        name: meRes.name || '',
+        phone: meRes.phone || '',
+        groupName: meRes.groupName || '',
+        address: meRes.address || '',
+      });
+      setPhotoUrl(meRes.photoUrl || '');
+    } catch (error) {
+      console.error('Gagal memuat profil:', error);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const isFarmer = me?.role === 'FARMER';
 
@@ -99,6 +103,13 @@ export default function EditProfilePage() {
             <Skeleton className="h-40 rounded-[var(--radius-card)]" />
             <Skeleton className="h-64 rounded-[var(--radius-card)]" />
           </div>
+        ) : failed ? (
+          <LoadError
+            onRetry={() => {
+              setLoading(true);
+              void load();
+            }}
+          />
         ) : (
           <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
             <Card>
@@ -130,7 +141,11 @@ export default function EditProfilePage() {
                 </Field>
                 <Field
                   label="Nomor HP"
-                  hint={isFarmer ? 'Dipakai untuk masuk. Untuk mengubahnya, hubungi petugas.' : undefined}
+                  hint={
+                    isFarmer
+                      ? 'Dipakai untuk masuk. Untuk mengubahnya, hubungi petugas.'
+                      : undefined
+                  }
                 >
                   <Input
                     type="tel"
@@ -163,11 +178,7 @@ export default function EditProfilePage() {
               </div>
 
               <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                <Button
-                  size="lg"
-                  onClick={handleSave}
-                  disabled={saving || !form.name.trim()}
-                >
+                <Button size="lg" onClick={handleSave} disabled={saving || !form.name.trim()}>
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </Button>
               </div>

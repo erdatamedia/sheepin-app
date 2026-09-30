@@ -18,7 +18,14 @@ type SheetProps = {
  * Lembar dari bawah gaya iOS: pegangan di atas, latar digelapkan, Escape dan ketuk luar menutup.
  * Di layar lebar tampil sebagai dialog di tengah.
  */
-export function Sheet({ open, onClose, title, hideTitle = false, children, className }: SheetProps) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  hideTitle = false,
+  children,
+  className,
+}: SheetProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -64,7 +71,10 @@ export function Sheet({ open, onClose, title, hideTitle = false, children, class
           className,
         )}
       >
-        <div aria-hidden="true" className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line md:hidden" />
+        <div
+          aria-hidden="true"
+          className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line md:hidden"
+        />
 
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2
@@ -78,9 +88,11 @@ export function Sheet({ open, onClose, title, hideTitle = false, children, class
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tint text-ink-muted active:brightness-95"
+              className="-mr-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full active:opacity-60"
             >
-              <X size={18} aria-hidden="true" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-tint text-ink-muted">
+                <X size={18} aria-hidden="true" />
+              </span>
             </button>
           )}
         </div>

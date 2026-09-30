@@ -156,6 +156,7 @@ export default function LoginPage() {
                 nomor HP.
               </p>
               <Input
+                aria-label="Contoh: FRM001"
                 placeholder="Contoh: FRM001"
                 autoCapitalize="characters"
                 autoCorrect="off"

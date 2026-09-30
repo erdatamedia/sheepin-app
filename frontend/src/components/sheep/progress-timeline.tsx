@@ -100,7 +100,7 @@ export function ProgressTimeline({ weights, bcs, health, reproduction, recordHre
                 setVisible(PAGE_SIZE);
               }}
               className={cn(
-                'min-h-9 shrink-0 rounded-full px-3.5 text-[14px] font-semibold transition',
+                'min-h-11 shrink-0 rounded-full px-3.5 text-[14px] font-semibold transition',
                 active ? 'bg-primary text-white' : 'bg-tint text-ink-soft active:brightness-95',
               )}
             >

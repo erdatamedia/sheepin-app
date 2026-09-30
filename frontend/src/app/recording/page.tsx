@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Baby,
   Check,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
+import { LoadError } from '@/components/ui/load-error';
 import { Avatar } from '@/components/ui/avatar';
 import { Button, buttonClassName } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -54,12 +55,49 @@ const EVENTS: Array<{
   danger?: boolean;
   submitLabel: string;
 }> = [
-  { key: 'SICK', label: 'Sakit', hint: 'Keluhan, tindakan, dan obat', icon: Stethoscope, submitLabel: 'Simpan kejadian sakit' },
-  { key: 'MATED', label: 'Dikawinkan', hint: 'Catat pejantan bila diketahui', icon: Heart, submitLabel: 'Simpan kejadian kawin' },
-  { key: 'PREGNANT', label: 'Bunting', hint: 'Saat sudah dipastikan bunting', icon: Sparkles, submitLabel: 'Simpan status bunting' },
-  { key: 'LAMBED', label: 'Beranak', hint: 'Saat selesai beranak', icon: Baby, submitLabel: 'Simpan kejadian beranak' },
-  { key: 'SOLD', label: 'Terjual', hint: 'Keluar dari daftar ternak aktif', icon: Tag, submitLabel: 'Simpan status terjual' },
-  { key: 'DEAD', label: 'Mati', hint: 'Keluar dari daftar ternak aktif', icon: CircleX, danger: true, submitLabel: 'Simpan status mati' },
+  {
+    key: 'SICK',
+    label: 'Sakit',
+    hint: 'Keluhan, tindakan, dan obat',
+    icon: Stethoscope,
+    submitLabel: 'Simpan kejadian sakit',
+  },
+  {
+    key: 'MATED',
+    label: 'Dikawinkan',
+    hint: 'Catat pejantan bila diketahui',
+    icon: Heart,
+    submitLabel: 'Simpan kejadian kawin',
+  },
+  {
+    key: 'PREGNANT',
+    label: 'Bunting',
+    hint: 'Saat sudah dipastikan bunting',
+    icon: Sparkles,
+    submitLabel: 'Simpan status bunting',
+  },
+  {
+    key: 'LAMBED',
+    label: 'Beranak',
+    hint: 'Saat selesai beranak',
+    icon: Baby,
+    submitLabel: 'Simpan kejadian beranak',
+  },
+  {
+    key: 'SOLD',
+    label: 'Terjual',
+    hint: 'Keluar dari daftar ternak aktif',
+    icon: Tag,
+    submitLabel: 'Simpan status terjual',
+  },
+  {
+    key: 'DEAD',
+    label: 'Mati',
+    hint: 'Keluar dari daftar ternak aktif',
+    icon: CircleX,
+    danger: true,
+    submitLabel: 'Simpan status mati',
+  },
 ];
 
 const emptyForm = (sheepId = '') => ({
@@ -78,6 +116,7 @@ const MAX_WEIGHT_KG = 300;
 
 export default function RecordingPage() {
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -89,40 +128,42 @@ export default function RecordingPage() {
   const [showBcsHelp, setShowBcsHelp] = useState(false);
   const [savedTitle, setSavedTitle] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const sheepRes = await getRecordingSheepOptions();
-        const options = sheepRes.data || [];
-        setSheepOptions(options);
+  const load = useCallback(async () => {
+    try {
+      setFailed(false);
+      const sheepRes = await getRecordingSheepOptions();
+      const options = sheepRes.data || [];
+      setSheepOptions(options);
 
-        const params = new URLSearchParams(window.location.search);
-        const wantedSheep = params.get('sheepId');
-        const wantedEvent = params.get('event') as EventType | null;
+      const params = new URLSearchParams(window.location.search);
+      const wantedSheep = params.get('sheepId');
+      const wantedEvent = params.get('event') as EventType | null;
 
-        // Ternak dari tautan, atau satu-satunya ternak yang dimiliki: langsung ke langkah isi.
-        const preselected =
-          options.find((item) => item.id === wantedSheep) ??
-          (options.length === 1 ? options[0] : undefined);
+      // Ternak dari tautan, atau satu-satunya ternak yang dimiliki: langsung ke langkah isi.
+      const preselected =
+        options.find((item) => item.id === wantedSheep) ??
+        (options.length === 1 ? options[0] : undefined);
 
-        if (preselected) {
-          setForm((prev) => ({ ...prev, sheepId: preselected.id }));
-          setStep(2);
-        }
-
-        if (wantedEvent && EVENTS.some((event) => event.key === wantedEvent)) {
-          setMode('EVENT');
-          setEventType(wantedEvent);
-        }
-      } catch (err) {
-        console.error('Gagal memuat rekording:', err);
-      } finally {
-        setLoading(false);
+      if (preselected) {
+        setForm((prev) => ({ ...prev, sheepId: preselected.id }));
+        setStep(2);
       }
-    };
 
-    void load();
+      if (wantedEvent && EVENTS.some((event) => event.key === wantedEvent)) {
+        setMode('EVENT');
+        setEventType(wantedEvent);
+      }
+    } catch (err) {
+      console.error('Gagal memuat rekording:', err);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const selectedSheep = useMemo(
     () => sheepOptions.find((item) => item.id === form.sheepId),
@@ -345,7 +386,14 @@ export default function RecordingPage() {
 
           {/* ===== Langkah 1: pilih ternak ===== */}
           {step === 1 &&
-            (sheepOptions.length === 0 ? (
+            (failed ? (
+              <LoadError
+                onRetry={() => {
+                  setLoading(true);
+                  void load();
+                }}
+              />
+            ) : sheepOptions.length === 0 ? (
               <EmptyState
                 icon={PawPrint}
                 title="Belum ada ternak aktif"
@@ -469,7 +517,8 @@ export default function RecordingPage() {
                     />
                     {form.bcsScore && (
                       <p className="text-[14px] text-ink-muted">
-                        {bcsLabel(Number(form.bcsScore))}: {BCS_GUIDE[Number(form.bcsScore) - 1]?.hint}
+                        {bcsLabel(Number(form.bcsScore))}:{' '}
+                        {BCS_GUIDE[Number(form.bcsScore) - 1]?.hint}
                       </p>
                     )}
                   </Card>
@@ -490,16 +539,19 @@ export default function RecordingPage() {
                     {form.healthStatus === 'SICK' && (
                       <div className="space-y-3 pt-1">
                         <Input
+                          aria-label="Keluhan atau penyakit (opsional)"
                           placeholder="Keluhan atau penyakit (opsional)"
                           value={form.diseaseName}
                           onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
                         />
                         <Input
+                          aria-label="Tindakan (opsional)"
                           placeholder="Tindakan (opsional)"
                           value={form.treatment}
                           onChange={(e) => setForm({ ...form, treatment: e.target.value })}
                         />
                         <Input
+                          aria-label="Obat (opsional)"
                           placeholder="Obat (opsional)"
                           value={form.medicine}
                           onChange={(e) => setForm({ ...form, medicine: e.target.value })}
@@ -563,16 +615,19 @@ export default function RecordingPage() {
                       {eventType === 'SICK' && (
                         <>
                           <Input
+                            aria-label="Keluhan atau penyakit (opsional)"
                             placeholder="Keluhan atau penyakit (opsional)"
                             value={form.diseaseName}
                             onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
                           />
                           <Input
+                            aria-label="Tindakan (opsional)"
                             placeholder="Tindakan (opsional)"
                             value={form.treatment}
                             onChange={(e) => setForm({ ...form, treatment: e.target.value })}
                           />
                           <Input
+                            aria-label="Obat (opsional)"
                             placeholder="Obat (opsional)"
                             value={form.medicine}
                             onChange={(e) => setForm({ ...form, medicine: e.target.value })}
@@ -581,12 +636,14 @@ export default function RecordingPage() {
                       )}
                       {isReproductionEvent && (
                         <Input
+                          aria-label="Pejantan atau pasangan (opsional)"
                           placeholder="Pejantan atau pasangan (opsional)"
                           value={form.diseaseName}
                           onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
                         />
                       )}
                       <Input
+                        aria-label="Catatan"
                         placeholder={
                           eventType === 'DEAD'
                             ? 'Sebab mati atau catatan singkat'
@@ -718,7 +775,10 @@ export default function RecordingPage() {
           </p>
           <ul className="space-y-2">
             {BCS_GUIDE.map((item) => (
-              <li key={item.score} className="flex gap-3 rounded-[var(--radius-control)] bg-tint p-3">
+              <li
+                key={item.score}
+                className="flex gap-3 rounded-[var(--radius-control)] bg-tint p-3"
+              >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-[17px] font-bold text-primary-strong">
                   {item.score}
                 </span>

@@ -1,8 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MapPin, Search, SlidersHorizontal } from 'lucide-react';
+import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Avatar } from '@/components/ui/avatar';
@@ -21,6 +22,7 @@ const DistributionMap = dynamic(() => import('@/components/map/distribution-map'
 
 export default function MapPage() {
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [items, setItems] = useState<MapDistributionResponse['data']>([]);
 
   const [search, setSearch] = useState('');
@@ -29,20 +31,22 @@ export default function MapPage() {
   const [villageFilter, setVillageFilter] = useState('ALL');
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await getMapDistribution();
-        setItems(res.data || []);
-      } catch (error) {
-        console.error('Gagal memuat data distribusi:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
+  const load = useCallback(async () => {
+    try {
+      setFailed(false);
+      const res = await getMapDistribution();
+      setItems(res.data || []);
+    } catch (error) {
+      console.error('Gagal memuat data distribusi:', error);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const regencyOptions = useMemo(() => {
     return Array.from(new Set(items.map((item) => item.regency).filter(Boolean))).sort();
@@ -212,6 +216,13 @@ export default function MapPage() {
             <Skeleton
               aria-label="Memuat peta distribusi"
               className="h-[60vh] min-h-[320px] rounded-2xl md:h-[480px]"
+            />
+          ) : failed ? (
+            <LoadError
+              onRetry={() => {
+                setLoading(true);
+                void load();
+              }}
             />
           ) : filteredItems.length === 0 ? (
             <EmptyState

@@ -2,6 +2,8 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+
   /* Coklat pastel, gaya iOS (mode terang saja).
      Ubah nilai di sini lalu jalankan `pnpm check:contrast`. */
   --background: #f6efe7; /* kanvas halaman */
