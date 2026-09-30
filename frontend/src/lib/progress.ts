@@ -22,6 +22,8 @@ export type ReproductionRecord = {
   totalLambWeaned?: number;
   status: string;
   note?: string;
+  /** Waktu pencatatan; dipakai bila catatan reproduksi tidak punya tanggal sendiri. */
+  createdAt?: string;
 };
 
 export type TimelineKind = 'WEIGHT' | 'BCS' | 'HEALTH' | 'REPRODUCTION';
@@ -37,13 +39,18 @@ export type TimelineEvent = {
   tone: TimelineTone;
 };
 
-const BCS_LABELS: Record<number, string> = {
-  1: 'Sangat kurus',
-  2: 'Kurus',
-  3: 'Ideal',
-  4: 'Gemuk',
-  5: 'Sangat gemuk',
-};
+/** Panduan menilai kondisi tubuh (BCS) 1-5 dengan cara meraba punggung dan tulang rusuk. */
+export const BCS_GUIDE: Array<{ score: number; label: string; hint: string }> = [
+  { score: 1, label: 'Sangat kurus', hint: 'Tulang punggung dan rusuk menonjol tajam, hampir tidak teraba daging.' },
+  { score: 2, label: 'Kurus', hint: 'Tulang punggung terasa jelas, daging di pinggang tipis.' },
+  { score: 3, label: 'Ideal', hint: 'Tulang punggung teraba halus, pinggang berdaging rata. Kondisi yang dituju.' },
+  { score: 4, label: 'Gemuk', hint: 'Tulang punggung sulit diraba, ada lapisan lemak yang jelas.' },
+  { score: 5, label: 'Sangat gemuk', hint: 'Tulang tertutup lemak tebal, badan tampak terlalu berat.' },
+];
+
+const BCS_LABELS: Record<number, string> = Object.fromEntries(
+  BCS_GUIDE.map((item) => [item.score, item.label]),
+);
 
 /** Penjelasan skor kondisi tubuh (BCS) dalam bahasa awam. */
 export function bcsLabel(score: number) {
@@ -122,10 +129,10 @@ export function buildTimeline(input: {
 
   for (const record of input.reproduction) {
     const date =
-      record.status === 'LAMBED'
+      (record.status === 'LAMBED'
         ? (record.lambingDate ?? record.matingDate)
-        : (record.matingDate ?? record.lambingDate);
-    if (!date) continue; // tanpa tanggal tidak bisa ditaruh di linimasa
+        : (record.matingDate ?? record.lambingDate)) ?? record.createdAt;
+    if (!date) continue; // tanpa tanggal sama sekali tidak bisa ditaruh di linimasa
 
     let title: string;
     let detail: string | undefined;

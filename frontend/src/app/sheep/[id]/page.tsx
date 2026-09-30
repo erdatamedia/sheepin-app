@@ -124,6 +124,7 @@ type Reproduction = {
   totalWeaningWeight?: number;
   status: string;
   note?: string;
+  createdAt?: string;
 };
 
 type TabKey = 'weights' | 'bcs' | 'health' | 'reproduction';

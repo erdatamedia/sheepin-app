@@ -1,363 +1,364 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Check, PawPrint, Search } from 'lucide-react';
+import {
+  Baby,
+  Check,
+  ChevronLeft,
+  CircleCheck,
+  CircleX,
+  Heart,
+  PawPrint,
+  Search,
+  Sparkles,
+  Stethoscope,
+  Tag,
+  type LucideIcon,
+} from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
+import { Avatar } from '@/components/ui/avatar';
+import { Button, buttonClassName } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/ui/page-header';
-import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
+import { PageHeader } from '@/components/ui/page-header';
 import { Segmented } from '@/components/ui/segmented';
-import { cn, sanitizeDecimal, todayLocal } from '@/lib/utils';
+import { Sheet } from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api, getApiErrorMessage } from '@/lib/api';
-import {
-  labelJenisKelamin,
-  labelStatusKesehatan,
-} from '@/lib/labels';
+import { formatDayLong, formatKg } from '@/lib/format';
+import { labelStatusKesehatan } from '@/lib/labels';
+import { BCS_GUIDE, bcsLabel } from '@/lib/progress';
 import {
   getRecordingSheepOptions,
-  submitSheepStatusEvent,
   submitQuickRecording,
+  submitSheepStatusEvent,
   type RecordingSheepOptionResponse,
 } from '@/lib/recording';
+import { cn, sanitizeDecimal, todayLocal } from '@/lib/utils';
 
 type SheepOption = RecordingSheepOptionResponse['data'][number];
+type EventType = 'SICK' | 'MATED' | 'PREGNANT' | 'LAMBED' | 'DEAD' | 'SOLD';
+type Mode = 'ROUTINE' | 'EVENT';
+type Step = 1 | 2 | 3 | 'done';
+
+const EVENTS: Array<{
+  key: EventType;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  danger?: boolean;
+  submitLabel: string;
+}> = [
+  { key: 'SICK', label: 'Sakit', hint: 'Keluhan, tindakan, dan obat', icon: Stethoscope, submitLabel: 'Simpan kejadian sakit' },
+  { key: 'MATED', label: 'Dikawinkan', hint: 'Catat pejantan bila diketahui', icon: Heart, submitLabel: 'Simpan kejadian kawin' },
+  { key: 'PREGNANT', label: 'Bunting', hint: 'Saat sudah dipastikan bunting', icon: Sparkles, submitLabel: 'Simpan status bunting' },
+  { key: 'LAMBED', label: 'Beranak', hint: 'Saat selesai beranak', icon: Baby, submitLabel: 'Simpan kejadian beranak' },
+  { key: 'SOLD', label: 'Terjual', hint: 'Keluar dari daftar ternak aktif', icon: Tag, submitLabel: 'Simpan status terjual' },
+  { key: 'DEAD', label: 'Mati', hint: 'Keluar dari daftar ternak aktif', icon: CircleX, danger: true, submitLabel: 'Simpan status mati' },
+];
+
+const emptyForm = (sheepId = '') => ({
+  sheepId,
+  recordDate: todayLocal(),
+  weightKg: '',
+  bcsScore: '',
+  healthStatus: '',
+  diseaseName: '',
+  treatment: '',
+  medicine: '',
+  note: '',
+});
+
+const MAX_WEIGHT_KG = 300;
 
 export default function RecordingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageTone, setMessageTone] = useState<'success' | 'error'>('success');
-  const [changingSheep, setChangingSheep] = useState(false);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [sheepOptions, setSheepOptions] = useState<SheepOption[]>([]);
-  const [eventType, setEventType] = useState<
-    '' | 'SICK' | 'MATED' | 'PREGNANT' | 'LAMBED' | 'DEAD' | 'SOLD'
-  >('');
-
-  const today = todayLocal();
-
-  const [form, setForm] = useState({
-    sheepId: '',
-    recordDate: today,
-    weightKg: '',
-    bcsScore: '',
-    healthStatus: '',
-    diseaseName: '',
-    treatment: '',
-    medicine: '',
-    note: '',
-  });
-
-  const filteredSheep = useMemo(() => {
-    return sheepOptions.filter((item) => {
-      const q = search.toLowerCase();
-      return (
-        !search ||
-        item.sheepCode.toLowerCase().includes(q) ||
-        (item.name || '').toLowerCase().includes(q) ||
-        item.breed.toLowerCase().includes(q) ||
-        (item.ownerUser?.name || '').toLowerCase().includes(q) ||
-        (item.ownerUser?.groupName || '').toLowerCase().includes(q)
-      );
-    });
-  }, [sheepOptions, search]);
-
-  const selectedSheep = useMemo(
-    () => sheepOptions.find((item) => item.id === form.sheepId),
-    [sheepOptions, form.sheepId],
-  );
-  const isEventMode = !!eventType;
-  const isStatusEvent = eventType === 'DEAD' || eventType === 'SOLD';
-  const isSickEvent = eventType === 'SICK';
-  const isReproductionEvent =
-    eventType === 'MATED' || eventType === 'PREGNANT' || eventType === 'LAMBED';
-
-  const eventConfig = useMemo(() => {
-    switch (eventType) {
-      case 'SICK':
-        return {
-          title: 'Catat ternak sakit',
-          description: 'Isi kondisi sakit, tindakan, dan obat jika ada.',
-          submitLabel: 'Simpan Kejadian Sakit',
-        };
-      case 'MATED':
-        return {
-          title: 'Catat kawin',
-          description: 'Simpan kejadian kawin dan identitas pejantan bila diketahui.',
-          submitLabel: 'Simpan Kejadian Kawin',
-        };
-      case 'PREGNANT':
-        return {
-          title: 'Catat bunting',
-          description: 'Gunakan saat ternak dipastikan bunting.',
-          submitLabel: 'Simpan Status Bunting',
-        };
-      case 'LAMBED':
-        return {
-          title: 'Catat beranak',
-          description: 'Gunakan saat ternak selesai beranak.',
-          submitLabel: 'Simpan Kejadian Beranak',
-        };
-      case 'DEAD':
-        return {
-          title: 'Catat mati',
-          description: 'Status ternak akan ditutup dan keluar dari daftar aktif.',
-          submitLabel: 'Simpan Status Mati',
-        };
-      case 'SOLD':
-        return {
-          title: 'Catat terjual',
-          description: 'Status ternak akan diubah menjadi terjual.',
-          submitLabel: 'Simpan Status Terjual',
-        };
-      default:
-        return null;
-    }
-  }, [eventType]);
+  const [step, setStep] = useState<Step>(1);
+  const [mode, setMode] = useState<Mode>('ROUTINE');
+  const [eventType, setEventType] = useState<EventType | ''>('');
+  const [form, setForm] = useState(emptyForm());
+  const [showBcsHelp, setShowBcsHelp] = useState(false);
+  const [savedTitle, setSavedTitle] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
         const sheepRes = await getRecordingSheepOptions();
-        setSheepOptions(sheepRes.data || []);
-        const params = new URLSearchParams(window.location.search);
-        const sheepId = params.get('sheepId');
-        const event = params.get('event');
+        const options = sheepRes.data || [];
+        setSheepOptions(options);
 
-        setForm((prev) => ({
-          ...prev,
-          sheepId: sheepId || prev.sheepId,
-        }));
-        setEventType(
-          (event as
-            | ''
-            | 'SICK'
-            | 'MATED'
-            | 'PREGNANT'
-            | 'LAMBED'
-            | 'DEAD'
-            | 'SOLD') || '',
-        );
-      } catch (error) {
-        console.error('Gagal memuat rekording cepat:', error);
+        const params = new URLSearchParams(window.location.search);
+        const wantedSheep = params.get('sheepId');
+        const wantedEvent = params.get('event') as EventType | null;
+
+        // Ternak dari tautan, atau satu-satunya ternak yang dimiliki: langsung ke langkah isi.
+        const preselected =
+          options.find((item) => item.id === wantedSheep) ??
+          (options.length === 1 ? options[0] : undefined);
+
+        if (preselected) {
+          setForm((prev) => ({ ...prev, sheepId: preselected.id }));
+          setStep(2);
+        }
+
+        if (wantedEvent && EVENTS.some((event) => event.key === wantedEvent)) {
+          setMode('EVENT');
+          setEventType(wantedEvent);
+        }
+      } catch (err) {
+        console.error('Gagal memuat rekording:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    load();
+    void load();
   }, []);
 
-  const handleSubmit = async () => {
-    try {
-      setSaving(true);
-      setMessage('');
+  const selectedSheep = useMemo(
+    () => sheepOptions.find((item) => item.id === form.sheepId),
+    [sheepOptions, form.sheepId],
+  );
 
-      await submitQuickRecording({
-        sheepId: form.sheepId,
-        recordDate: form.recordDate,
-        weightKg: form.weightKg ? Number(form.weightKg) : undefined,
-        bcsScore: form.bcsScore ? Number(form.bcsScore) : undefined,
-        healthStatus: form.healthStatus
-          ? (form.healthStatus as 'HEALTHY' | 'SICK' | 'RECOVERING')
-          : undefined,
-        diseaseName: form.diseaseName || undefined,
-        treatment: form.treatment || undefined,
-        medicine: form.medicine || undefined,
-        note: form.note || undefined,
-      });
+  const filteredSheep = useMemo(() => {
+    const q = search.toLowerCase();
+    return sheepOptions.filter(
+      (item) =>
+        !search ||
+        item.sheepCode.toLowerCase().includes(q) ||
+        (item.name || '').toLowerCase().includes(q) ||
+        item.breed.toLowerCase().includes(q) ||
+        (item.ownerUser?.name || '').toLowerCase().includes(q) ||
+        (item.ownerUser?.groupName || '').toLowerCase().includes(q),
+    );
+  }, [sheepOptions, search]);
 
-      setMessageTone('success');
-      setMessage('Rekording cepat berhasil disimpan.');
-      setForm({
-        sheepId: '',
-        recordDate: today,
-        weightKg: '',
-        bcsScore: '',
-        healthStatus: '',
-        diseaseName: '',
-        treatment: '',
-        medicine: '',
-        note: '',
-      });
-    } catch (error) {
-      console.error(error);
-      setMessageTone('error');
-      setMessage(getApiErrorMessage(error, 'Gagal menyimpan rekording cepat.'));
-    } finally {
-      setSaving(false);
-    }
+  const eventConfig = EVENTS.find((event) => event.key === eventType);
+  const weightValue = form.weightKg ? Number(form.weightKg) : undefined;
+  const weightInvalid =
+    weightValue !== undefined &&
+    (!Number.isFinite(weightValue) || weightValue <= 0 || weightValue > MAX_WEIGHT_KG);
+
+  const hasRoutineValue = !!(form.weightKg || form.bcsScore || form.healthStatus);
+  const canContinue =
+    !!form.sheepId && (mode === 'ROUTINE' ? hasRoutineValue && !weightInvalid : !!eventType);
+
+  const sheepTitle = (item: SheepOption) =>
+    item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode;
+
+  const goBack = () => {
+    setError('');
+    setStep((current) => (current === 3 ? 2 : 1));
   };
 
-  const handleEventSubmit = async () => {
+  const resetForNext = () => {
+    setForm(emptyForm());
+    setMode('ROUTINE');
+    setEventType('');
+    setSearch('');
+    setError('');
+    setStep(1);
+  };
+
+  const handleSave = async () => {
     try {
       setSaving(true);
-      setMessage('');
+      setError('');
 
-      if (!form.sheepId || !eventType) {
-        setMessageTone('error');
-        setMessage('Pilih ternak dan jenis kejadian terlebih dahulu.');
+      if (!form.sheepId) {
+        setError('Pilih ternak terlebih dahulu.');
         return;
       }
 
-      if (eventType === 'SICK') {
+      if (mode === 'ROUTINE') {
         await submitQuickRecording({
           sheepId: form.sheepId,
           recordDate: form.recordDate,
-          healthStatus: 'SICK',
+          weightKg: weightValue,
+          bcsScore: form.bcsScore ? Number(form.bcsScore) : undefined,
+          healthStatus: form.healthStatus
+            ? (form.healthStatus as 'HEALTHY' | 'SICK' | 'RECOVERING')
+            : undefined,
           diseaseName: form.diseaseName || undefined,
           treatment: form.treatment || undefined,
           medicine: form.medicine || undefined,
           note: form.note || undefined,
         });
-      } else if (eventType === 'DEAD' || eventType === 'SOLD') {
-        await submitSheepStatusEvent(form.sheepId, {
-          status: eventType,
-          eventDate: form.recordDate,
-          note: form.note || undefined,
-        });
+        setSavedTitle('Catatan perkembangan tersimpan');
       } else {
-        await api.post('/reproduction', {
-          sheepId: form.sheepId,
-          status: eventType,
-          matingDate:
-            eventType === 'MATED' ? form.recordDate : undefined,
-          lambingDate:
-            eventType === 'LAMBED' ? form.recordDate : undefined,
-          note: form.note || undefined,
-          maleParent: form.diseaseName || undefined,
-        });
+        if (!eventType) {
+          setError('Pilih jenis kejadian terlebih dahulu.');
+          return;
+        }
+
+        if (eventType === 'SICK') {
+          await submitQuickRecording({
+            sheepId: form.sheepId,
+            recordDate: form.recordDate,
+            healthStatus: 'SICK',
+            diseaseName: form.diseaseName || undefined,
+            treatment: form.treatment || undefined,
+            medicine: form.medicine || undefined,
+            note: form.note || undefined,
+          });
+        } else if (eventType === 'DEAD' || eventType === 'SOLD') {
+          await submitSheepStatusEvent(form.sheepId, {
+            status: eventType,
+            eventDate: form.recordDate,
+            note: form.note || undefined,
+          });
+        } else {
+          await api.post('/reproduction', {
+            sheepId: form.sheepId,
+            status: eventType,
+            matingDate: eventType === 'MATED' ? form.recordDate : undefined,
+            lambingDate: eventType === 'LAMBED' ? form.recordDate : undefined,
+            note: form.note || undefined,
+            maleParent: form.diseaseName || undefined,
+          });
+        }
+        setSavedTitle(`Kejadian "${eventConfig?.label ?? ''}" tercatat`);
       }
 
-      setMessageTone('success');
-      setMessage('Kejadian lapangan berhasil dicatat.');
-      setEventType('');
-      setForm({
-        sheepId: form.sheepId,
-        recordDate: today,
-        weightKg: '',
-        bcsScore: '',
-        healthStatus: '',
-        diseaseName: '',
-        treatment: '',
-        medicine: '',
-        note: '',
-      });
-    } catch (error) {
-      console.error(error);
-      setMessageTone('error');
-      setMessage(getApiErrorMessage(error, 'Gagal mencatat kejadian lapangan.'));
+      setStep('done');
+    } catch (err) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Gagal menyimpan. Coba lagi.'));
     } finally {
       setSaving(false);
     }
   };
 
-  const eventOptions = [
-    { key: '', label: 'Rutin' },
-    { key: 'SICK', label: 'Sakit' },
-    { key: 'MATED', label: 'Kawin' },
-    { key: 'PREGNANT', label: 'Bunting' },
-    { key: 'LAMBED', label: 'Beranak' },
-    { key: 'DEAD', label: 'Mati' },
-    { key: 'SOLD', label: 'Terjual' },
-  ];
-
-  const pickingSheep = !form.sheepId || changingSheep;
-
-  const handleWeightChange = (raw: string) => {
-    setForm({ ...form, weightKg: sanitizeDecimal(raw) });
-  };
-
-  const submitLabel = saving
-    ? 'Menyimpan...'
-    : isEventMode
-      ? eventConfig?.submitLabel || 'Simpan Kejadian'
-      : 'Simpan Rekording';
-
   if (loading) {
     return (
       <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
         <DashboardShell>
-          <PageHeader title="Rekording Cepat" />
-          <div className="space-y-4" aria-busy="true" aria-label="Memuat rekording cepat">
-            <Skeleton className="h-14" />
+          <PageHeader title="Catat" />
+          <div className="space-y-3" aria-busy="true" aria-label="Memuat">
             <Skeleton className="h-12" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
           </div>
         </DashboardShell>
       </RoleGuard>
     );
   }
 
+  const stepTitle =
+    step === 1
+      ? 'Pilih ternak'
+      : step === 2
+        ? mode === 'EVENT'
+          ? 'Catat kejadian'
+          : 'Catat perkembangan'
+        : step === 3
+          ? 'Periksa dan simpan'
+          : 'Tersimpan';
+
+  const stepDescription =
+    step === 1
+      ? 'Ternak mana yang mau dicatat?'
+      : step === 'done'
+        ? undefined
+        : selectedSheep
+          ? sheepTitle(selectedSheep)
+          : undefined;
+
+  const isReproductionEvent =
+    eventType === 'MATED' || eventType === 'PREGNANT' || eventType === 'LAMBED';
+
+  const summaryRows: Array<[string, string]> = [];
+  if (selectedSheep) summaryRows.push(['Ternak', sheepTitle(selectedSheep)]);
+  summaryRows.push(['Tanggal', formatDayLong(form.recordDate)]);
+  if (mode === 'ROUTINE') {
+    summaryRows.push([
+      'Bobot',
+      weightValue !== undefined && !weightInvalid ? formatKg(weightValue) : 'Tidak diisi',
+    ]);
+    summaryRows.push([
+      'Kondisi tubuh',
+      form.bcsScore ? `${form.bcsScore} · ${bcsLabel(Number(form.bcsScore))}` : 'Tidak diisi',
+    ]);
+    summaryRows.push([
+      'Kesehatan',
+      form.healthStatus ? labelStatusKesehatan(form.healthStatus) : 'Tidak diisi',
+    ]);
+  } else {
+    summaryRows.push(['Kejadian', eventConfig?.label ?? '-']);
+  }
+  if (form.diseaseName) {
+    summaryRows.push([isReproductionEvent ? 'Pejantan' : 'Keluhan', form.diseaseName]);
+  }
+  if (form.treatment) summaryRows.push(['Tindakan', form.treatment]);
+  if (form.medicine) summaryRows.push(['Obat', form.medicine]);
+  if (form.note) summaryRows.push(['Catatan', form.note]);
+
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
-        <div className="pb-24 md:pb-0">
-          <PageHeader
-            title="Rekording Cepat"
-            description="Catat bobot, kondisi, dan kesehatan dalam sekali simpan"
-          />
+        <div className="mx-auto max-w-xl pb-28 md:mx-0 md:pb-0">
+          {(step === 2 || step === 3) && (
+            <button
+              type="button"
+              onClick={goBack}
+              className="-ml-2 mb-1 inline-flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[17px] text-primary active:opacity-60"
+            >
+              <ChevronLeft size={24} aria-hidden="true" />
+              {step === 2 ? 'Pilih ternak' : 'Ubah'}
+            </button>
+          )}
 
-          {/* 1. Jenis catatan */}
-          <section className="mb-5" aria-labelledby="rec-event">
-            <h2 id="rec-event" className="mb-2 text-sm font-semibold text-ink">
-              Jenis catatan
-            </h2>
-            <div className="grid grid-cols-4 gap-2 md:grid-cols-7">
-              {eventOptions.map((item) => {
-                const active = eventType === item.key;
-                return (
-                  <button
-                    key={item.key || 'routine'}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setEventType(item.key as typeof eventType)}
-                    className={cn(
-                      'min-h-11 rounded-[var(--radius-control)] border px-2 text-sm font-semibold transition active:scale-[0.97]',
-                      active
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-line bg-surface text-ink hover:border-primary/40',
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
+          {step !== 'done' && (
+            <div
+              className="mb-3 flex items-center gap-2"
+              role="group"
+              aria-label={`Langkah ${step} dari 3`}
+            >
+              {[1, 2, 3].map((n) => (
+                <span
+                  key={n}
+                  aria-current={n === step ? 'step' : undefined}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all',
+                    n === step
+                      ? 'w-7 bg-primary'
+                      : n < (step as number)
+                        ? 'w-3 bg-primary-icon'
+                        : 'w-3 bg-line',
+                  )}
+                />
+              ))}
+              <span className="ml-1 text-[13px] text-ink-muted">Langkah {step} dari 3</span>
             </div>
-          </section>
+          )}
 
-          {/* 2. Pilih ternak */}
-          <Card className="mb-5">
-            <h2 className="mb-3 text-base font-semibold text-ink">Ternak</h2>
+          <PageHeader title={stepTitle} description={stepDescription} />
 
-            {!pickingSheep && selectedSheep ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
-                    <PawPrint size={22} aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-lg font-semibold text-ink">
-                      {selectedSheep.sheepCode}
-                    </p>
-                    <p className="truncate text-sm text-ink-muted">
-                      {selectedSheep.name || selectedSheep.breed}
-                      {selectedSheep.ownerUser?.name ? ` · ${selectedSheep.ownerUser.name}` : ''}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" onClick={() => setChangingSheep(true)}>
-                  Ganti
-                </Button>
-              </div>
+          {/* ===== Langkah 1: pilih ternak ===== */}
+          {step === 1 &&
+            (sheepOptions.length === 0 ? (
+              <EmptyState
+                icon={PawPrint}
+                title="Belum ada ternak aktif"
+                description="Tambahkan ternak lebih dulu di menu Ternak, lalu kembali untuk mencatat."
+                action={
+                  <Link href="/sheep" className={buttonClassName()}>
+                    Ke daftar ternak
+                  </Link>
+                }
+              />
             ) : (
               <>
-                <div className="relative mb-3">
+                <div className="relative mb-4">
                   <Search
                     size={18}
                     aria-hidden="true"
@@ -374,126 +375,87 @@ export default function RecordingPage() {
 
                 {filteredSheep.length === 0 ? (
                   <EmptyState
-                    className="border-0 py-6 shadow-none"
-                    icon={PawPrint}
-                    title={search ? 'Ternak tidak ditemukan' : 'Belum ada ternak aktif'}
-                    description={
-                      search
-                        ? 'Coba kata kunci lain, misalnya kode ternak.'
-                        : 'Tambahkan ternak lebih dulu di menu Ternak.'
-                    }
+                    icon={Search}
+                    title="Ternak tidak ditemukan"
+                    description="Coba kata kunci lain, misalnya kode ternak."
                   />
                 ) : (
-                  <ul className="grid max-h-[340px] gap-2 overflow-auto md:grid-cols-2 xl:grid-cols-3">
-                    {filteredSheep.map((item) => {
-                      const active = form.sheepId === item.id;
-                      return (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => {
-                              setForm({ ...form, sheepId: item.id });
-                              setChangingSheep(false);
-                            }}
-                            className={cn(
-                              'flex min-h-16 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] border px-4 py-3 text-left transition',
-                              active
-                                ? 'border-primary bg-primary-soft'
-                                : 'border-line bg-surface hover:border-primary/40',
-                            )}
-                          >
-                            <span className="min-w-0">
-                              <span className="block truncate text-base font-semibold text-ink">
-                                {item.sheepCode}
-                                <span className="ml-2 text-sm font-normal text-ink-muted">
-                                  {labelJenisKelamin(item.gender)}
-                                </span>
-                              </span>
-                              <span className="block truncate text-sm text-ink-muted">
-                                {item.name || item.breed} · {item.ownerUser?.name || '-'}
-                              </span>
-                            </span>
-                            {active && <Check size={20} className="shrink-0 text-primary" aria-hidden="true" />}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <ListGroup>
+                    {filteredSheep.map((item) => (
+                      <ListRow
+                        key={item.id}
+                        leading={<Avatar name={item.name || item.sheepCode} size="md" />}
+                        title={sheepTitle(item)}
+                        subtitle={[item.breed, item.ownerUser?.name].filter(Boolean).join(' · ')}
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, sheepId: item.id }));
+                          setStep(2);
+                        }}
+                      />
+                    ))}
+                  </ListGroup>
                 )}
               </>
-            )}
-          </Card>
+            ))}
 
-          {/* 3. Form */}
-          <Card>
-            <h2 className="text-base font-semibold text-ink">
-              {isEventMode ? eventConfig?.title : 'Catatan rutin'}
-            </h2>
-            <p className="mb-4 mt-1 text-sm text-ink-muted">
-              {isEventMode
-                ? eventConfig?.description
-                : 'Isi yang perlu saja, kolom kosong tidak akan disimpan.'}
-            </p>
-
-            {message && (
-              <div
-                role="status"
-                className={cn(
-                  'mb-4 rounded-[var(--radius-control)] border px-4 py-3 text-sm font-medium',
-                  messageTone === 'success'
-                    ? 'border-[color:var(--success-border)] bg-success-soft text-success'
-                    : 'border-[color:var(--danger-border)] bg-danger-soft text-danger',
-                )}
-              >
-                {message}
-              </div>
-            )}
-
-            {isStatusEvent && (
-              <div className="mb-4 rounded-[var(--radius-control)] border border-[color:var(--warning-border)] bg-warning-soft px-4 py-3 text-sm text-warning">
-                {eventType === 'DEAD'
-                  ? 'Ternak akan ditandai mati dan keluar dari daftar ternak aktif.'
-                  : 'Ternak akan ditandai terjual dan keluar dari daftar ternak aktif.'}
-              </div>
-            )}
-
+          {/* ===== Langkah 2: isi catatan ===== */}
+          {step === 2 && (
             <div className="space-y-5">
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-ink">Tanggal</span>
-                <Input
-                  type="date"
-                  value={form.recordDate}
-                  onChange={(e) => setForm({ ...form, recordDate: e.target.value })}
-                />
-              </label>
+              <Segmented
+                label="Jenis catatan"
+                value={mode}
+                onChange={(value) => {
+                  setMode(value as Mode);
+                  setError('');
+                }}
+                options={[
+                  { value: 'ROUTINE', label: 'Perkembangan' },
+                  { value: 'EVENT', label: 'Kejadian' },
+                ]}
+              />
 
-              {!isEventMode && (
+              {mode === 'ROUTINE' ? (
                 <>
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-ink">Bobot (kg)</span>
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        autoComplete="off"
-                        placeholder="0"
-                        className="h-16 pr-14 text-3xl font-bold"
-                        value={form.weightKg}
-                        onChange={(e) => handleWeightChange(e.target.value)}
-                      />
-                      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-base font-medium text-ink-muted">
-                        kg
-                      </span>
-                    </div>
-                  </label>
+                  <Card>
+                    <Field label="Bobot (dianjurkan)">
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder="0"
+                          className="h-16 pr-14 text-[32px] font-bold"
+                          value={form.weightKg}
+                          aria-invalid={weightInvalid}
+                          onChange={(e) =>
+                            setForm({ ...form, weightKg: sanitizeDecimal(e.target.value) })
+                          }
+                        />
+                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[17px] font-medium text-ink-muted">
+                          kg
+                        </span>
+                      </div>
+                    </Field>
+                    {weightInvalid && (
+                      <p role="alert" className="mt-2 text-[14px] font-medium text-danger">
+                        Bobot tidak wajar. Isi angka antara 0 dan {MAX_WEIGHT_KG} kg.
+                      </p>
+                    )}
+                  </Card>
 
-                  <div>
-                    <p className="mb-1.5 text-sm font-medium text-ink">
-                      Kondisi tubuh (BCS)
-                    </p>
+                  <Card className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[15px] font-semibold text-ink">Kondisi tubuh (opsional)</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowBcsHelp(true)}
+                        className="min-h-11 text-[15px] font-medium text-primary active:opacity-60"
+                      >
+                        Apa artinya?
+                      </button>
+                    </div>
                     <Segmented
-                      label="Kondisi tubuh (BCS)"
+                      label="Kondisi tubuh 1 sampai 5"
                       allowClear
                       value={form.bcsScore}
                       onChange={(value) => setForm({ ...form, bcsScore: value })}
@@ -505,89 +467,272 @@ export default function RecordingPage() {
                         { value: '5', label: '5', hint: 'Gemuk' },
                       ]}
                     />
-                  </div>
+                    {form.bcsScore && (
+                      <p className="text-[14px] text-ink-muted">
+                        {bcsLabel(Number(form.bcsScore))}: {BCS_GUIDE[Number(form.bcsScore) - 1]?.hint}
+                      </p>
+                    )}
+                  </Card>
 
-                  <div>
-                    <p className="mb-1.5 text-sm font-medium text-ink">Kesehatan</p>
+                  <Card className="space-y-3">
+                    <p className="text-[15px] font-semibold text-ink">Kesehatan (opsional)</p>
                     <Segmented
                       label="Kesehatan"
                       allowClear
                       value={form.healthStatus}
                       onChange={(value) => setForm({ ...form, healthStatus: value })}
                       options={[
-                        { value: 'HEALTHY', label: labelStatusKesehatan('HEALTHY') },
-                        { value: 'SICK', label: labelStatusKesehatan('SICK') },
-                        { value: 'RECOVERING', label: labelStatusKesehatan('RECOVERING') },
+                        { value: 'HEALTHY', label: 'Sehat' },
+                        { value: 'SICK', label: 'Sakit' },
+                        { value: 'RECOVERING', label: 'Pulih' },
                       ]}
                     />
-                  </div>
+                    {form.healthStatus === 'SICK' && (
+                      <div className="space-y-3 pt-1">
+                        <Input
+                          placeholder="Keluhan atau penyakit (opsional)"
+                          value={form.diseaseName}
+                          onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Tindakan (opsional)"
+                          value={form.treatment}
+                          onChange={(e) => setForm({ ...form, treatment: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Obat (opsional)"
+                          value={form.medicine}
+                          onChange={(e) => setForm({ ...form, medicine: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </Card>
+
+                  <Card>
+                    <Field label="Catatan (opsional)">
+                      <Input
+                        placeholder="Misalnya: nafsu makan baik"
+                        value={form.note}
+                        onChange={(e) => setForm({ ...form, note: e.target.value })}
+                      />
+                    </Field>
+                  </Card>
+                </>
+              ) : (
+                <>
+                  <ListGroup header="Kejadian apa?">
+                    {EVENTS.map((event) => {
+                      const selected = eventType === event.key;
+                      return (
+                        <ListRow
+                          key={event.key}
+                          leading={
+                            <RowIcon icon={event.icon} tone={event.danger ? 'danger' : 'default'} />
+                          }
+                          leadingSize="icon"
+                          title={
+                            <>
+                              {event.label}
+                              {selected && <span className="sr-only"> (dipilih)</span>}
+                            </>
+                          }
+                          subtitle={event.hint}
+                          tone={event.danger ? 'danger' : 'default'}
+                          chevron={false}
+                          trailing={
+                            selected ? (
+                              <Check size={20} className="text-primary" aria-hidden="true" />
+                            ) : undefined
+                          }
+                          onClick={() => setEventType(event.key)}
+                        />
+                      );
+                    })}
+                  </ListGroup>
+
+                  {(eventType === 'DEAD' || eventType === 'SOLD') && (
+                    <p className="rounded-[var(--radius-control)] border border-[color:var(--warning-border)] bg-warning-soft px-4 py-3 text-[14px] text-warning">
+                      {eventType === 'DEAD'
+                        ? 'Ternak akan ditandai mati dan keluar dari daftar ternak aktif.'
+                        : 'Ternak akan ditandai terjual dan keluar dari daftar ternak aktif.'}
+                    </p>
+                  )}
+
+                  {eventType && (
+                    <Card className="space-y-3">
+                      {eventType === 'SICK' && (
+                        <>
+                          <Input
+                            placeholder="Keluhan atau penyakit (opsional)"
+                            value={form.diseaseName}
+                            onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
+                          />
+                          <Input
+                            placeholder="Tindakan (opsional)"
+                            value={form.treatment}
+                            onChange={(e) => setForm({ ...form, treatment: e.target.value })}
+                          />
+                          <Input
+                            placeholder="Obat (opsional)"
+                            value={form.medicine}
+                            onChange={(e) => setForm({ ...form, medicine: e.target.value })}
+                          />
+                        </>
+                      )}
+                      {isReproductionEvent && (
+                        <Input
+                          placeholder="Pejantan atau pasangan (opsional)"
+                          value={form.diseaseName}
+                          onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
+                        />
+                      )}
+                      <Input
+                        placeholder={
+                          eventType === 'DEAD'
+                            ? 'Sebab mati atau catatan singkat'
+                            : eventType === 'SOLD'
+                              ? 'Keterangan penjualan'
+                              : 'Catatan singkat (opsional)'
+                        }
+                        value={form.note}
+                        onChange={(e) => setForm({ ...form, note: e.target.value })}
+                      />
+                    </Card>
+                  )}
                 </>
               )}
 
-              {(isSickEvent || isReproductionEvent || isStatusEvent) && (
-                <Input
-                  placeholder={
-                    eventType === 'MATED'
-                      ? 'Pejantan / pasangan (opsional)'
-                      : eventType === 'DEAD' || eventType === 'SOLD'
-                        ? 'Label tambahan (opsional)'
-                        : 'Penyakit / keluhan (opsional)'
-                  }
-                  value={form.diseaseName}
-                  onChange={(e) => setForm({ ...form, diseaseName: e.target.value })}
-                />
-              )}
-
-              {isSickEvent && (
-                <div className="grid gap-3 md:grid-cols-2">
+              <details className="rounded-[var(--radius-card)] border border-line bg-surface px-4 shadow-[var(--shadow-soft)]">
+                <summary className="flex min-h-[52px] cursor-pointer items-center justify-between text-[15px] text-ink">
+                  <span>Tanggal</span>
+                  <span className="text-ink-muted">
+                    {form.recordDate === todayLocal() ? 'Hari ini' : formatDayLong(form.recordDate)}
+                  </span>
+                </summary>
+                <div className="pb-4">
                   <Input
-                    placeholder="Tindakan (opsional)"
-                    value={form.treatment}
-                    onChange={(e) => setForm({ ...form, treatment: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Obat (opsional)"
-                    value={form.medicine}
-                    onChange={(e) => setForm({ ...form, medicine: e.target.value })}
+                    type="date"
+                    aria-label="Tanggal catatan"
+                    max={todayLocal()}
+                    value={form.recordDate}
+                    onChange={(e) =>
+                      setForm({ ...form, recordDate: e.target.value || todayLocal() })
+                    }
                   />
                 </div>
+              </details>
+            </div>
+          )}
+
+          {/* ===== Langkah 3: periksa ===== */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <ListGroup footer="Periksa sekali lagi. Ketuk Ubah di kiri atas bila ada yang salah.">
+                {summaryRows.map(([label, value]) => (
+                  <ListRow key={label} title={label} value={value} />
+                ))}
+              </ListGroup>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-[var(--radius-control)] border border-[color:var(--danger-border)] bg-danger-soft px-4 py-3 text-[15px] font-medium text-danger"
+                >
+                  {error}
+                </div>
               )}
-
-              <Input
-                placeholder={
-                  !isEventMode
-                    ? 'Catatan singkat (opsional)'
-                    : eventType === 'DEAD'
-                      ? 'Sebab mati / catatan singkat'
-                      : eventType === 'SOLD'
-                        ? 'Keterangan penjualan'
-                        : 'Catatan singkat'
-                }
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-              />
             </div>
-          </Card>
+          )}
 
-          {/* Tombol simpan: menempel di atas bottom nav pada mobile */}
-          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/90 px-4 py-3 backdrop-blur md:static md:mt-5 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-            <div className="mx-auto flex max-w-7xl gap-2">
-              <Button
-                size="lg"
-                className="flex-1 md:flex-none md:min-w-64"
-                onClick={isEventMode ? handleEventSubmit : handleSubmit}
-                disabled={saving || !form.sheepId}
-              >
-                {submitLabel}
-              </Button>
-            </div>
-            {!form.sheepId && (
-              <p className="mt-1.5 text-center text-xs text-ink-muted md:text-left">
-                Pilih ternak dulu untuk menyimpan.
-              </p>
-            )}
-          </div>
+          {/* ===== Selesai ===== */}
+          {step === 'done' && (
+            <Card className="flex flex-col items-center gap-3 py-8 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
+                <CircleCheck size={30} aria-hidden="true" />
+              </span>
+              <h2 role="status" className="text-[20px] font-bold tracking-tight text-ink">
+                {savedTitle}
+              </h2>
+              {selectedSheep && (
+                <p className="text-[15px] text-ink-muted">{sheepTitle(selectedSheep)}</p>
+              )}
+              <div className="mt-2 grid w-full gap-2">
+                <Button size="lg" onClick={resetForNext}>
+                  Catat ternak lain
+                </Button>
+                {selectedSheep && (
+                  <Link
+                    href={`/sheep/${selectedSheep.id}`}
+                    className={buttonClassName({ variant: 'tinted', size: 'lg' })}
+                  >
+                    Lihat perkembangan
+                  </Link>
+                )}
+              </div>
+            </Card>
+          )}
         </div>
+
+        {/* Tombol lanjut/simpan menempel di atas bilah tab pada mobile */}
+        {(step === 2 || step === 3) && (
+          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/90 px-4 py-3 backdrop-blur-xl md:static md:mt-5 md:max-w-xl md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+            <div className="mx-auto max-w-xl md:mx-0">
+              {step === 2 ? (
+                <>
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    disabled={!canContinue}
+                    onClick={() => setStep(3)}
+                  >
+                    Lanjut
+                  </Button>
+                  {!canContinue && (
+                    <p className="mt-1.5 text-center text-[13px] text-ink-muted md:text-left">
+                      {mode === 'ROUTINE'
+                        ? 'Isi salah satu: bobot, kondisi tubuh, atau kesehatan.'
+                        : 'Pilih jenis kejadian dulu.'}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <Button size="lg" className="w-full" disabled={saving} onClick={handleSave}>
+                  {saving
+                    ? 'Menyimpan...'
+                    : mode === 'EVENT'
+                      ? (eventConfig?.submitLabel ?? 'Simpan kejadian')
+                      : 'Simpan catatan'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <Sheet
+          open={showBcsHelp}
+          onClose={() => setShowBcsHelp(false)}
+          title="Menilai kondisi tubuh"
+        >
+          <p className="mb-3 text-[15px] text-ink-muted">
+            Raba punggung dan tulang rusuk ternak, lalu pilih skor yang paling mirip.
+          </p>
+          <ul className="space-y-2">
+            {BCS_GUIDE.map((item) => (
+              <li key={item.score} className="flex gap-3 rounded-[var(--radius-control)] bg-tint p-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-[17px] font-bold text-primary-strong">
+                  {item.score}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[16px] font-semibold text-ink">{item.label}</span>
+                  <span className="block text-[14px] leading-snug text-ink-muted">{item.hint}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Button size="lg" className="mt-4 w-full" onClick={() => setShowBcsHelp(false)}>
+            Mengerti
+          </Button>
+        </Sheet>
       </DashboardShell>
     </RoleGuard>
   );
