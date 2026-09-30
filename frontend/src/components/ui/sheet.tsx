@@ -29,15 +29,25 @@ export function Sheet({
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
 
+  // onClose sering berupa fungsi inline yang dibuat ulang tiap render (mis. saat mengetik).
+  // Dibaca lewat ref agar efek di bawah tidak berjalan ulang dan tidak merebut fokus dari kolom isian.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
+
+    // Pindahkan fokus ke lembar hanya saat baru terbuka, dan hanya bila fokus belum di dalamnya.
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', onKeyDown);
 
@@ -45,7 +55,7 @@ export function Sheet({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
