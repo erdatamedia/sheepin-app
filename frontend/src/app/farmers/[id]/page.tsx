@@ -7,9 +7,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, KeyRound, MapPin, Navigation, PencilLine, PawPrint, Phone } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonClassName } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
+import { BackLink } from '@/components/ui/back-link';
+import { Field } from '@/components/ui/field';
+import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
+import { Sheet } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,15 +39,6 @@ import {
 type FarmerDetail = FarmerDetailResponse['data'];
 type FarmerSheepItem = FarmerSheepResponse['data']['sheep'][number];
 type FarmerSummary = FarmerSummaryResponse['data']['summary'];
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
-      {children}
-    </label>
-  );
-}
 
 export default function FarmerDetailPage() {
   const params = useParams();
@@ -107,10 +102,7 @@ export default function FarmerDetailPage() {
     } catch (error) {
       console.error('Gagal memuat detail peternak:', error);
 
-      const message = getApiErrorMessage(
-        error,
-        'Terjadi kesalahan saat memuat detail peternak.',
-      );
+      const message = getApiErrorMessage(error, 'Terjadi kesalahan saat memuat detail peternak.');
 
       if (axios.isAxiosError(error) && error.response?.status === 403) {
         setErrorMessage('Anda tidak memiliki akses ke halaman detail peternak.');
@@ -133,9 +125,7 @@ export default function FarmerDetailPage() {
   const totalEvaluated = useMemo(() => {
     if (!summary) return 0;
     return (
-      (summary.eligibleBreeding || 0) +
-      (summary.monitoring || 0) +
-      (summary.notRecommended || 0)
+      (summary.eligibleBreeding || 0) + (summary.monitoring || 0) + (summary.notRecommended || 0)
     );
   }, [summary]);
 
@@ -217,7 +207,10 @@ export default function FarmerDetailPage() {
   if (errorMessage || !farmer || !summary) {
     return shell(
       <>
-        <Link href="/farmers" className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-ink-muted">
+        <Link
+          href="/farmers"
+          className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-ink-muted"
+        >
           <ArrowLeft size={16} aria-hidden="true" />
           Kembali ke data peternak
         </Link>
@@ -234,197 +227,145 @@ export default function FarmerDetailPage() {
 
   return shell(
     <>
-      <div className="mb-5">
-        <Link
-          href="/map"
-          className="mb-2 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink-muted transition hover:text-ink"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          Kembali ke peta sebaran
-        </Link>
+      <BackLink href="/farmers" label="Peternak" />
 
-        <h1 className="text-2xl font-bold text-ink">{farmer.name}</h1>
-        <p className="mt-1 text-sm text-ink-muted">{region || 'Wilayah belum diisi'}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {farmer.hasPin ? (
-            <Badge variant={farmer.mustChangePin ? 'warning' : 'success'}>
-              {farmer.mustChangePin ? 'PIN sementara' : 'PIN aktif'}
+      <div className="mb-5 flex items-center gap-4">
+        <Avatar name={farmer.name} size="xl" />
+        <div className="min-w-0">
+          <h1 className="truncate text-[28px] font-bold leading-tight tracking-tight text-ink">
+            {farmer.name}
+          </h1>
+          <p className="truncate text-[15px] text-ink-muted">{region || 'Wilayah belum diisi'}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {farmer.hasPin ? (
+              <Badge variant={farmer.mustChangePin ? 'warning' : 'success'}>
+                {farmer.mustChangePin ? 'PIN sementara' : 'PIN aktif'}
+              </Badge>
+            ) : (
+              <Badge variant="danger">Belum ada PIN</Badge>
+            )}
+            <Badge variant={farmer.isActive ? 'success' : 'danger'}>
+              {farmer.isActive ? 'Aktif' : 'Tidak aktif'}
             </Badge>
-          ) : (
-            <Badge variant="danger">Belum ada PIN</Badge>
-          )}
-          <Badge variant={farmer.isActive ? 'success' : 'danger'}>
-            {farmer.isActive ? 'Aktif' : 'Tidak aktif'}
-          </Badge>
-          <Badge variant="default">{labelSumberLokasi(farmer.locationSource)}</Badge>
+          </div>
         </div>
       </div>
 
-      <div className="mb-5 grid gap-2 sm:grid-cols-3">
-        <Button variant={farmer.hasPin ? 'outline' : 'solid'} disabled={resetting} onClick={handleResetPin}>
-          <KeyRound size={18} aria-hidden="true" />
-          {farmer.hasPin ? 'Reset PIN' : 'Buat PIN'}
-        </Button>
-        {farmer.phone && (
-          <a href={`tel:${farmer.phone}`} className={buttonClassName({ className: 'w-full' })}>
-            <Phone size={18} aria-hidden="true" />
-            Hubungi
-          </a>
-        )}
-        {hasPoint && (
-          <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${farmer.latitude},${farmer.longitude}`}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClassName({ variant: 'outline', className: 'w-full' })}
-          >
-            <Navigation size={18} aria-hidden="true" />
-            Buka Rute
-          </a>
-        )}
-        {hasPoint && (
-          <a
-            href={`https://www.google.com/maps?q=${farmer.latitude},${farmer.longitude}`}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClassName({ variant: 'outline', className: 'w-full' })}
-          >
-            <MapPin size={18} aria-hidden="true" />
-            Lihat Titik
-          </a>
-        )}
-      </div>
-
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3">
         <StatTile label="Total ternak" value={summary.totalSheep} />
         <StatTile label="Ternak aktif" value={summary.activeSheep} />
-        <StatTile label="Kelompok" value={<span className="text-lg">{farmer.groupName || '-'}</span>} />
-        <StatTile label="No. HP" value={<span className="text-lg">{farmer.phone || '-'}</span>} />
       </div>
 
-      <div className="mb-5 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <div className="mb-3 flex items-center gap-2">
-            <MapPin size={18} className="text-primary" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-ink">Informasi lokasi</h2>
-          </div>
+      <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-6">
+          <ListGroup header="Tindakan">
+            <ListRow
+              leading={<RowIcon icon={KeyRound} />}
+              leadingSize="icon"
+              title={farmer.hasPin ? 'Reset PIN' : 'Buat PIN'}
+              subtitle={
+                farmer.hasPin ? 'PIN sementara baru, sesi lama keluar' : 'PIN sementara untuk masuk'
+              }
+              chevron={false}
+              onClick={resetting ? undefined : handleResetPin}
+            />
+            {farmer.phone && (
+              <ListRow
+                leading={<RowIcon icon={Phone} />}
+                leadingSize="icon"
+                title="Hubungi"
+                value={farmer.phone}
+                href={`tel:${farmer.phone}`}
+              />
+            )}
+            {hasPoint && (
+              <ListRow
+                leading={<RowIcon icon={Navigation} />}
+                leadingSize="icon"
+                title="Buka rute"
+                subtitle="Google Maps"
+                href={`https://www.google.com/maps/dir/?api=1&destination=${farmer.latitude},${farmer.longitude}`}
+              />
+            )}
+            {hasPoint && (
+              <ListRow
+                leading={<RowIcon icon={MapPin} />}
+                leadingSize="icon"
+                title="Lihat titik lokasi"
+                href={`https://www.google.com/maps?q=${farmer.latitude},${farmer.longitude}`}
+              />
+            )}
+            <ListRow
+              leading={<RowIcon icon={PencilLine} />}
+              leadingSize="icon"
+              title="Ubah data peternak"
+              onClick={() => setShowEdit(true)}
+            />
+          </ListGroup>
 
-          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            {[
-              ['Provinsi', farmer.province || '-'],
-              ['Kabupaten', farmer.regency || '-'],
-              ['Kecamatan', farmer.district || '-'],
-              ['Desa', farmer.village || '-'],
-              ['Latitude', farmer.latitude ?? '-'],
-              ['Longitude', farmer.longitude ?? '-'],
-              [
-                'Update lokasi',
+          <ListGroup header="Informasi">
+            <ListRow title="Nomor HP" value={farmer.phone || '-'} />
+            <ListRow title="Kelompok" value={farmer.groupName || '-'} />
+            <ListRow title="Provinsi" value={farmer.province || '-'} />
+            <ListRow title="Kabupaten" value={farmer.regency || '-'} />
+            <ListRow title="Kecamatan" value={farmer.district || '-'} />
+            <ListRow title="Desa" value={farmer.village || '-'} />
+            <ListRow title="Alamat" value={farmer.addressDetail || farmer.address || '-'} />
+            <ListRow title="Sumber lokasi" value={labelSumberLokasi(farmer.locationSource)} />
+            <ListRow
+              title="Koordinat"
+              value={hasPoint ? `${farmer.latitude}, ${farmer.longitude}` : '-'}
+            />
+            <ListRow
+              title="Lokasi diperbarui"
+              value={
                 farmer.locationUpdatedAt
                   ? new Date(farmer.locationUpdatedAt).toLocaleString('id-ID')
-                  : '-',
-              ],
-            ].map(([label, value]) => (
-              <div key={label} className="flex gap-3">
-                <dt className="w-28 shrink-0 text-ink-muted">{label}</dt>
-                <dd className="min-w-0 break-words font-medium text-ink">{value}</dd>
-              </div>
-            ))}
-            <div className="flex gap-3 sm:col-span-2">
-              <dt className="w-28 shrink-0 text-ink-muted">Alamat</dt>
-              <dd className="min-w-0 break-words font-medium text-ink">
-                {farmer.addressDetail || farmer.address || '-'}
-              </dd>
-            </div>
-          </dl>
-        </Card>
+                  : '-'
+              }
+            />
+          </ListGroup>
 
-        <Card>
-          <h2 className="mb-3 text-lg font-semibold text-ink">Ringkasan evaluasi</h2>
-          <dl className="space-y-3 text-sm">
-            {[
-              ['Total dievaluasi', totalEvaluated],
-              ['Layak bibit', summary.eligibleBreeding],
-              ['Perlu dipantau', summary.monitoring],
-              ['Belum direkomendasikan', summary.notRecommended],
-              ['Persentase layak bibit', `${eligiblePercent}%`],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between gap-3">
-                <dt className="text-ink-muted">{label}</dt>
-                <dd className="font-semibold text-ink">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-      </div>
-
-      <Card className="mb-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Ubah data peternak</h2>
-            <p className="text-sm text-ink-muted">Perbarui identitas dan alamat</p>
-          </div>
-          <Button
-            variant="outline"
-            aria-expanded={showEdit}
-            onClick={() => setShowEdit((value) => !value)}
-          >
-            <PencilLine size={18} aria-hidden="true" />
-            {showEdit ? 'Tutup' : 'Ubah'}
-          </Button>
+          <ListGroup header="Evaluasi bibit">
+            <ListRow title="Total dievaluasi" value={totalEvaluated} />
+            <ListRow title="Layak bibit" value={summary.eligibleBreeding} />
+            <ListRow title="Perlu dipantau" value={summary.monitoring} />
+            <ListRow title="Belum direkomendasikan" value={summary.notRecommended} />
+            <ListRow title="Persentase layak bibit" value={`${eligiblePercent}%`} />
+          </ListGroup>
         </div>
 
-        {showEdit && (
-          <div className="mt-5 space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Nama">
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </Field>
-              <Field label="No. HP">
-                <Input type="tel" inputMode="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              </Field>
-              <Field label="Alamat">
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-              </Field>
-              <Field label="Kelompok">
-                <Input value={form.groupName} onChange={(e) => setForm({ ...form, groupName: e.target.value })} />
-              </Field>
-              <Field label="Provinsi">
-                <Input value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} />
-              </Field>
-              <Field label="Kabupaten">
-                <Input value={form.regency} onChange={(e) => setForm({ ...form, regency: e.target.value })} />
-              </Field>
-              <Field label="Kecamatan">
-                <Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
-              </Field>
-              <Field label="Desa">
-                <Input value={form.village} onChange={(e) => setForm({ ...form, village: e.target.value })} />
-              </Field>
-              <Field label="Alamat detail">
-                <Input value={form.addressDetail} onChange={(e) => setForm({ ...form, addressDetail: e.target.value })} />
-              </Field>
-              <Field label="Status">
-                <Select
-                  value={String(form.isActive)}
-                  onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
-                >
-                  <option value="true">Aktif</option>
-                  <option value="false">Tidak aktif</option>
-                </Select>
-              </Field>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button size="lg" onClick={handleSave} disabled={saving}>
-                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </Button>
-              <Button size="lg" variant="dangerOutline" onClick={handleDelete} disabled={saving}>
-                Hapus Peternak
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
+        <ListGroup header={`Ternak milik peternak (${sheep.length})`}>
+          {sheep.length === 0 ? (
+            <li className="px-4 py-8 text-center">
+              <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary-strong">
+                <PawPrint size={22} aria-hidden="true" />
+              </span>
+              <p className="text-[17px] font-semibold text-ink">Belum ada ternak</p>
+              <p className="mt-1 text-[15px] text-ink-muted">
+                Ternak akan tampil di sini setelah ditambahkan untuk peternak ini.
+              </p>
+            </li>
+          ) : (
+            sheep.map((item) => (
+              <ListRow
+                key={item.id}
+                href={`/sheep/${item.id}`}
+                leading={<Avatar name={item.name || item.sheepCode} size="md" />}
+                title={item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode}
+                subtitle={[item.breed, labelJenisKelamin(item.gender), item.location]
+                  .filter(Boolean)
+                  .join(' · ')}
+                trailing={
+                  <Badge variant={item.status === 'ACTIVE' ? 'success' : 'default'}>
+                    {labelStatusTernak(item.status)}
+                  </Badge>
+                }
+              />
+            ))
+          )}
+        </ListGroup>
+      </div>
 
       {tempPin && (
         <TempPinDialog
@@ -435,69 +376,81 @@ export default function FarmerDetailPage() {
         />
       )}
 
-      <Card>
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Ternak milik peternak</h2>
-            <p className="text-sm text-ink-muted">Ternak yang terhubung dengan peternak ini</p>
+      <Sheet open={showEdit} onClose={() => setShowEdit(false)} title="Ubah data peternak">
+        <div className="space-y-4">
+          <Field label="Nama">
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label="No. HP">
+            <Input
+              type="tel"
+              inputMode="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
+          </Field>
+          <Field label="Alamat">
+            <Input
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+          </Field>
+          <Field label="Kelompok">
+            <Input
+              value={form.groupName}
+              onChange={(e) => setForm({ ...form, groupName: e.target.value })}
+            />
+          </Field>
+          <Field label="Provinsi">
+            <Input
+              value={form.province}
+              onChange={(e) => setForm({ ...form, province: e.target.value })}
+            />
+          </Field>
+          <Field label="Kabupaten">
+            <Input
+              value={form.regency}
+              onChange={(e) => setForm({ ...form, regency: e.target.value })}
+            />
+          </Field>
+          <Field label="Kecamatan">
+            <Input
+              value={form.district}
+              onChange={(e) => setForm({ ...form, district: e.target.value })}
+            />
+          </Field>
+          <Field label="Desa">
+            <Input
+              value={form.village}
+              onChange={(e) => setForm({ ...form, village: e.target.value })}
+            />
+          </Field>
+          <Field label="Alamat detail">
+            <Input
+              value={form.addressDetail}
+              onChange={(e) => setForm({ ...form, addressDetail: e.target.value })}
+            />
+          </Field>
+          <Field label="Status">
+            <Select
+              value={String(form.isActive)}
+              onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
+            >
+              <option value="true">Aktif</option>
+              <option value="false">Tidak aktif</option>
+            </Select>
+          </Field>
+
+          <div className="flex flex-col gap-2 pt-1">
+            <Button size="lg" onClick={handleSave} disabled={saving}>
+              {saving ? 'Menyimpan...' : 'Simpan perubahan'}
+            </Button>
+            <Button size="lg" variant="dangerOutline" onClick={handleDelete} disabled={saving}>
+              Hapus peternak
+            </Button>
           </div>
-          <Badge variant="info">Total: {sheep.length}</Badge>
         </div>
-
-        {sheep.length === 0 ? (
-          <EmptyState
-            className="border-0 py-6 shadow-none"
-            icon={PawPrint}
-            title="Belum ada ternak"
-            description="Ternak akan tampil di sini setelah ditambahkan untuk peternak ini."
-          />
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {sheep.map((item) => (
-              <Link
-                key={item.id}
-                href={`/sheep/${item.id}`}
-                className="block rounded-2xl border border-line p-3 transition active:bg-primary-soft/40 sm:p-4"
-              >
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-lg font-semibold text-ink">{item.sheepCode}</h3>
-                    <p className="truncate text-sm text-ink-muted">{item.name || 'Tanpa nama'}</p>
-                  </div>
-                  <Badge variant={item.status === 'ACTIVE' ? 'success' : 'default'}>
-                    {labelStatusTernak(item.status)}
-                  </Badge>
-                </div>
-
-                <p className="text-sm text-ink/80">
-                  {item.breed} · {labelJenisKelamin(item.gender)}
-                  {item.color ? ` · ${item.color}` : ''}
-                </p>
-                <p className="text-sm text-ink-muted">{item.location || '-'}</p>
-
-                <div className="mt-3 grid grid-cols-4 gap-1.5 text-center text-xs text-ink-muted">
-                  <div className="rounded-lg bg-primary-soft/50 px-1 py-1.5">
-                    Bobot
-                    <p className="text-sm font-semibold text-ink">{item._count.weights}</p>
-                  </div>
-                  <div className="rounded-lg bg-primary-soft/50 px-1 py-1.5">
-                    BCS
-                    <p className="text-sm font-semibold text-ink">{item._count.bcsRecords}</p>
-                  </div>
-                  <div className="rounded-lg bg-primary-soft/50 px-1 py-1.5">
-                    Sehat
-                    <p className="text-sm font-semibold text-ink">{item._count.healthRecords}</p>
-                  </div>
-                  <div className="rounded-lg bg-primary-soft/50 px-1 py-1.5">
-                    Repro
-                    <p className="text-sm font-semibold text-ink">{item._count.reproductions}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </Card>
+      </Sheet>
     </>,
   );
 }

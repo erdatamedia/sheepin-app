@@ -1,21 +1,31 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { History, RefreshCw, Search } from 'lucide-react';
+import {
+  Baby,
+  CircleX,
+  Gauge,
+  HeartPulse,
+  History,
+  RefreshCw,
+  Scale,
+  Search,
+  type LucideIcon,
+} from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ListGroup, ListRow } from '@/components/ui/list-group';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/stat-tile';
 import { getMe, type MeResponse } from '@/lib/me';
 import { getRecordingHistory, type RecordingHistoryResponse } from '@/lib/recording';
-import { labelJenisCatatan, labelPeran } from '@/lib/labels';
+import { labelStatusKesehatan } from '@/lib/labels';
+import { daysSince, formatDayLong } from '@/lib/format';
 import { cn, todayLocal } from '@/lib/utils';
 
 type HistoryItem = RecordingHistoryResponse['data'][number];
@@ -113,15 +123,55 @@ export default function HistoryPage() {
 
   const isFarmer = me?.role === 'FARMER';
 
+  const typeIcon: Record<string, LucideIcon> = {
+    WEIGHT: Scale,
+    BCS: Gauge,
+    HEALTH: HeartPulse,
+    REPRODUCTION: Baby,
+    STATUS: CircleX,
+  };
+
+  const toneClass = {
+    info: 'bg-primary-soft text-primary-strong',
+    warning: 'bg-warning-soft text-warning',
+    success: 'bg-success-soft text-success',
+    danger: 'bg-danger-soft text-danger',
+    default: 'bg-tint text-ink-soft',
+  } as const;
+
+  const rowTitle = (item: HistoryItem) =>
+    item.type === 'HEALTH' && ['SICK', 'HEALTHY', 'RECOVERING'].includes(item.title)
+      ? labelStatusKesehatan(item.title)
+      : item.title;
+
+  // Kelompokkan per hari; urutan dari server dipertahankan (terbaru di atas).
+  const dayGroups = useMemo(() => {
+    const groups: Array<{ key: string; items: HistoryItem[] }> = [];
+    for (const item of filteredItems) {
+      const key = item.recordDate.slice(0, 10);
+      const last = groups[groups.length - 1];
+      if (last && last.key === key) last.items.push(item);
+      else groups.push({ key, items: [item] });
+    }
+    return groups;
+  }, [filteredItems]);
+
+  const dayHeading = (key: string) => {
+    const days = daysSince(key);
+    if (days === 0) return 'Hari ini';
+    if (days === 1) return 'Kemarin';
+    return formatDayLong(key);
+  };
+
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
         <PageHeader
-          title="Riwayat Rekording"
+          title="Riwayat"
           description={
             isFarmer
-              ? 'Kejadian lapangan yang baru dicatat dan yang perlu tindak lanjut'
-              : 'Riwayat bobot, BCS, kesehatan, reproduksi, dan status ternak'
+              ? 'Catatan terbaru dan yang perlu ditindaklanjuti'
+              : 'Bobot, kondisi, kesehatan, dan kejadian semua ternak'
           }
         />
 
@@ -147,10 +197,8 @@ export default function HistoryPage() {
                   aria-checked={active}
                   onClick={() => setQuickFilter(item.key)}
                   className={cn(
-                    'min-h-11 shrink-0 rounded-full border px-4 text-sm font-semibold transition',
-                    active
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-line bg-surface text-ink hover:border-primary/40',
+                    'min-h-9 shrink-0 rounded-full px-3.5 text-[14px] font-semibold transition',
+                    active ? 'bg-primary text-white' : 'bg-tint text-ink-soft active:brightness-95',
                   )}
                 >
                   {item.label}
@@ -173,18 +221,12 @@ export default function HistoryPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
-          {!loading && !failed && (
-            <p className="text-sm text-ink-muted">
-              Menampilkan {filteredItems.length} dari {items.length} catatan
-            </p>
-          )}
         </div>
 
         {loading ? (
           <div className="space-y-3" aria-busy="true" aria-label="Memuat riwayat">
             {[0, 1, 2].map((key) => (
-              <Skeleton key={key} className="h-28 rounded-[var(--radius-card)]" />
+              <Skeleton key={key} className="h-16 rounded-[var(--radius-card)]" />
             ))}
           </div>
         ) : failed ? (
@@ -193,7 +235,7 @@ export default function HistoryPage() {
             description="Periksa sambungan internet Anda lalu coba lagi."
             action={
               <Button
-                variant="outline"
+                variant="tinted"
                 onClick={() => {
                   setLoading(true);
                   void load();
@@ -210,76 +252,59 @@ export default function HistoryPage() {
             title={items.length === 0 ? 'Belum ada riwayat' : 'Tidak ada catatan yang cocok'}
             description={
               items.length === 0
-                ? 'Catatan akan muncul di sini setelah Anda mulai rekording.'
+                ? 'Catatan akan muncul di sini setelah Anda mulai mencatat.'
                 : 'Coba ganti filter atau kata kunci pencarian.'
             }
             action={
               items.length > 0 && quickFilter !== 'ALL' ? (
-                <Button variant="outline" onClick={() => setQuickFilter('ALL')}>
+                <Button variant="tinted" onClick={() => setQuickFilter('ALL')}>
                   Tampilkan semua
                 </Button>
               ) : undefined
             }
           />
         ) : (
-          <div className="space-y-3">
-            {filteredItems.map((item) => (
-              <Card
-                key={`${item.type}-${item.id}`}
-                className={cn(
-                  item.type === 'STATUS' && 'border-[color:var(--danger-border)]',
-                  item.type === 'HEALTH' &&
-                    item.title === 'SICK' &&
-                    'border-[color:var(--warning-border)]',
-                )}
-              >
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <Badge variant={getTypeVariant(item.type)}>{labelJenisCatatan(item.type)}</Badge>
-                  <p className="text-sm text-ink-muted">
-                    {new Date(item.recordDate).toLocaleString('id-ID')}
-                  </p>
-                </div>
-
-                <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
-                <p className="mt-1 text-sm text-ink/80">{item.description}</p>
-
-                {isFarmer && isFollowUp(item) && (
-                  <div className="mt-3">
-                    {item.type === 'STATUS' ? (
-                      <Badge variant="danger">Ternak sudah keluar dari ternak aktif</Badge>
-                    ) : item.type === 'HEALTH' ? (
-                      <Badge variant="warning">Perlu cek kesehatan lanjutan</Badge>
-                    ) : (
-                      <Badge variant="warning">Perlu tindak lanjut reproduksi</Badge>
-                    )}
-                  </div>
-                )}
-
-                <dl className="mt-3 space-y-1 text-sm">
-                  <div className="flex gap-2">
-                    <dt className="w-24 shrink-0 text-ink-muted">Ternak</dt>
-                    <dd className="min-w-0">
-                      <Link
-                        href={`/sheep/${item.sheep.id}`}
-                        className="inline-flex min-h-8 items-center font-semibold text-primary underline underline-offset-4"
-                      >
-                        {item.sheep.sheepCode}
-                      </Link>
-                      {item.sheep.name ? ` - ${item.sheep.name}` : ''}
-                    </dd>
-                  </div>
-                  <div className="flex gap-2">
-                    <dt className="w-24 shrink-0 text-ink-muted">Pemilik</dt>
-                    <dd className="min-w-0">{item.sheep.ownerUser?.name || '-'}</dd>
-                  </div>
-                  <div className="flex gap-2">
-                    <dt className="w-24 shrink-0 text-ink-muted">Dicatat oleh</dt>
-                    <dd className="min-w-0">
-                      {item.createdBy.name} ({labelPeran(item.createdBy.role)})
-                    </dd>
-                  </div>
-                </dl>
-              </Card>
+          <div className="space-y-5 lg:max-w-3xl">
+            {dayGroups.map((group) => (
+              <ListGroup key={group.key} header={dayHeading(group.key)}>
+                {group.items.map((item) => {
+                  const Icon = typeIcon[item.type] ?? Scale;
+                  const tone = getTypeVariant(item.type) as keyof typeof toneClass;
+                  return (
+                    <ListRow
+                      key={`${item.type}-${item.id}`}
+                      href={`/sheep/${item.sheep.id}`}
+                      leadingSize="circle"
+                      leading={
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'flex h-9 w-9 items-center justify-center rounded-full',
+                            toneClass[tone] ?? toneClass.default,
+                          )}
+                        >
+                          <Icon size={18} />
+                        </span>
+                      }
+                      title={rowTitle(item)}
+                      subtitle={[
+                        `${item.sheep.sheepCode}${item.sheep.name ? ` - ${item.sheep.name}` : ''}`,
+                        item.description,
+                        !isFarmer && item.sheep.ownerUser?.name,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                      trailing={
+                        isFarmer && isFollowUp(item) ? (
+                          <Badge variant={item.type === 'STATUS' ? 'danger' : 'warning'}>
+                            Tindak lanjut
+                          </Badge>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
+              </ListGroup>
             ))}
           </div>
         )}

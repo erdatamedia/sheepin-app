@@ -15,9 +15,7 @@ type ListGroupProps = {
 export function ListGroup({ header, footer, children, className }: ListGroupProps) {
   return (
     <section className={className}>
-      {header && (
-        <h2 className="mb-1.5 px-4 text-[13px] font-medium text-ink-muted">{header}</h2>
-      )}
+      {header && <h2 className="mb-1.5 px-4 text-[13px] font-medium text-ink-muted">{header}</h2>}
       <ul className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
         {children}
       </ul>
@@ -27,7 +25,13 @@ export function ListGroup({ header, footer, children, className }: ListGroupProp
 }
 
 /** Ikon kotak membulat untuk leading ListRow (seperti daftar Pengaturan iOS). */
-export function RowIcon({ icon: Icon, tone = 'default' }: { icon: LucideIcon; tone?: 'default' | 'danger' }) {
+export function RowIcon({
+  icon: Icon,
+  tone = 'default',
+}: {
+  icon: LucideIcon;
+  tone?: 'default' | 'danger';
+}) {
   return (
     <span
       aria-hidden="true"
@@ -87,7 +91,11 @@ export function ListRow({
         <span
           className={cn(
             'block truncate text-[17px] leading-snug',
-            tone === 'danger' ? 'text-danger' : tone === 'accent' ? 'font-medium text-primary' : 'text-ink',
+            tone === 'danger'
+              ? 'text-danger'
+              : tone === 'accent'
+                ? 'font-medium text-primary'
+                : 'text-ink',
           )}
         >
           {title}
@@ -97,7 +105,9 @@ export function ListRow({
         )}
       </span>
       {value && (
-        <span className="max-w-[60%] shrink-0 break-words text-right text-[15px] text-ink-muted">{value}</span>
+        <span className="max-w-[60%] shrink-0 break-words text-right text-[15px] text-ink-muted">
+          {value}
+        </span>
       )}
       {trailing && <span className="flex shrink-0 items-center">{trailing}</span>}
       {showChevron && (
@@ -110,7 +120,16 @@ export function ListRow({
 
   return (
     <li className="group relative">
-      {href ? (
+      {href && /^(https?:|tel:|mailto:)/.test(href) ? (
+        <a
+          href={href}
+          target={href.startsWith('http') ? '_blank' : undefined}
+          rel="noreferrer"
+          className={classes}
+        >
+          {content}
+        </a>
+      ) : href ? (
         <Link href={href} className={classes}>
           {content}
         </Link>

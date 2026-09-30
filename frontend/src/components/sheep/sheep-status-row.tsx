@@ -3,10 +3,16 @@ import { Badge } from '@/components/ui/badge';
 import { ListRow } from '@/components/ui/list-group';
 import type { MySheepResponse } from '@/lib/me';
 import { formatDiff, formatKg, labelTimeAgo } from '@/lib/format';
-import { labelStatusKesehatan } from '@/lib/labels';
+import { labelStatusKesehatan, labelStatusTernak } from '@/lib/labels';
 import { cn } from '@/lib/utils';
 
 export type MySheepItem = MySheepResponse['data'][number];
+
+const exitVariant = {
+  SOLD: 'info',
+  DEAD: 'danger',
+  CULLED: 'warning',
+} as const;
 
 const healthVariant = {
   HEALTHY: 'success',
@@ -53,9 +59,15 @@ export function SheepStatusRow({ item }: { item: MySheepItem }) {
         </>
       }
       trailing={
-        <Badge variant={health ? healthVariant[health] : 'default'}>
-          {health ? labelStatusKesehatan(health) : 'Belum dicek'}
-        </Badge>
+        item.status !== 'ACTIVE' ? (
+          <Badge variant={exitVariant[item.status as keyof typeof exitVariant] ?? 'default'}>
+            {labelStatusTernak(item.status)}
+          </Badge>
+        ) : (
+          <Badge variant={health ? healthVariant[health] : 'default'}>
+            {health ? labelStatusKesehatan(health) : 'Belum dicek'}
+          </Badge>
+        )
       }
     />
   );
