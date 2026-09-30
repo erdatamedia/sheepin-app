@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
-import { Card } from '@/components/ui/card';
+import { AuthShell } from '@/components/auth/auth-shell';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
 
 type RegisterResult = {
   name: string;
@@ -15,23 +17,21 @@ type RegisterResult = {
   groupName?: string;
 };
 
+const emptyForm = { name: '', phone: '', address: '', groupName: '' };
+
 export default function RegisterFarmerPage() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
   const [result, setResult] = useState<RegisterResult | null>(null);
-
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    groupName: '',
-  });
+  const [copied, setCopied] = useState(false);
+  const [form, setForm] = useState(emptyForm);
 
   const handleRegister = async () => {
     try {
       setLoading(true);
       setServerError('');
       setResult(null);
+      setCopied(false);
 
       const response = await api.post('/auth/register-farmer', {
         name: form.name,
@@ -41,12 +41,7 @@ export default function RegisterFarmerPage() {
       });
 
       setResult(response.data.data);
-      setForm({
-        name: '',
-        phone: '',
-        address: '',
-        groupName: '',
-      });
+      setForm(emptyForm);
     } catch (error) {
       setServerError(getApiErrorMessage(error, 'Registrasi peternak gagal.'));
     } finally {
@@ -54,101 +49,117 @@ export default function RegisterFarmerPage() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4 py-8">
-      <Card className="w-full max-w-lg animate-[fadeInUp_.4s_ease-out]">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Daftar Peternak
-          </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Isi data singkat untuk mendapatkan ID peternak
-          </p>
-        </div>
+  const copyCode = async () => {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result.loginCode);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
 
+  return (
+    <AuthShell
+      title="Daftar Peternak"
+      description="Isi data singkat untuk mendapatkan ID peternak"
+    >
+      {result ? (
         <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Nama Peternak
-            </label>
+          <div
+            role="status"
+            className="rounded-[var(--radius-card)] border border-[color:var(--success-border)] bg-success-soft p-4 text-center"
+          >
+            <CheckCircle2 size={32} className="mx-auto text-success" aria-hidden="true" />
+            <p className="mt-2 text-sm font-medium text-success">Registrasi berhasil</p>
+            <p className="mt-3 text-sm text-ink-muted">ID Peternak Anda</p>
+            <p className="text-3xl font-bold tracking-wider text-ink">{result.loginCode}</p>
+            <p className="mt-2 text-sm text-ink-muted">
+              Simpan atau foto ID ini, dipakai untuk masuk ke aplikasi.
+            </p>
+          </div>
+
+          <Button variant="outline" size="lg" className="w-full" onClick={copyCode}>
+            {copied ? 'ID tersalin' : 'Salin ID'}
+          </Button>
+          <Link href="/login" className={buttonClassName({ size: 'lg', className: 'w-full' })}>
+            Lanjut ke Login
+          </Link>
+        </div>
+      ) : (
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!loading && form.name.trim()) void handleRegister();
+          }}
+        >
+          <Field label="Nama peternak">
             <Input
               placeholder="Masukkan nama peternak"
+              autoComplete="name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Nomor HP
-            </label>
+          <Field label="Nomor HP (opsional)">
             <Input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               placeholder="Contoh: 08123456789"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Alamat / Lokasi
-            </label>
+          <Field label="Alamat / lokasi (opsional)">
             <Input
               placeholder="Contoh: Sukoanyar"
+              autoComplete="street-address"
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Kelompok Ternak
-            </label>
+          <Field label="Kelompok ternak (opsional)">
             <Input
               placeholder="Contoh: Kelompok Makmur"
               value={form.groupName}
               onChange={(e) => setForm({ ...form, groupName: e.target.value })}
             />
-          </div>
+          </Field>
 
           {serverError && (
-            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div
+              role="alert"
+              className="rounded-[var(--radius-control)] border border-[color:var(--danger-border)] bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
+            >
               {serverError}
             </div>
           )}
 
-          {result && (
-            <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
-              <p className="text-sm text-green-700">Registrasi berhasil.</p>
-              <h2 className="mt-2 text-xl font-bold text-green-900">
-                ID Peternak: {result.loginCode}
-              </h2>
-              <p className="mt-2 text-sm text-green-700">
-                Simpan ID ini untuk login ke aplikasi.
-              </p>
-            </div>
-          )}
-
           <Button
-            type="button"
-            onClick={handleRegister}
+            type="submit"
+            size="lg"
             disabled={loading || !form.name.trim()}
             className="w-full"
           >
             {loading ? 'Memproses...' : 'Daftar Sekarang'}
           </Button>
 
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-ink-muted">
             Sudah punya ID?{' '}
             <Link
               href="/login"
-              className="font-medium text-gray-900 underline underline-offset-4"
+              className="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4"
             >
               Kembali ke login
             </Link>
           </p>
-        </div>
-      </Card>
-    </div>
+        </form>
+      )}
+    </AuthShell>
   );
 }

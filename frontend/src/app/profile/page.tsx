@@ -1,12 +1,18 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { MapPin } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Field } from '@/components/ui/field';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Toast, useToast } from '@/components/ui/toast';
 import { PhotoUploadField } from '@/components/ui/photo-upload-field';
 import { getMe, updateMyProfile, type MeResponse } from '@/lib/me';
 import { getApiErrorMessage } from '@/lib/api';
@@ -16,7 +22,7 @@ export default function ProfilePage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const { toast, notify } = useToast();
   const [photoUrl, setPhotoUrl] = useState('');
   const [form, setForm] = useState({
     name: '',
@@ -62,7 +68,6 @@ export default function ProfilePage() {
 
     try {
       setSaving(true);
-      setMessage('');
 
       const response = await updateMyProfile({
         name: form.name.trim(),
@@ -74,10 +79,10 @@ export default function ProfilePage() {
 
       setMe(response.data);
       setPhotoUrl(response.data.photoUrl || '');
-      setMessage('Profil berhasil diperbarui.');
+      notify('success', 'Profil berhasil diperbarui.');
     } catch (error) {
       console.error(error);
-      setMessage(getApiErrorMessage(error, 'Gagal memperbarui profil.'));
+      notify('error', getApiErrorMessage(error, 'Gagal memperbarui profil.'));
     } finally {
       setSaving(false);
     }
@@ -86,88 +91,94 @@ export default function ProfilePage() {
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Profil</h1>
-            <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
-              Pengaturan identitas pengguna untuk kebutuhan lapangan dan operasional.
-            </p>
-          </div>
-          {me?.role && <Badge variant="info">{labelPeran(me.role)}</Badge>}
-        </div>
+        <PageHeader
+          title="Profil"
+          description="Identitas pengguna untuk kebutuhan lapangan dan operasional"
+          actions={me?.role && <Badge variant="info">{labelPeran(me.role)}</Badge>}
+        />
 
         {loading ? (
-          <Card>
-            <p className="text-sm text-[color:var(--ink-muted)]">Memuat profil...</p>
-          </Card>
+          <div className="space-y-4" aria-busy="true" aria-label="Memuat profil">
+            <Skeleton className="h-40 rounded-[var(--radius-card)]" />
+            <Skeleton className="h-64 rounded-[var(--radius-card)]" />
+          </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <Card className="bg-[color:var(--surface-strong)]">
-              <h2 className="text-lg font-semibold text-gray-900">Foto Profil</h2>
-              <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
-                Pilih file foto agar identitas pengguna lebih mudah dikenali saat operasional lapangan.
-              </p>
-
-              <div className="mt-5">
+          <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <Card>
+              <h2 className="text-lg font-semibold text-ink">Foto profil</h2>
+              <div className="mt-4">
                 <PhotoUploadField
                   label="Foto profil"
                   value={photoUrl}
                   onChange={setPhotoUrl}
-                  helperText="Foto profil disimpan ke server dan akan muncul konsisten di perangkat lain setelah profil disimpan."
+                  helperText="Tersimpan di server dan tampil di perangkat lain setelah profil disimpan."
                   emptyLabel={initials}
                 />
               </div>
             </Card>
 
-            <Card className="bg-[color:var(--surface-strong)]">
-              <h2 className="text-lg font-semibold text-gray-900">Pengaturan Profil</h2>
-              <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
-                Rapikan data dasar supaya dashboard, lokasi, dan kepemilikan ternak tetap konsisten.
+            <Card>
+              <h2 className="text-lg font-semibold text-ink">Data profil</h2>
+              <p className="mb-5 mt-1 text-sm text-ink-muted">
+                Data yang rapi menjaga dasbor, lokasi, dan kepemilikan ternak tetap konsisten.
               </p>
 
-              {message && (
-                <div className="mt-4 rounded-2xl border border-[color:rgba(86,74,50,0.12)] bg-white/80 px-4 py-3 text-sm text-gray-800">
-                  {message}
-                </div>
-              )}
-
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                <Input
-                  placeholder="Nama lengkap"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <Input
-                  placeholder="Nomor telepon"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-                <Input
-                  placeholder="Kelompok / kandang"
-                  value={form.groupName}
-                  onChange={(e) => setForm({ ...form, groupName: e.target.value })}
-                />
-                <Input value={me?.loginCode || me?.email || '-'} disabled />
-                <div className="md:col-span-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Nama lengkap">
                   <Input
-                    placeholder="Alamat singkat"
-                    value={form.address}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    autoComplete="name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
+                </Field>
+                <Field label="Nomor telepon">
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </Field>
+                <Field label="Kelompok / kandang">
+                  <Input
+                    value={form.groupName}
+                    onChange={(e) => setForm({ ...form, groupName: e.target.value })}
+                  />
+                </Field>
+                <Field label={me?.loginCode ? 'ID peternak' : 'Email'}>
+                  <Input value={me?.loginCode || me?.email || '-'} disabled />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Alamat singkat">
+                    <Input
+                      value={form.address}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    />
+                  </Field>
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Button onClick={handleSave} disabled={saving || !form.name.trim()}>
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  size="lg"
+                  onClick={handleSave}
+                  disabled={saving || !form.name.trim()}
+                >
                   {saving ? 'Menyimpan...' : 'Simpan Profil'}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => window.location.assign('/location')}>
+                <Link
+                  href="/location"
+                  className={buttonClassName({ variant: 'outline', size: 'lg' })}
+                >
+                  <MapPin size={18} aria-hidden="true" />
                   Atur Lokasi
-                </Button>
+                </Link>
               </div>
             </Card>
           </div>
         )}
+        <Toast toast={toast} />
       </DashboardShell>
     </RoleGuard>
   );
