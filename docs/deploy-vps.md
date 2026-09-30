@@ -33,7 +33,6 @@ cd backend  && pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm db
 pm2 start "pnpm start:prod" --name sheepin-backend
 cd ../frontend && pnpm install --frozen-lockfile && pnpm build
 pm2 start "pnpm start -p 3000" --name sheepin-frontend
-pm2 save
 ```
 
 Reverse proxy (nginx/Caddy): `/api` dan `/uploads` → `localhost:8000`, sisanya → `localhost:3000`.

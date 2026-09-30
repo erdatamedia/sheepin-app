@@ -36,9 +36,9 @@ cd ..
 
 echo "==> Restart"
 if command -v pm2 >/dev/null 2>&1 && pm2 describe sheepin-backend >/dev/null 2>&1; then
+  # hanya dua proses milik Sheep-In; server bisa dipakai bersama aplikasi lain
   pm2 reload sheepin-backend
   pm2 reload sheepin-frontend
-  pm2 save
 else
   echo "pm2 / proses 'sheepin-backend' tidak ditemukan. Restart manual:"
   echo "  backend : cd backend && pnpm start:prod        (port 8000)"
