@@ -76,11 +76,11 @@ export function LandingDistributionSection() {
 
       <Card className="overflow-hidden border-[color:rgba(33,73,61,0.14)] bg-[linear-gradient(180deg,rgba(255,252,245,0.96),rgba(239,246,241,0.94))] p-4 md:p-5">
         {loading ? (
-          <div className="flex h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-soft)] bg-white/80">
+          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-soft)] bg-white/80">
             <p className="text-sm text-[color:var(--ink-muted)]">Memuat peta sebaran peternak...</p>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-soft)] bg-white/80">
+          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-soft)] bg-white/80">
             <p className="max-w-md text-center text-sm leading-7 text-[color:var(--ink-muted)]">
               Belum ada data lokasi peternak yang bisa ditampilkan di landing page.
             </p>

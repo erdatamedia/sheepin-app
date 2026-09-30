@@ -127,6 +127,12 @@ export function labelStatusData(status?: string | null) {
       return 'Tinggi';
     case 'BAD':
       return 'Buruk';
+    case 'LAYAK_BIBIT':
+      return 'Layak Bibit';
+    case 'PERLU_PEMANTAUAN':
+      return 'Perlu Dipantau';
+    case 'BELUM_DIREKOMENDASIKAN':
+      return 'Belum Direkomendasikan';
     default:
       return status || '-';
   }
