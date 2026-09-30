@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
+import { IsIndonesianPhone } from '../../common/validators/indonesian-phone.decorator';
 
 export class RegisterFarmerDto {
   @IsString()
@@ -6,10 +13,11 @@ export class RegisterFarmerDto {
   @MaxLength(100)
   name: string;
 
-  @IsOptional()
-  @IsString()
-  @MaxLength(30)
-  phone?: string;
+  @IsIndonesianPhone()
+  phone: string;
+
+  @Matches(/^\d{6}$/, { message: 'PIN harus 6 angka' })
+  pin: string;
 
   @IsOptional()
   @IsString()

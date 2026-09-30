@@ -1,19 +1,28 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Plus, Filter } from 'lucide-react';
+import { PawPrint, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { PhotoUploadField } from '@/components/ui/photo-upload-field';
+import { PageHeader } from '@/components/ui/page-header';
+import { StatTile } from '@/components/ui/stat-tile';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SheepAvatar } from '@/components/sheep/sheep-avatar';
+import {
+  AddSheepForm,
+  emptySheepForm,
+  type SheepFormState,
+} from '@/components/sheep/add-sheep-form';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { getMe, getMySheep, type MeResponse, type MySheepResponse } from '@/lib/me';
-import { getFarmers, type FarmerOption } from '@/lib/farmers';
+import { farmerLabel, getFarmers, type FarmerOption } from '@/lib/farmers';
 import {
   labelJenisKelamin,
   labelStatusKesehatan,
@@ -38,6 +47,35 @@ type Sheep = {
   } | null;
 };
 
+function getStatusVariant(status: string) {
+  switch (status) {
+    case 'ACTIVE':
+      return 'success';
+    case 'SOLD':
+      return 'info';
+    case 'DEAD':
+      return 'danger';
+    case 'CULLED':
+      return 'warning';
+    default:
+      return 'default';
+  }
+}
+
+function ListSkeleton() {
+  return (
+    <div
+      className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+      aria-busy="true"
+      aria-label="Memuat data ternak"
+    >
+      {[0, 1, 2].map((key) => (
+        <Skeleton key={key} className="h-32 rounded-[var(--radius-card)]" />
+      ))}
+    </div>
+  );
+}
+
 export default function SheepPage() {
   const [data, setData] = useState<Sheep[]>([]);
   const [mySheep, setMySheep] = useState<MySheepResponse['data']>([]);
@@ -49,16 +87,12 @@ export default function SheepPage() {
   const [genderFilter, setGenderFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [ownerFilter, setOwnerFilter] = useState('ALL');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const [form, setForm] = useState({
-    sheepCode: '',
-    name: '',
-    breed: '',
-    gender: 'MALE',
-    photoUrl: '',
-    ownerUserId: '',
-  });
+  const [form, setForm] = useState<SheepFormState>(emptySheepForm);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const fetchData = async () => {
     try {
@@ -86,267 +120,74 @@ export default function SheepPage() {
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
+      const keyword = search.toLowerCase();
       const matchesSearch =
         !search ||
-        item.sheepCode.toLowerCase().includes(search.toLowerCase()) ||
-        (item.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        item.breed.toLowerCase().includes(search.toLowerCase()) ||
-        (item.location || '').toLowerCase().includes(search.toLowerCase()) ||
-        (item.ownerUser?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (item.ownerUser?.loginCode || '').toLowerCase().includes(search.toLowerCase());
+        item.sheepCode.toLowerCase().includes(keyword) ||
+        (item.name || '').toLowerCase().includes(keyword) ||
+        item.breed.toLowerCase().includes(keyword) ||
+        (item.location || '').toLowerCase().includes(keyword) ||
+        (item.ownerUser?.name || '').toLowerCase().includes(keyword) ||
+        (item.ownerUser?.groupName || '').toLowerCase().includes(keyword);
 
-      const matchesGender =
-        genderFilter === 'ALL' || item.gender === genderFilter;
-
-      const matchesStatus =
-        statusFilter === 'ALL' || item.status === statusFilter;
-
-      const matchesOwner =
-        ownerFilter === 'ALL' || item.ownerUser?.id === ownerFilter;
+      const matchesGender = genderFilter === 'ALL' || item.gender === genderFilter;
+      const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
+      const matchesOwner = ownerFilter === 'ALL' || item.ownerUser?.id === ownerFilter;
 
       return matchesSearch && matchesGender && matchesStatus && matchesOwner;
     });
   }, [data, search, genderFilter, statusFilter, ownerFilter]);
 
-  const stats = useMemo(() => {
-    return {
+  const filteredMySheep = useMemo(() => {
+    const keyword = search.toLowerCase();
+    return mySheep.filter(
+      (item) =>
+        !search ||
+        item.sheepCode.toLowerCase().includes(keyword) ||
+        (item.name || '').toLowerCase().includes(keyword) ||
+        item.breed.toLowerCase().includes(keyword),
+    );
+  }, [mySheep, search]);
+
+  const stats = useMemo(
+    () => ({
       total: data.length,
       male: data.filter((item) => item.gender === 'MALE').length,
       female: data.filter((item) => item.gender === 'FEMALE').length,
       active: data.filter((item) => item.status === 'ACTIVE').length,
-    };
-  }, [data]);
+    }),
+    [data],
+  );
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'success';
-      case 'SOLD':
-        return 'info';
-      case 'DEAD':
-        return 'danger';
-      case 'CULLED':
-        return 'warning';
-      default:
-        return 'default';
-    }
-  };
-
+  const isFarmer = me?.role === 'FARMER';
   const canCreateSheep =
     me?.role === 'ADMIN' || me?.role === 'OFFICER' || me?.role === 'FARMER';
-  const canManageSheep = me?.role === 'ADMIN' || me?.role === 'OFFICER';
+  const activeFilterCount = [genderFilter, statusFilter, ownerFilter].filter(
+    (value) => value !== 'ALL',
+  ).length;
 
-  if (me?.role === 'FARMER') {
-    const activeMySheep = mySheep.filter((item) => item.status === 'ACTIVE');
+  const closeForm = () => {
+    setShowCreateForm(false);
+    setForm(emptySheepForm);
+    setFormError('');
+  };
 
-    return (
-      <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
-        <DashboardShell>
-          <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Ternak Saya</h1>
-              <p className="text-sm text-[color:var(--ink-muted)]">
-                Pilih ternak yang ingin dicatat hari ini
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="info">Aktif: {activeMySheep.length}</Badge>
-              <Button
-                type="button"
-                onClick={() => setShowCreateForm((value) => !value)}
-              >
-                {showCreateForm ? 'Tutup Form' : 'Tambah Ternak'}
-              </Button>
-            </div>
-          </div>
-
-          <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="min-h-[116px] bg-[color:var(--surface-strong)]">
-              <p className="text-sm text-[color:var(--ink-muted)]">Total Ternak</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">{mySheep.length}</h2>
-            </Card>
-            <Card className="min-h-[116px] bg-[color:var(--surface-strong)]">
-              <p className="text-sm text-[color:var(--ink-muted)]">Ternak Aktif</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">{activeMySheep.length}</h2>
-            </Card>
-            <Card className="min-h-[116px] bg-[color:var(--surface-strong)]">
-              <p className="text-sm text-[color:var(--ink-muted)]">Butuh Cek Kesehatan</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">
-                {mySheep.filter((item) => item.latestHealth?.healthStatus === 'SICK').length}
-              </h2>
-            </Card>
-            <Card className="min-h-[116px] bg-[color:var(--surface-strong)]">
-              <p className="text-sm text-[color:var(--ink-muted)]">Perlu Tindak Lanjut</p>
-              <h2 className="mt-2 text-2xl font-bold text-gray-900">
-                {mySheep.filter((item) => item.latestReproduction?.status === 'PREGNANT').length}
-              </h2>
-            </Card>
-          </div>
-
-          <Card className="mb-6 bg-[color:var(--surface-strong)]">
-            <div className="relative">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <Input
-                className="pl-10"
-                placeholder="Cari kode, nama, atau breed ternak..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-          </Card>
-
-          {showCreateForm && (
-            <Card className="mb-6 space-y-4 bg-[color:var(--surface-strong)]">
-              <div className="flex items-center gap-2">
-                <Plus size={18} className="text-[color:var(--accent)]" />
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Tambah Ternak Baru</h2>
-                  <p className="text-sm text-[color:var(--ink-muted)]">
-                    Ternak yang Anda tambahkan akan langsung terhubung ke akun peternak ini.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  placeholder="Kode ternak"
-                  value={form.sheepCode}
-                  onChange={(e) => setForm({ ...form, sheepCode: e.target.value })}
-                />
-                <Input
-                  placeholder="Nama ternak"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <Input
-                  placeholder="Breed / rumpun"
-                  value={form.breed}
-                  onChange={(e) => setForm({ ...form, breed: e.target.value })}
-                />
-                <select
-                  className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                >
-                  <option value="MALE">Jantan</option>
-                  <option value="FEMALE">Betina</option>
-                </select>
-              </div>
-
-              <PhotoUploadField
-                label="Foto ternak"
-                value={form.photoUrl}
-                onChange={(value) => setForm({ ...form, photoUrl: value })}
-                helperText="Unggah foto ternak agar identifikasi di kandang lebih cepat."
-                emptyLabel="FOTO"
-              />
-
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={handleSubmit}>Simpan Ternak</Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setForm({
-                      sheepCode: '',
-                      name: '',
-                      breed: '',
-                      gender: 'MALE',
-                      photoUrl: '',
-                      ownerUserId: '',
-                    });
-                  }}
-                >
-                  Batal
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {loading ? (
-              <p className="text-sm text-gray-500">Memuat ternak...</p>
-            ) : mySheep.length === 0 ? (
-              <Card className="bg-[color:var(--surface-strong)] md:col-span-2 xl:col-span-3">
-                <p className="text-sm text-[color:var(--ink-muted)]">
-                  Belum ada ternak yang terhubung dengan akun peternak ini.
-                </p>
-              </Card>
-            ) : (
-              mySheep
-                .filter((item) => {
-                  const keyword = search.toLowerCase();
-                  return (
-                    !search ||
-                    item.sheepCode.toLowerCase().includes(keyword) ||
-                    (item.name || '').toLowerCase().includes(keyword) ||
-                    item.breed.toLowerCase().includes(keyword)
-                  );
-                })
-                .map((item) => (
-                  <Card
-                    key={item.id}
-                    className="border-[color:rgba(86,74,50,0.12)] bg-[color:var(--surface-strong)]"
-                  >
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        {item.photoUrl ? (
-                          <img
-                            src={item.photoUrl}
-                            alt={item.name || item.sheepCode}
-                            className="h-14 w-14 rounded-2xl border border-[color:rgba(86,74,50,0.12)] object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(33,73,61,0.12)] text-sm font-semibold text-[color:var(--accent)]">
-                            {item.sheepCode.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {item.sheepCode}
-                          </h3>
-                          <p className="text-sm text-[color:var(--ink-muted)]">{item.name || item.breed}</p>
-                        </div>
-                      </div>
-                      <Badge variant={getStatusVariant(item.status)}>{labelStatusTernak(item.status)}</Badge>
-                    </div>
-
-                    <div className="space-y-2 text-sm text-gray-800">
-                      <p><span className="font-medium">Breed:</span> {item.breed}</p>
-                      <p><span className="font-medium">Bobot terakhir:</span> {item.latestWeight ? `${item.latestWeight.weightKg} kg` : '-'}</p>
-                      <p><span className="font-medium">BCS terakhir:</span> {item.latestBcs?.bcsScore ?? '-'}</p>
-                      <p><span className="font-medium">Kondisi:</span> {labelStatusKesehatan(item.latestHealth?.healthStatus)}</p>
-                    </div>
-
-                    <div className="mt-4 flex gap-2">
-                      <Link href={`/recording?sheepId=${item.id}`} className="flex-1">
-                        <Button className="w-full">Rekord</Button>
-                      </Link>
-                      <Link href={`/sheep/${item.id}`} className="flex-1">
-                        <Button variant="outline" className="w-full">
-                          Lihat
-                        </Button>
-                      </Link>
-                    </div>
-                  </Card>
-                ))
-            )}
-          </div>
-        </DashboardShell>
-      </RoleGuard>
-    );
-  }
+  const resetFilters = () => {
+    setSearch('');
+    setGenderFilter('ALL');
+    setStatusFilter('ALL');
+    setOwnerFilter('ALL');
+  };
 
   async function handleSubmit() {
+    if (!canCreateSheep) {
+      setFormError('Anda tidak memiliki izin untuk menambah ternak.');
+      return;
+    }
+
     try {
-      if (!canCreateSheep) {
-        alert('Anda tidak memiliki izin untuk menambah ternak');
-        return;
-      }
+      setSaving(true);
+      setFormError('');
 
       await api.post('/sheep', {
         ...form,
@@ -358,239 +199,346 @@ export default function SheepPage() {
             : undefined,
       });
 
-      setForm({
-        sheepCode: '',
-        name: '',
-        breed: '',
-        gender: 'MALE',
-        photoUrl: '',
-        ownerUserId: '',
-      });
-      setShowCreateForm(false);
-
+      closeForm();
       fetchData();
     } catch (err) {
       console.error(err);
-      alert(getApiErrorMessage(err, 'Gagal menambahkan data ternak'));
+      setFormError(getApiErrorMessage(err, 'Gagal menambahkan data ternak'));
+    } finally {
+      setSaving(false);
     }
   }
 
-  return (
-    <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
-      <DashboardShell>
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Data Ternak</h1>
-            <p className="text-sm text-gray-500">
-              Manajemen data ternak domba berbasis rekording
-            </p>
-          </div>
-          <Badge variant="info">Total tampil: {filteredData.length}</Badge>
-        </div>
+  const addButton = canCreateSheep && !showCreateForm && (
+    <Button onClick={() => setShowCreateForm(true)}>
+      <Plus size={18} aria-hidden="true" />
+      Tambah Ternak
+    </Button>
+  );
 
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card>
-            <p className="text-sm text-gray-500">Total Ternak</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">{stats.total}</h2>
-          </Card>
-          <Card>
-            <p className="text-sm text-gray-500">Jantan</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">{stats.male}</h2>
-          </Card>
-          <Card>
-            <p className="text-sm text-gray-500">Betina</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">{stats.female}</h2>
-          </Card>
-          <Card>
-            <p className="text-sm text-gray-500">Aktif</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">{stats.active}</h2>
-          </Card>
-        </div>
+  const createForm = showCreateForm && (
+    <AddSheepForm
+      form={form}
+      onChange={setForm}
+      onSubmit={handleSubmit}
+      onCancel={closeForm}
+      saving={saving}
+      error={formError}
+      farmers={isFarmer ? undefined : farmers}
+      description={
+        isFarmer
+          ? 'Ternak yang Anda tambahkan langsung masuk ke akun Anda.'
+          : 'Pilih pemilik peternak agar ternak tercatat atas nama mereka.'
+      }
+    />
+  );
 
-        {canManageSheep && (
-          <Card className="mb-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Plus size={18} className="text-gray-500" />
-              <h2 className="text-lg font-semibold text-gray-900">Tambah Ternak</h2>
-            </div>
+  if (isFarmer) {
+    const activeMySheep = mySheep.filter((item) => item.status === 'ACTIVE');
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <Input
-                placeholder="Kode Ternak"
-                value={form.sheepCode}
-                onChange={(e) => setForm({ ...form, sheepCode: e.target.value })}
-              />
+    return (
+      <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
+        <DashboardShell>
+          <PageHeader
+            title="Ternak Saya"
+            description="Pilih ternak yang ingin dicatat hari ini"
+            actions={addButton}
+          />
 
-              <Input
-                placeholder="Nama Ternak"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+          {createForm}
 
-              <Input
-                placeholder="Breed / Rumpun"
-                value={form.breed}
-                onChange={(e) => setForm({ ...form, breed: e.target.value })}
-              />
-
-              <select
-                className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                value={form.gender}
-                onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              >
-                <option value="MALE">Jantan</option>
-                <option value="FEMALE">Betina</option>
-              </select>
-
-              <select
-                className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-                value={form.ownerUserId}
-                onChange={(e) => setForm({ ...form, ownerUserId: e.target.value })}
-              >
-                <option value="">Pilih Pemilik Peternak</option>
-                {farmers.map((farmer) => (
-                  <option key={farmer.id} value={farmer.id}>
-                    {farmer.name} {farmer.loginCode ? `- ${farmer.loginCode}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <PhotoUploadField
-              label="Foto ternak"
-              value={form.photoUrl}
-              onChange={(value) => setForm({ ...form, photoUrl: value })}
-              helperText="Unggah foto ternak untuk memudahkan identifikasi visual di kandang."
-              emptyLabel="FOTO TERNAK"
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile label="Total ternak" value={mySheep.length} />
+            <StatTile label="Ternak aktif" value={activeMySheep.length} />
+            <StatTile
+              label="Sedang sakit"
+              value={mySheep.filter((item) => item.latestHealth?.healthStatus === 'SICK').length}
             />
-
-            <div>
-              <Button onClick={handleSubmit}>Simpan Ternak</Button>
-            </div>
-          </Card>
-        )}
-
-        <Card className="mb-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Filter size={18} className="text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Pencarian & Filter</h2>
+            <StatTile
+              label="Sedang bunting"
+              value={
+                mySheep.filter((item) => item.latestReproduction?.status === 'PREGNANT').length
+              }
+            />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="relative xl:col-span-2">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <Input
-                className="pl-10"
-                placeholder="Cari kode, nama, breed, lokasi, pemilik..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <select
-              className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-            >
-              <option value="ALL">Semua Gender</option>
-              <option value="MALE">Jantan</option>
-              <option value="FEMALE">Betina</option>
-            </select>
-
-            <select
-              className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">Semua Status</option>
-              <option value="ACTIVE">Aktif</option>
-              <option value="SOLD">Terjual</option>
-              <option value="DEAD">Mati</option>
-              <option value="CULLED">Afkir</option>
-            </select>
-            <select
-              className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-              value={ownerFilter}
-              onChange={(e) => setOwnerFilter(e.target.value)}
-            >
-              <option value="ALL">Semua Pemilik</option>
-              {farmers.map((farmer) => (
-                <option key={farmer.id} value={farmer.id}>
-                  {farmer.name} {farmer.loginCode ? `- ${farmer.loginCode}` : ''}
-                </option>
-              ))}
-            </select>
+          <div className="relative mb-5">
+            <Search
+              size={18}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
+            />
+            <Input
+              className="pl-11"
+              aria-label="Cari ternak"
+              placeholder="Cari kode, nama, atau jenis ternak"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        </Card>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
-            <p className="text-sm text-gray-500">Memuat data ternak...</p>
-          ) : filteredData.length === 0 ? (
-            <Card className="md:col-span-2 xl:col-span-3">
-              <p className="text-sm text-gray-500">
-                Tidak ada data ternak yang sesuai dengan pencarian/filter.
-              </p>
-            </Card>
+            <ListSkeleton />
+          ) : mySheep.length === 0 ? (
+            <EmptyState
+              icon={PawPrint}
+              title="Belum ada ternak"
+              description="Tambahkan ternak pertama Anda untuk mulai mencatat."
+              action={
+                !showCreateForm && (
+                  <Button onClick={() => setShowCreateForm(true)}>
+                    <Plus size={18} aria-hidden="true" />
+                    Tambah Ternak
+                  </Button>
+                )
+              }
+            />
+          ) : filteredMySheep.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Ternak tidak ditemukan"
+              description="Coba kata kunci lain."
+              action={
+                <Button variant="outline" onClick={() => setSearch('')}>
+                  Hapus pencarian
+                </Button>
+              }
+            />
           ) : (
-            filteredData.map((item) => (
-              <Link key={item.id} href={`/sheep/${item.id}`}>
-                <Card className="group h-full cursor-pointer border-gray-200 transition duration-200 hover:-translate-y-1 hover:border-gray-300 hover:shadow-lg">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      {item.photoUrl ? (
-                        <img
-                          src={item.photoUrl}
-                          alt={item.name || item.sheepCode}
-                          className="h-14 w-14 rounded-2xl border border-[color:rgba(86,74,50,0.12)] object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(33,73,61,0.12)] text-sm font-semibold text-[color:var(--accent)]">
-                          {item.sheepCode.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {item.sheepCode}
-                        </h3>
-                        <p className="text-sm text-gray-500">{item.name || 'Tanpa nama'}</p>
-                      </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {filteredMySheep.map((item) => (
+                <Card key={item.id}>
+                  <div className="flex items-start gap-3">
+                    <SheepAvatar
+                      sheepCode={item.sheepCode}
+                      name={item.name}
+                      photoUrl={item.photoUrl}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-semibold text-ink">
+                        {item.sheepCode}
+                      </h3>
+                      <p className="truncate text-sm text-ink-muted">
+                        {item.name || item.breed}
+                      </p>
                     </div>
                     <Badge variant={getStatusVariant(item.status)}>
                       {labelStatusTernak(item.status)}
                     </Badge>
                   </div>
 
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <p>
-                      <span className="font-medium">Breed:</span> {item.breed}
-                    </p>
-                    <p>
-                      <span className="font-medium">Jenis kelamin:</span> {labelJenisKelamin(item.gender)}
-                    </p>
-                    <p>
-                      <span className="font-medium">Lokasi:</span> {item.location || '-'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Pemilik:</span>{' '}
-                      {item.ownerUser?.name || '-'}
-                      {item.ownerUser?.loginCode ? ` (${item.ownerUser.loginCode})` : ''}
-                    </p>
-                  </div>
+                  <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl bg-primary-soft/50 px-2 py-2">
+                      <dt className="text-xs text-ink-muted">Bobot</dt>
+                      <dd className="text-base font-semibold text-ink">
+                        {item.latestWeight ? `${item.latestWeight.weightKg} kg` : '-'}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-primary-soft/50 px-2 py-2">
+                      <dt className="text-xs text-ink-muted">BCS</dt>
+                      <dd className="text-base font-semibold text-ink">
+                        {item.latestBcs?.bcsScore ?? '-'}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-primary-soft/50 px-2 py-2">
+                      <dt className="text-xs text-ink-muted">Kondisi</dt>
+                      <dd className="truncate text-base font-semibold text-ink">
+                        {labelStatusKesehatan(item.latestHealth?.healthStatus)}
+                      </dd>
+                    </div>
+                  </dl>
 
-                  <div className="mt-4 border-t border-gray-100 pt-3">
-                    <p className="text-xs font-medium text-gray-400 transition group-hover:text-gray-600">
-                      Klik untuk melihat detail rekording →
-                    </p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Link
+                      href={`/recording?sheepId=${item.id}`}
+                      className="inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] bg-primary text-sm font-semibold text-white shadow-[var(--shadow-accent)]"
+                    >
+                      Rekord
+                    </Link>
+                    <Link
+                      href={`/sheep/${item.id}`}
+                      className="inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] border border-line bg-surface text-sm font-semibold text-ink"
+                    >
+                      Lihat
+                    </Link>
                   </div>
                 </Card>
-              </Link>
-            ))
+              ))}
+            </div>
+          )}
+        </DashboardShell>
+      </RoleGuard>
+    );
+  }
+
+  return (
+    <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
+      <DashboardShell>
+        <PageHeader
+          title="Data Ternak"
+          description="Kelola data ternak domba berbasis rekording"
+          actions={addButton}
+        />
+
+        {createForm}
+
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Total ternak" value={stats.total} />
+          <StatTile label="Jantan" value={stats.male} />
+          <StatTile label="Betina" value={stats.female} />
+          <StatTile label="Aktif" value={stats.active} />
+        </div>
+
+        <div className="mb-5 space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search
+                size={18}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
+              />
+              <Input
+                className="pl-11"
+                aria-label="Cari ternak"
+                placeholder="Cari kode, nama, jenis, atau pemilik"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button
+              variant={activeFilterCount ? 'solid' : 'outline'}
+              className="h-12 md:hidden"
+              aria-expanded={showFilters}
+              aria-controls="sheep-filters"
+              onClick={() => setShowFilters((value) => !value)}
+            >
+              <SlidersHorizontal size={18} aria-hidden="true" />
+              Filter{activeFilterCount ? ` (${activeFilterCount})` : ''}
+            </Button>
+          </div>
+
+          <div
+            id="sheep-filters"
+            className={`${showFilters ? 'grid' : 'hidden'} gap-3 md:grid md:grid-cols-3`}
+          >
+            <Select
+              aria-label="Filter jenis kelamin"
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+            >
+              <option value="ALL">Semua jenis kelamin</option>
+              <option value="MALE">Jantan</option>
+              <option value="FEMALE">Betina</option>
+            </Select>
+            <Select
+              aria-label="Filter status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">Semua status</option>
+              <option value="ACTIVE">Aktif</option>
+              <option value="SOLD">Terjual</option>
+              <option value="DEAD">Mati</option>
+              <option value="CULLED">Afkir</option>
+            </Select>
+            <Select
+              aria-label="Filter pemilik"
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value)}
+            >
+              <option value="ALL">Semua pemilik</option>
+              {farmers.map((farmer) => (
+                <option key={farmer.id} value={farmer.id}>
+                  {farmerLabel(farmer)}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {!loading && (
+            <p className="text-sm text-ink-muted">
+              Menampilkan {filteredData.length} dari {data.length} ternak
+            </p>
           )}
         </div>
+
+        {loading ? (
+          <ListSkeleton />
+        ) : filteredData.length === 0 ? (
+          <EmptyState
+            icon={data.length === 0 ? PawPrint : Search}
+            title={data.length === 0 ? 'Belum ada data ternak' : 'Ternak tidak ditemukan'}
+            description={
+              data.length === 0
+                ? 'Tambahkan ternak pertama untuk mulai merekam data.'
+                : 'Tidak ada ternak yang sesuai dengan pencarian atau filter.'
+            }
+            action={
+              data.length === 0 ? (
+                !showCreateForm && canCreateSheep && (
+                  <Button onClick={() => setShowCreateForm(true)}>
+                    <Plus size={18} aria-hidden="true" />
+                    Tambah Ternak
+                  </Button>
+                )
+              ) : (
+                <Button variant="outline" onClick={resetFilters}>
+                  Reset pencarian dan filter
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {filteredData.map((item) => (
+              <Link
+                key={item.id}
+                href={`/sheep/${item.id}`}
+                className="block rounded-[var(--radius-card)] transition active:scale-[0.99]"
+              >
+                <Card className="h-full">
+                  <div className="flex items-start gap-3">
+                    <SheepAvatar
+                      sheepCode={item.sheepCode}
+                      name={item.name}
+                      photoUrl={item.photoUrl}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-semibold text-ink">
+                        {item.sheepCode}
+                      </h3>
+                      <p className="truncate text-sm text-ink-muted">
+                        {item.name || 'Tanpa nama'}
+                      </p>
+                    </div>
+                    <Badge variant={getStatusVariant(item.status)}>
+                      {labelStatusTernak(item.status)}
+                    </Badge>
+                  </div>
+
+                  <dl className="mt-3 space-y-1 text-sm text-ink">
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-ink-muted">Jenis</dt>
+                      <dd className="min-w-0 truncate">
+                        {item.breed} · {labelJenisKelamin(item.gender)}
+                      </dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-ink-muted">Lokasi</dt>
+                      <dd className="min-w-0 truncate">{item.location || '-'}</dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-ink-muted">Pemilik</dt>
+                      <dd className="min-w-0 truncate">
+                        {item.ownerUser?.name || '-'}
+                      </dd>
+                    </div>
+                  </dl>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </DashboardShell>
     </RoleGuard>
   );

@@ -4,11 +4,41 @@ export type FarmerOption = {
   id: string;
   name: string;
   loginCode?: string | null;
+  phone?: string | null;
+  /** true bila peternak sudah punya PIN; false = masih memakai ID lama / belum diberi PIN. */
+  hasPin?: boolean;
+  mustChangePin?: boolean;
   groupName?: string | null;
   village?: string | null;
   district?: string | null;
   regency?: string | null;
 };
+
+/** Label untuk pilihan peternak: nama + 4 digit terakhir nomor HP (membedakan nama yang sama). */
+export function farmerLabel(farmer: { name: string; phone?: string | null }) {
+  const digits = (farmer.phone || '').replace(/\D/g, '');
+  return digits.length >= 4 ? `${farmer.name} (…${digits.slice(-4)})` : farmer.name;
+}
+
+export type TempPinResponse = {
+  message: string;
+  data: { id: string; name: string; pin: string };
+};
+
+export async function createFarmer(payload: {
+  name: string;
+  phone: string;
+  address?: string;
+  groupName?: string;
+}) {
+  const response = await api.post<TempPinResponse>('/farmers', payload);
+  return response.data;
+}
+
+export async function resetFarmerPin(id: string) {
+  const response = await api.post<TempPinResponse>(`/farmers/${id}/reset-pin`);
+  return response.data;
+}
 
 export type FarmerListResponse = {
   message: string;
@@ -22,6 +52,8 @@ export type FarmerDetailResponse = {
     name: string;
     loginCode?: string | null;
     phone?: string | null;
+    hasPin?: boolean;
+    mustChangePin?: boolean;
     address?: string | null;
     groupName?: string | null;
     province?: string | null;

@@ -2,51 +2,51 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { api, getApiErrorMessage } from '@/lib/api';
-import { Card } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
+import { getApiErrorMessage } from '@/lib/api';
+import { saveToken } from '@/lib/auth';
+import { registerWithPhone } from '@/lib/farmer-auth';
+import { pinProblem } from '@/lib/pin';
+import { AuthShell } from '@/components/auth/auth-shell';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { PinInput } from '@/components/ui/pin-input';
 import { Button } from '@/components/ui/button';
 
-type RegisterResult = {
-  name: string;
-  loginCode: string;
-  phone?: string;
-  address?: string;
-  groupName?: string;
-};
+const emptyForm = { name: '', phone: '', address: '', groupName: '' };
 
 export default function RegisterFarmerPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
-  const [result, setResult] = useState<RegisterResult | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [pin, setPin] = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
 
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    groupName: '',
-  });
+  const problem = pin ? pinProblem(pin, pinConfirm || undefined) : null;
+  const canSubmit =
+    !loading &&
+    form.name.trim() &&
+    form.phone.trim() &&
+    pin.length === 6 &&
+    pinConfirm.length === 6 &&
+    !pinProblem(pin, pinConfirm);
 
   const handleRegister = async () => {
     try {
       setLoading(true);
       setServerError('');
-      setResult(null);
 
-      const response = await api.post('/auth/register-farmer', {
-        name: form.name,
-        phone: form.phone || undefined,
-        address: form.address || undefined,
-        groupName: form.groupName || undefined,
+      const result = await registerWithPhone({
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        pin,
+        address: form.address.trim() || undefined,
+        groupName: form.groupName.trim() || undefined,
       });
 
-      setResult(response.data.data);
-      setForm({
-        name: '',
-        phone: '',
-        address: '',
-        groupName: '',
-      });
+      saveToken(result.access_token);
+      router.push('/dashboard');
     } catch (error) {
       setServerError(getApiErrorMessage(error, 'Registrasi peternak gagal.'));
     } finally {
@@ -55,100 +55,97 @@ export default function RegisterFarmerPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4 py-8">
-      <Card className="w-full max-w-lg animate-[fadeInUp_.4s_ease-out]">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Daftar Peternak
-          </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Isi data singkat untuk mendapatkan ID peternak
+    <AuthShell
+      title="Daftar Peternak"
+      description="Cukup nama, nomor HP, dan PIN 6 angka"
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canSubmit) void handleRegister();
+        }}
+      >
+        <Field label="Nama peternak">
+          <Input
+            placeholder="Masukkan nama Anda"
+            autoComplete="name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+        </Field>
+
+        <Field label="Nomor HP" hint="Nomor ini dipakai untuk masuk. Contoh: 081234567890">
+          <Input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="081234567890"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+        </Field>
+
+        <Field label="Buat PIN (6 angka)" hint="Ingat PIN ini. Jangan beri tahu siapa pun.">
+          <PinInput value={pin} onChange={setPin} autoComplete="new-password" />
+        </Field>
+
+        <Field label="Ulangi PIN">
+          <PinInput value={pinConfirm} onChange={setPinConfirm} autoComplete="new-password" />
+        </Field>
+
+        {problem && (pin.length === 6 || pinConfirm.length === 6) && (
+          <p role="alert" className="text-sm font-medium text-danger">
+            {problem}
           </p>
-        </div>
+        )}
 
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Nama Peternak
-            </label>
-            <Input
-              placeholder="Masukkan nama peternak"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+        <details className="rounded-[var(--radius-control)] border border-line p-3">
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-ink">
+            Data tambahan (boleh dikosongkan)
+          </summary>
+          <div className="mt-3 space-y-4">
+            <Field label="Alamat / lokasi">
+              <Input
+                placeholder="Contoh: Sukoanyar"
+                autoComplete="street-address"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+            </Field>
+            <Field label="Kelompok ternak">
+              <Input
+                placeholder="Contoh: Kelompok Makmur"
+                value={form.groupName}
+                onChange={(e) => setForm({ ...form, groupName: e.target.value })}
+              />
+            </Field>
           </div>
+        </details>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Nomor HP
-            </label>
-            <Input
-              placeholder="Contoh: 08123456789"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Alamat / Lokasi
-            </label>
-            <Input
-              placeholder="Contoh: Sukoanyar"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Kelompok Ternak
-            </label>
-            <Input
-              placeholder="Contoh: Kelompok Makmur"
-              value={form.groupName}
-              onChange={(e) => setForm({ ...form, groupName: e.target.value })}
-            />
-          </div>
-
-          {serverError && (
-            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-              {serverError}
-            </div>
-          )}
-
-          {result && (
-            <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
-              <p className="text-sm text-green-700">Registrasi berhasil.</p>
-              <h2 className="mt-2 text-xl font-bold text-green-900">
-                ID Peternak: {result.loginCode}
-              </h2>
-              <p className="mt-2 text-sm text-green-700">
-                Simpan ID ini untuk login ke aplikasi.
-              </p>
-            </div>
-          )}
-
-          <Button
-            type="button"
-            onClick={handleRegister}
-            disabled={loading || !form.name.trim()}
-            className="w-full"
+        {serverError && (
+          <div
+            role="alert"
+            className="rounded-[var(--radius-control)] border border-[color:var(--danger-border)] bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
           >
-            {loading ? 'Memproses...' : 'Daftar Sekarang'}
-          </Button>
+            {serverError}
+          </div>
+        )}
 
-          <p className="text-center text-sm text-gray-500">
-            Sudah punya ID?{' '}
-            <Link
-              href="/login"
-              className="font-medium text-gray-900 underline underline-offset-4"
-            >
-              Kembali ke login
-            </Link>
-          </p>
-        </div>
-      </Card>
-    </div>
+        <Button type="submit" size="lg" disabled={!canSubmit} className="w-full">
+          {loading ? 'Memproses...' : 'Daftar Sekarang'}
+        </Button>
+
+        <p className="text-center text-sm text-ink-muted">
+          Sudah punya akun?{' '}
+          <Link
+            href="/login"
+            className="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4"
+          >
+            Masuk
+          </Link>
+        </p>
+      </form>
+    </AuthShell>
   );
 }

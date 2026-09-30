@@ -1,30 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import {
-  ArrowRight,
-  BadgeCheck,
-  ClipboardList,
-  ClipboardPlus,
-  FileCheck,
-  FileClock,
-  Layers3,
-  MapPin,
-  Users,
-} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ClipboardPlus, Map, PawPrint, RefreshCw } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Button, buttonClassName } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatTile } from '@/components/ui/stat-tile';
 import { api } from '@/lib/api';
 import { getMe, getMySheep, type MeResponse, type MySheepResponse } from '@/lib/me';
 import { getEvaluationSummary, type EvaluationSummaryResponse } from '@/lib/evaluation';
 import { getRecordingHistory, type RecordingHistoryResponse } from '@/lib/recording';
 import {
   labelJenisCatatan,
+  labelJenisKelamin,
   labelStatusKesehatan,
   labelStatusTernak,
 } from '@/lib/labels';
+import { todayLocal } from '@/lib/utils';
 
 type DashboardResponse = {
   message: string;
@@ -53,6 +50,81 @@ type DashboardResponse = {
   };
 };
 
+type HistoryItem = RecordingHistoryResponse['data'][number];
+
+function historyVariant(type: HistoryItem['type']) {
+  switch (type) {
+    case 'STATUS':
+      return 'danger' as const;
+    case 'HEALTH':
+      return 'success' as const;
+    case 'REPRODUCTION':
+      return 'warning' as const;
+    default:
+      return 'info' as const;
+  }
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  badge,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-ink">{title}</h2>
+          {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
+        </div>
+        {badge}
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+const rowLink =
+  'block rounded-xl border border-line p-3 transition active:bg-primary-soft/40 sm:p-4';
+
+function ActivityRow({ item, variant }: { item: HistoryItem; variant: 'danger' | 'success' | 'warning' | 'info' }) {
+  return (
+    <Link href={`/sheep/${item.sheep.id}`} className={rowLink}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-ink">{item.title}</p>
+          <p className="truncate text-sm text-ink-muted">
+            {item.sheep.sheepCode}
+            {item.sheep.name ? ` - ${item.sheep.name}` : ''}
+          </p>
+        </div>
+        <Badge variant={variant}>{labelJenisCatatan(item.type)}</Badge>
+      </div>
+      <p className="mt-1.5 text-sm text-ink/80">{item.description}</p>
+    </Link>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Memuat dasbor">
+      <Skeleton className="h-24 rounded-[var(--radius-card)]" />
+      <div className="grid grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((key) => (
+          <Skeleton key={key} className="h-20" />
+        ))}
+      </div>
+      <Skeleton className="h-40 rounded-[var(--radius-card)]" />
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [summary, setSummary] = useState<DashboardResponse['data'] | null>(null);
@@ -61,44 +133,60 @@ export default function DashboardPage() {
   const [mySheep, setMySheep] = useState<MySheepResponse['data']>([]);
   const [recentHistory, setRecentHistory] = useState<RecordingHistoryResponse['data']>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setFailed(false);
+      const meData = await getMe();
+      setMe(meData);
+
+      if (meData.role === 'ADMIN' || meData.role === 'OFFICER') {
+        const [dashboardRes, evaluationRes] = await Promise.all([
+          api.get('/dashboard/summary'),
+          getEvaluationSummary(),
+        ]);
+
+        setSummary(dashboardRes.data.data);
+        setEvaluationSummary(evaluationRes.data);
+      } else {
+        const [mySheepRes, historyRes] = await Promise.all([
+          getMySheep(),
+          getRecordingHistory(),
+        ]);
+
+        setMySheep(mySheepRes.data);
+        setRecentHistory(historyRes.data.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Gagal memuat dashboard:', error);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const meData = await getMe();
-        setMe(meData);
+    void fetchDashboard();
+  }, [fetchDashboard]);
 
-        if (meData.role === 'ADMIN' || meData.role === 'OFFICER') {
-          const [dashboardRes, evaluationRes] = await Promise.all([
-            api.get('/dashboard/summary'),
-            getEvaluationSummary(),
-          ]);
-
-          setSummary(dashboardRes.data.data);
-          setEvaluationSummary(evaluationRes.data);
-        } else {
-          const [mySheepRes, historyRes] = await Promise.all([
-            getMySheep(),
-            getRecordingHistory(),
-          ]);
-
-          setMySheep(mySheepRes.data);
-          setRecentHistory(historyRes.data.slice(0, 5));
-        }
-      } catch (error) {
-        console.error('Gagal memuat dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboard();
-  }, []);
+  const retry = (
+    <Button
+      variant="outline"
+      onClick={() => {
+        setLoading(true);
+        void fetchDashboard();
+      }}
+    >
+      <RefreshCw size={18} aria-hidden="true" />
+      Coba lagi
+    </Button>
+  );
 
   if (loading) {
     return (
       <DashboardShell>
-        <p className="text-sm text-gray-500">Memuat dashboard...</p>
+        <DashboardSkeleton />
       </DashboardShell>
     );
   }
@@ -106,16 +194,25 @@ export default function DashboardPage() {
   if (!me) {
     return (
       <DashboardShell>
-        <Card>
-          <p className="text-sm text-red-500">Gagal memuat profil pengguna.</p>
-        </Card>
+        <EmptyState
+          title="Gagal memuat profil pengguna"
+          description="Periksa sambungan internet Anda lalu coba lagi."
+          action={retry}
+        />
       </DashboardShell>
     );
   }
 
+  const dateLabel = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   if (me.role === 'FARMER') {
     const activeSheep = mySheep.filter((item) => item.status === 'ACTIVE');
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = todayLocal();
     const todayEvents = recentHistory.filter(
       (item) => item.recordDate.slice(0, 10) === todayKey,
     );
@@ -148,663 +245,268 @@ export default function DashboardPage() {
 
     return (
       <DashboardShell>
-        <div className="mb-8 rounded-[32px] border border-[color:rgba(86,74,50,0.12)] bg-[linear-gradient(135deg,rgba(255,252,245,0.92),rgba(223,236,229,0.9))] px-6 py-7 shadow-[0_22px_52px_rgba(39,33,21,0.08)] md:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="inline-flex rounded-full border border-[color:rgba(33,73,61,0.12)] bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--accent)]">
-                Dasbor Peternak
-              </div>
-              <h1 className="mt-4 text-3xl font-semibold leading-tight text-gray-900 md:text-4xl">
-                Kerja harian peternak dibuat lebih cepat dan lebih fokus.
-              </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--ink-muted)] md:text-base">
-                Pilih ternak, catat kejadian penting, dan pantau tindak lanjut tanpa tenggelam di struktur data.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Link href="/recording">
-                <Card className="min-w-[200px] cursor-pointer border-[color:rgba(33,73,61,0.16)] bg-[linear-gradient(180deg,#eef6f1,#e4efe8)] shadow-[0_14px_28px_rgba(33,73,61,0.10)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--accent)]">
-                    Aksi Utama
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-gray-900">Mulai Rekording</p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
-                    Masuk ke alur kerja hari ini untuk timbang, cek kondisi, atau catat kejadian.
-                  </p>
-                </Card>
-              </Link>
-              <Link href="/sheep">
-                <Card className="min-w-[200px] cursor-pointer bg-[color:var(--surface-strong)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--ink-muted)]">
-                    Fokus Cepat
-                  </p>
-                  <p className="mt-3 text-xl font-semibold text-gray-900">Lihat Ternak Saya</p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
-                    Buka daftar ternak aktif dan langsung pilih yang perlu dicatat.
-                  </p>
-                </Card>
-              </Link>
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title={`Halo, ${me.name.split(' ')[0]}`}
+          description={[dateLabel, me.groupName]
+            .filter(Boolean)
+            .join(' · ')}
+        />
 
-        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="min-h-[128px] bg-[color:var(--surface-strong)]">
-            <p className="text-sm text-gray-500">Ternak Aktif</p>
-            <h2 className="mt-4 text-3xl font-semibold text-gray-900">
-              {activeSheep.length}
-            </h2>
-            <p className="mt-3 text-sm text-[color:var(--ink-muted)]">Masih aktif dalam kerja harian kandang.</p>
+        {failed && (
+          <Card className="mb-4 flex flex-col gap-2 border-[color:var(--danger-border)] bg-danger-soft sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-danger">Sebagian data gagal dimuat.</p>
+            {retry}
           </Card>
+        )}
 
-          <Card className="min-h-[128px] bg-[color:var(--surface-strong)]">
-            <p className="text-sm text-gray-500">Total Ternak</p>
-            <h2 className="mt-4 text-3xl font-semibold text-gray-900">
-              {mySheep.length}
-            </h2>
-            <p className="mt-3 text-sm text-[color:var(--ink-muted)]">Semua ternak yang terhubung ke akun peternak ini.</p>
-          </Card>
-
-          <Card className="min-h-[128px] bg-[color:var(--surface-strong)]">
-            <p className="text-sm text-gray-500">ID Peternak</p>
-            <h2 className="mt-4 text-2xl font-semibold text-gray-900">
-              {me.loginCode || '-'}
-            </h2>
-            <p className="mt-3 text-sm text-[color:var(--ink-muted)]">Identitas singkat untuk login dan koordinasi lapangan.</p>
-          </Card>
-
-          <Card className="min-h-[128px] bg-[color:var(--surface-strong)]">
-            <p className="text-sm text-gray-500">Kelompok</p>
-            <h2 className="mt-4 text-2xl font-semibold text-gray-900">
-              {me.groupName || '-'}
-            </h2>
-            <p className="mt-3 text-sm text-[color:var(--ink-muted)]">Kelompok peternak yang sedang aktif dipantau.</p>
-          </Card>
-        </div>
-
-        <div className="mb-8 grid gap-4 md:grid-cols-2">
-          <Link href="/recording">
-            <Card className="cursor-pointer border-[color:rgba(33,73,61,0.16)] bg-[linear-gradient(180deg,#eef6f1,#ddebe3)] transition hover:-translate-y-1 hover:shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[color:var(--accent)]">Aksi Utama</p>
-                  <h2 className="mt-2 text-xl font-semibold text-gray-900">Rekording Cepat</h2>
-                  <p className="mt-2 text-sm text-[color:var(--ink-muted)]">
-                    Buka kerja hari ini dan catat kondisi ternak secepat mungkin
-                  </p>
-                </div>
-                <ClipboardPlus size={28} className="text-[color:var(--accent)]" />
-              </div>
-            </Card>
+        <div className="mb-5 grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/recording"
+            className={buttonClassName({ size: 'lg', className: 'w-full justify-start' })}
+          >
+            <ClipboardPlus size={22} aria-hidden="true" />
+            Mulai Rekording
           </Link>
-
-          <Link href="/history">
-            <Card className="cursor-pointer bg-[color:var(--surface-strong)] transition hover:-translate-y-1 hover:shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Aksi Utama</p>
-                  <h2 className="mt-2 text-xl font-semibold text-gray-900">
-                    Riwayat Rekording
-                  </h2>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Lihat hasil input terakhir dengan cepat
-                  </p>
-                </div>
-                <FileClock size={28} className="text-[color:var(--accent)]" />
-              </div>
-            </Card>
+          <Link
+            href="/sheep"
+            className={buttonClassName({
+              variant: 'outline',
+              size: 'lg',
+              className: 'w-full justify-start',
+            })}
+          >
+            <PawPrint size={22} aria-hidden="true" />
+            Ternak Saya
           </Link>
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="min-h-[124px] border-red-100 bg-[linear-gradient(180deg,#fff5f2,#fffaf8)]">
-            <p className="text-sm text-red-700">Sakit Hari Ini</p>
-            <h2 className="mt-2 text-2xl font-bold text-red-900">
-              {todayHealthEvents.length}
-            </h2>
-            <p className="mt-2 text-sm text-red-700">
-              Kejadian kesehatan yang dicatat hari ini
-            </p>
-          </Card>
-
-          <Card className="min-h-[124px] border-yellow-100 bg-[linear-gradient(180deg,#fff9eb,#fffdf7)]">
-            <p className="text-sm text-yellow-700">Bunting Dipantau</p>
-            <h2 className="mt-2 text-2xl font-bold text-yellow-900">
-              {pregnantSheep.length}
-            </h2>
-            <p className="mt-2 text-sm text-yellow-700">
-              Ternak yang perlu pengamatan lanjutan
-            </p>
-          </Card>
-
-          <Card className="min-h-[124px] border-gray-200 bg-[linear-gradient(180deg,#fbfaf7,#ffffff)]">
-            <p className="text-sm text-gray-600">Keluar Hari Ini</p>
-            <h2 className="mt-2 text-2xl font-bold text-gray-900">
-              {todayStatusEvents.length}
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Mati, terjual, atau perubahan status lain hari ini
-            </p>
-          </Card>
-
-          <Card className="min-h-[124px] border-blue-100 bg-[linear-gradient(180deg,#edf7ff,#fbfeff)]">
-            <p className="text-sm text-blue-700">Total Kejadian Hari Ini</p>
-            <h2 className="mt-2 text-2xl font-bold text-blue-900">
-              {todayEvents.length}
-            </h2>
-            <p className="mt-2 text-sm text-blue-700">
-              Semua rekording dan kejadian lapangan hari ini
-            </p>
-          </Card>
+        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <StatTile label="Ternak aktif" value={activeSheep.length} />
+          <StatTile label="Total ternak" value={mySheep.length} />
+          <StatTile label="Kejadian hari ini" value={todayEvents.length} tone="info" />
+          <StatTile label="Sakit hari ini" value={todayHealthEvents.length} tone="danger" />
+          <StatTile label="Bunting dipantau" value={pregnantSheep.length} tone="warning" />
+          <StatTile label="Keluar hari ini" value={todayStatusEvents.length} />
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Link href="/sheep">
-            <Card className="cursor-pointer transition hover:-translate-y-1 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Ternak Saya</p>
-                  <h2 className="mt-2 text-lg font-semibold text-gray-900">
-                    Pilih ternak untuk dicatat
-                  </h2>
-                </div>
-                <ClipboardList className="text-gray-400" size={22} />
-              </div>
-            </Card>
-          </Link>
-
-          <Link href="/location">
-            <Card className="cursor-pointer transition hover:-translate-y-1 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Lokasi Saya</p>
-                  <h2 className="mt-2 text-lg font-semibold text-gray-900">
-                    Perbarui titik lokasi
-                  </h2>
-                </div>
-                <MapPin className="text-gray-400" size={22} />
-              </div>
-            </Card>
-          </Link>
-
-          <Link href="/recording">
-            <Card className="cursor-pointer transition hover:-translate-y-1 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Input Hari Ini</p>
-                  <h2 className="mt-2 text-lg font-semibold text-gray-900">
-                    Bobot, kondisi, reproduksi
-                  </h2>
-                </div>
-                <ArrowRight className="text-gray-400" size={22} />
-              </div>
-            </Card>
-          </Link>
-        </div>
-
-        <div className="mb-8 grid gap-6 lg:grid-cols-2">
-          <Card className="bg-[color:var(--surface-strong)]">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Prioritas Hari Ini
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Ternak yang perlu tindakan lebih dulu
-                </p>
-              </div>
-              <Badge variant="warning">{actionQueue.length} antrean</Badge>
-            </div>
-
+        <div className="mb-4 grid gap-4 lg:grid-cols-2">
+          <SectionCard
+            title="Prioritas hari ini"
+            subtitle="Ternak yang perlu tindakan lebih dulu"
+            badge={<Badge variant="warning">{actionQueue.length} antrean</Badge>}
+          >
             {actionQueue.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-muted">
                 Belum ada prioritas mendesak. Lanjutkan rekording rutin hari ini.
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {actionQueue.map((item) => (
                   <Link
                     key={`${item.label}-${item.id}`}
                     href={item.href}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 p-4 transition hover:border-gray-200 hover:bg-gray-50"
+                    className={`${rowLink} flex items-center justify-between gap-3`}
                   >
-                    <div>
-                      <p className="font-medium text-gray-900">{item.label}</p>
-                      <p className="text-sm text-gray-500">{item.detail}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink">{item.label}</p>
+                      <p className="text-sm text-ink-muted">{item.detail}</p>
                     </div>
                     <Badge variant={item.variant}>Tindak lanjuti</Badge>
                   </Link>
                 ))}
               </div>
             )}
-          </Card>
+          </SectionCard>
 
-          <Card className="bg-[color:var(--surface-strong)]">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Ringkasan Hari Ini
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Aktivitas lapangan tanggal {new Date().toLocaleDateString('id-ID')}
-                </p>
-              </div>
-              <Badge variant="info">{todayEvents.length} kejadian</Badge>
-            </div>
-
+          <SectionCard
+            title="Ringkasan hari ini"
+            subtitle="Aktivitas lapangan hari ini"
+            badge={<Badge variant="info">{todayEvents.length} kejadian</Badge>}
+          >
             {todayEvents.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-muted">
                 Belum ada rekording hari ini. Mulai dari timbang, cek kondisi, atau catat kejadian penting.
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {todayEvents.map((item) => (
-                  <Link
+                  <ActivityRow
                     key={`today-${item.type}-${item.id}`}
-                    href={`/sheep/${item.sheep.id}`}
-                    className="block rounded-xl border border-gray-100 p-4 transition hover:border-gray-200 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-gray-900">{item.title}</p>
-                        <p className="text-sm text-gray-500">
-                          {item.sheep.sheepCode}
-                          {item.sheep.name ? ` - ${item.sheep.name}` : ''}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          item.type === 'STATUS'
-                            ? 'danger'
-                            : item.type === 'HEALTH'
-                              ? 'success'
-                              : item.type === 'REPRODUCTION'
-                                ? 'warning'
-                                : 'info'
-                        }
-                      >
-                        {labelJenisCatatan(item.type)}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                  </Link>
+                    item={item}
+                    variant={historyVariant(item.type)}
+                  />
                 ))}
               </div>
             )}
-          </Card>
+          </SectionCard>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="bg-[color:var(--surface-strong)]">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              Ternak Siap Dicatat
-            </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <SectionCard title="Ternak siap dicatat">
             {activeSheep.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Belum ada ternak aktif yang terhubung ke akun peternak ini.
+              <p className="text-sm text-ink-muted">
+                Belum ada ternak aktif yang terhubung ke akun ini.
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {activeSheep.slice(0, 4).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/recording?sheepId=${item.id}`}
-                    className="block rounded-xl border border-gray-100 p-4 transition hover:border-gray-200 hover:bg-gray-50"
-                  >
+                  <Link key={item.id} href={`/recording?sheepId=${item.id}`} className={rowLink}>
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-900">{item.sheepCode}</p>
-                        <p className="text-sm text-gray-500">
-                          {item.name || item.breed}
-                        </p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-ink">{item.sheepCode}</p>
+                        <p className="truncate text-sm text-ink-muted">{item.name || item.breed}</p>
                       </div>
                       <Badge variant="success">Rekord</Badge>
                     </div>
-                    <div className="mt-3 grid gap-1 text-sm text-gray-600">
-                      <p>Bobot terakhir: {item.latestWeight ? `${item.latestWeight.weightKg} kg` : '-'}</p>
-                      <p>Kesehatan: {labelStatusKesehatan(item.latestHealth?.healthStatus)}</p>
-                    </div>
+                    <p className="mt-1.5 text-sm text-ink/80">
+                      {item.latestWeight ? `${item.latestWeight.weightKg} kg` : 'Bobot -'} ·{' '}
+                      {labelStatusKesehatan(item.latestHealth?.healthStatus)}
+                    </p>
                   </Link>
                 ))}
               </div>
             )}
-          </Card>
+          </SectionCard>
 
-          <Card className="bg-[color:var(--surface-strong)]">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              Aktivitas Terakhir
-            </h2>
+          <SectionCard title="Aktivitas terakhir">
             {recentHistory.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Belum ada aktivitas rekording terakhir.
-              </p>
+              <p className="text-sm text-ink-muted">Belum ada aktivitas rekording terakhir.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentHistory.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.id}`}
-                    href={`/sheep/${item.sheep.id}`}
-                    className="block rounded-xl border border-gray-100 p-4 transition hover:border-gray-200 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-gray-900">{item.title}</p>
-                        <p className="text-sm text-gray-500">
-                          {item.sheep.sheepCode}
-                          {item.sheep.name ? ` - ${item.sheep.name}` : ''}
-                        </p>
-                      </div>
-                      <Badge variant="info">{labelJenisCatatan(item.type)}</Badge>
-                    </div>
-                    <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                  </Link>
+                  <ActivityRow key={`${item.type}-${item.id}`} item={item} variant="info" />
                 ))}
               </div>
             )}
-          </Card>
+          </SectionCard>
         </div>
       </DashboardShell>
     );
   }
 
+  const totalRecords = summary
+    ? summary.records.weights +
+      summary.records.bcs +
+      summary.records.health +
+      summary.records.reproduction
+    : 0;
+  const activePercent =
+    summary && summary.sheep.total > 0
+      ? Math.round((summary.sheep.active / summary.sheep.total) * 100)
+      : 0;
+
   return (
     <DashboardShell>
-      <div className="mb-8 rounded-[32px] border border-[color:rgba(86,74,50,0.12)] bg-[linear-gradient(135deg,rgba(255,252,245,0.94),rgba(230,236,246,0.92))] px-6 py-7 shadow-[0_22px_52px_rgba(39,33,21,0.08)] md:px-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex rounded-full border border-[color:rgba(33,73,61,0.12)] bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--accent)]">
-              Ruang Kerja Admin
-            </div>
-            <h1 className="mt-4 text-3xl font-semibold leading-tight text-gray-900 md:text-4xl">
-              Kendali data, evaluasi, dan distribusi ternak dalam satu layar.
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--ink-muted)] md:text-base">
-              Gunakan dashboard ini untuk membaca kepadatan data, kualitas rekording, dan titik fokus operasional tim.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link href="/sheep">
-              <Card className="min-w-[200px] cursor-pointer border-[color:rgba(33,73,61,0.16)] bg-[linear-gradient(180deg,#eef6f1,#e4efe8)] shadow-[0_14px_28px_rgba(33,73,61,0.10)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--accent)]">
-                  Kontrol Utama
-                </p>
-                <p className="mt-3 text-lg font-semibold text-gray-900">Kelola Ternak</p>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
-                  Buka data ternak untuk input baru, koreksi, dan audit status.
-                </p>
-              </Card>
-            </Link>
-            <Link href="/map">
-              <Card className="min-w-[200px] cursor-pointer bg-[color:var(--surface-strong)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--ink-muted)]">
-                  Pemantauan
-                </p>
-                <p className="mt-3 text-xl font-semibold text-gray-900">Lihat Distribusi</p>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--ink-muted)]">
-                  Pantau sebaran peternak dan konsentrasi ternak per wilayah.
-                </p>
-              </Card>
-            </Link>
-          </div>
-        </div>
+      <PageHeader
+        title="Ruang Kerja"
+        description={`${dateLabel} · ${me.name}`}
+      />
+
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/sheep"
+          className={buttonClassName({ size: 'lg', className: 'w-full justify-start' })}
+        >
+          <PawPrint size={22} aria-hidden="true" />
+          Kelola Ternak
+        </Link>
+        <Link
+          href="/map"
+          className={buttonClassName({
+            variant: 'outline',
+            size: 'lg',
+            className: 'w-full justify-start',
+          })}
+        >
+          <Map size={22} aria-hidden="true" />
+          Lihat Distribusi
+        </Link>
       </div>
 
       {!summary ? (
-        <Card>
-          <p className="text-sm text-red-500">Gagal memuat data dashboard.</p>
-        </Card>
+        <EmptyState
+          title="Gagal memuat data dasbor"
+          description="Periksa sambungan internet Anda lalu coba lagi."
+          action={retry}
+        />
       ) : (
         <>
-          <div className="mb-8 grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr]">
-            <Card className="min-h-[132px] bg-[linear-gradient(180deg,#f8f5ec,#fffdfa)]">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-[color:var(--ink-muted)]">
-                    Populasi Ternak
-                  </p>
-                  <h2 className="mt-3 text-3xl font-semibold text-gray-900">
-                    {summary.sheep.total}
-                  </h2>
-                  <p className="mt-3 text-sm text-[color:var(--ink-muted)]">
-                    {summary.sheep.active} aktif, {summary.sheep.male} jantan, {summary.sheep.female} betina
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-[rgba(33,73,61,0.08)] p-3 text-[color:var(--accent)]">
-                  <Layers3 size={22} />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="min-h-[132px] bg-[linear-gradient(180deg,#f4f8f6,#fffdfa)]">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-[color:var(--ink-muted)]">
-                    Rekording
-                  </p>
-                  <h2 className="mt-3 text-3xl font-semibold text-gray-900">
-                    {summary.records.weights +
-                      summary.records.bcs +
-                      summary.records.health +
-                      summary.records.reproduction}
-                  </h2>
-                  <p className="mt-3 text-sm text-[color:var(--ink-muted)]">
-                    Bobot {summary.records.weights}, BCS {summary.records.bcs}, kesehatan {summary.records.health}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-blue-50 p-3 text-blue-700">
-                  <ClipboardPlus size={22} />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="min-h-[132px] bg-[linear-gradient(180deg,#fff8ed,#fffdfa)]">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-[color:var(--ink-muted)]">
-                    Evaluasi
-                  </p>
-                  <h2 className="mt-3 text-3xl font-semibold text-gray-900">
-                    {evaluationSummary?.eligible ?? 0}
-                  </h2>
-                  <p className="mt-3 text-sm text-[color:var(--ink-muted)]">
-                    Layak bibit, {evaluationSummary?.monitoring ?? 0} perlu pantau
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-yellow-50 p-3 text-yellow-700">
-                  <BadgeCheck size={22} />
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          <div className="mb-8 grid gap-4 md:grid-cols-2">
-            <Link href="/sheep">
-              <Card className="min-h-[112px] cursor-pointer bg-[color:var(--surface-strong)] transition hover:-translate-y-1 hover:shadow-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[color:var(--ink-muted)]">
-                      Ternak
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold text-gray-900">
-                      Kelola data ternak
-                    </h2>
-                  </div>
-                  <ClipboardList className="text-[color:var(--accent)]" size={20} />
-                </div>
-              </Card>
-            </Link>
-
-            <Link href="/map">
-              <Card className="min-h-[112px] cursor-pointer bg-[color:var(--surface-strong)] transition hover:-translate-y-1 hover:shadow-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[color:var(--ink-muted)]">
-                      Distribusi
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold text-gray-900">
-                      Pantau sebaran peternak
-                    </h2>
-                  </div>
-                  <ArrowRight className="text-[color:var(--accent)]" size={20} />
-                </div>
-              </Card>
-            </Link>
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile
+              label="Populasi ternak"
+              value={summary.sheep.total}
+              hint={`${summary.sheep.active} aktif · ${summary.sheep.male} jantan · ${summary.sheep.female} betina`}
+            />
+            <StatTile
+              label="Total rekording"
+              value={totalRecords}
+              hint={`Bobot ${summary.records.weights} · BCS ${summary.records.bcs} · Sehat ${summary.records.health}`}
+            />
+            <StatTile
+              label="Layak bibit"
+              value={evaluationSummary?.eligible ?? 0}
+              tone="success"
+              hint={`${evaluationSummary?.monitoring ?? 0} perlu dipantau`}
+            />
+            <StatTile label="Ternak aktif" value={`${activePercent}%`} hint="Dari seluruh data ternak" />
           </div>
 
           {evaluationSummary && (
-            <div className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-              <Card className="bg-[color:var(--surface-strong)]">
-                <div className="mb-4 flex items-center gap-2">
-                  <BadgeCheck size={18} className="text-[color:var(--accent)]" />
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Ringkasan Evaluasi
-                  </h2>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl bg-green-50 px-4 py-4">
-                    <p className="text-sm text-green-700">Layak Bibit</p>
-                    <p className="mt-2 text-2xl font-semibold text-green-900">
-                      {evaluationSummary.eligible}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-yellow-50 px-4 py-4">
-                    <p className="text-sm text-yellow-700">Perlu Pemantauan</p>
-                    <p className="mt-2 text-2xl font-semibold text-yellow-900">
-                      {evaluationSummary.monitoring}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-red-50 px-4 py-4">
-                    <p className="text-sm text-red-700">Belum Direkomendasikan</p>
-                    <p className="mt-2 text-2xl font-semibold text-red-900">
-                      {evaluationSummary.notRecommended}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-blue-50 px-4 py-4">
-                    <p className="text-sm text-blue-700">Data Lengkap</p>
-                    <p className="mt-2 text-2xl font-semibold text-blue-900">
-                      {evaluationSummary.completeRecords}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="bg-[color:var(--surface-strong)]">
-                <div className="mb-4 flex items-center gap-2">
-                  <FileCheck size={18} className="text-[color:var(--accent)]" />
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Kualitas Data
-                  </h2>
-                </div>
-                <div className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center justify-between">
-                    <span>Total rekording</span>
-                    <span className="font-semibold">
-                      {summary.records.weights +
-                        summary.records.bcs +
-                        summary.records.health +
-                        summary.records.reproduction}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Reproduksi tercatat</span>
-                    <span className="font-semibold">{summary.records.reproduction}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Persentase aktif</span>
-                    <span className="font-semibold">
-                      {summary.sheep.total > 0
-                        ? Math.round((summary.sheep.active / summary.sheep.total) * 100)
-                        : 0}
-                      %
-                    </span>
-                  </div>
-                </div>
-              </Card>
+            <div className="mb-5">
+              <h2 className="mb-3 text-lg font-semibold text-ink">Ringkasan evaluasi</h2>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <StatTile label="Layak bibit" value={evaluationSummary.eligible} tone="success" />
+                <StatTile label="Perlu pemantauan" value={evaluationSummary.monitoring} tone="warning" />
+                <StatTile label="Belum direkomendasikan" value={evaluationSummary.notRecommended} tone="danger" />
+                <StatTile label="Data lengkap" value={evaluationSummary.completeRecords} tone="info" />
+              </div>
             </div>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-[1.45fr_0.95fr]">
-            <Card className="bg-[color:var(--surface-strong)]">
-              <div className="mb-4 flex items-center gap-2">
-                <Users size={18} className="text-[color:var(--accent)]" />
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Ternak Terbaru
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                {summary.recentSheep.length === 0 ? (
-                  <p className="text-sm text-gray-500">Belum ada data ternak.</p>
-                ) : (
-                  summary.recentSheep.map((item) => (
-                    <Link key={item.id} href={`/sheep/${item.id}`}>
-                      <div className="rounded-xl border border-gray-100 p-4 transition hover:border-gray-200 hover:bg-gray-50">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {item.sheepCode}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {item.name || 'Tanpa nama'}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={
-                              item.status === 'ACTIVE' ? 'success' : 'default'
-                            }
-                          >
-                            {labelStatusTernak(item.status)}
-                          </Badge>
-                        </div>
-
-                        <div className="mt-3 grid gap-1 text-sm text-gray-600 md:grid-cols-2">
-                          <p>Breed: {item.breed}</p>
-                          <p>Jenis kelamin: {item.gender === 'MALE' ? 'Jantan' : item.gender === 'FEMALE' ? 'Betina' : item.gender}</p>
-                          <p>
-                            Ditambahkan:{' '}
-                            {new Date(item.createdAt).toLocaleDateString(
-                              'id-ID',
-                            )}
+          <div className="grid gap-4 lg:grid-cols-[1.45fr_0.95fr]">
+            <SectionCard title="Ternak terbaru">
+              {summary.recentSheep.length === 0 ? (
+                <p className="text-sm text-ink-muted">Belum ada data ternak.</p>
+              ) : (
+                <div className="space-y-2">
+                  {summary.recentSheep.map((item) => (
+                    <Link key={item.id} href={`/sheep/${item.id}`} className={rowLink}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-ink">{item.sheepCode}</p>
+                          <p className="truncate text-sm text-ink-muted">
+                            {item.name || 'Tanpa nama'}
                           </p>
                         </div>
+                        <Badge variant={item.status === 'ACTIVE' ? 'success' : 'default'}>
+                          {labelStatusTernak(item.status)}
+                        </Badge>
                       </div>
+                      <p className="mt-1.5 text-sm text-ink/80">
+                        {item.breed} · {labelJenisKelamin(item.gender)} · ditambahkan{' '}
+                        {new Date(item.createdAt).toLocaleDateString('id-ID')}
+                      </p>
                     </Link>
-                  ))
-                )}
-              </div>
-            </Card>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
 
-            <Card className="bg-[color:var(--surface-strong)]">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Ringkasan Sistem
-              </h2>
-              <div className="space-y-3 text-sm text-gray-700">
-                <div className="flex items-center justify-between">
-                  <span>Total data ternak</span>
-                  <span className="font-semibold">{summary.sheep.total}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Total rekording</span>
-                  <span className="font-semibold">
-                    {summary.records.weights +
-                      summary.records.bcs +
-                      summary.records.health +
-                      summary.records.reproduction}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Persentase aktif</span>
-                  <span className="font-semibold">
-                    {summary.sheep.total > 0
-                      ? Math.round(
-                          (summary.sheep.active / summary.sheep.total) * 100,
-                        )
-                      : 0}
-                    %
-                  </span>
-                </div>
-              </div>
-            </Card>
+            <SectionCard title="Kualitas data">
+              <dl className="space-y-3 text-sm">
+                {[
+                  ['Total data ternak', summary.sheep.total],
+                  ['Total rekording', totalRecords],
+                  ['Reproduksi tercatat', summary.records.reproduction],
+                  ['Persentase aktif', `${activePercent}%`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-3">
+                    <dt className="text-ink-muted">{label}</dt>
+                    <dd className="font-semibold text-ink">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </SectionCard>
           </div>
         </>
       )}

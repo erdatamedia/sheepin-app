@@ -1,4 +1,5 @@
 import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIndonesianPhone } from '../../common/validators/indonesian-phone.decorator';
 
 export class UpdateMyProfileDto {
   @IsOptional()
@@ -7,8 +8,7 @@ export class UpdateMyProfileDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(30)
+  @IsIndonesianPhone()
   phone?: string;
 
   @IsOptional()

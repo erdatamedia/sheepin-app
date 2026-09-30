@@ -54,7 +54,7 @@ export default function LocationPickerMap({
   onPick,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200">
+    <div className="overflow-hidden rounded-2xl border border-line">
       <LeafletMapContainer
         center={[latitude, longitude]}
         zoom={13}

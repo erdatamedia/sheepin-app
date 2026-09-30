@@ -99,7 +99,7 @@ describe('Smoke Test API Sheep-In', () => {
       { id: farmerUser.id },
       {
         name: 'Fajar Ariadi',
-        phone: '08123456789',
+        phone: farmerUser.phone, // nomor HP tidak berubah
         groupName: 'Kelompok Inti',
         address: 'Kandang Tengah',
         photoUrl: '/uploads/fajar.png',
@@ -108,6 +108,15 @@ describe('Smoke Test API Sheep-In', () => {
 
     expect(profileResponse.data.name).toBe('Fajar Ariadi');
     expect(profileResponse.data.photoUrl).toBe('/uploads/fajar.png');
+  });
+
+  it('peternak tidak bisa mengganti nomor HP (identitas login) lewat profil', async () => {
+    await expect(
+      usersController.updateMyProfile(
+        { id: farmerUser.id },
+        { phone: '6289999999999' },
+      ),
+    ).rejects.toThrow('hanya dapat diubah oleh petugas');
   });
 
   it('mengunggah gambar melalui layanan media', () => {

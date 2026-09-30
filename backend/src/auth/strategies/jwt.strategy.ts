@@ -2,12 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { UserRole } from '@prisma/client';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { getJwtSecret } from '../../common/config/jwt-secret';
 import { PrismaService } from '../../prisma/prisma.service';
 
 type JwtPayload = {
   sub: string;
-  email: string;
   role: UserRole;
+  iat?: number;
 };
 
 @Injectable()
@@ -16,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'supersecret_sheepin_jwt_key',
+      secretOrKey: getJwtSecret(),
     });
   }
 
@@ -29,11 +30,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         role: true,
         isActive: true,
+        pinChangedAt: true,
+        mustChangePin: true,
       },
     });
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User tidak aktif atau tidak ditemukan');
+    }
+
+    // Token yang terbit sebelum PIN diganti/direset tidak berlaku lagi.
+    if (
+      user.pinChangedAt &&
+      (payload.iat ?? 0) < Math.floor(user.pinChangedAt.getTime() / 1000)
+    ) {
+      throw new UnauthorizedException('Sesi berakhir. Silakan masuk kembali.');
     }
 
     return user;

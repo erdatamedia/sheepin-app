@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  // Tanpa env (mis. di belakang reverse proxy satu domain) API dipanggil lewat /api.
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
 });
 
 api.interceptors.request.use((config) => {
@@ -14,6 +15,23 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+// Akun dengan PIN sementara hanya boleh membuka halaman ganti PIN.
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (
+      typeof window !== 'undefined' &&
+      axios.isAxiosError<{ code?: string }>(error) &&
+      error.response?.status === 403 &&
+      error.response.data?.code === 'PIN_CHANGE_REQUIRED' &&
+      window.location.pathname !== '/change-pin'
+    ) {
+      window.location.assign('/change-pin?wajib=1');
+    }
+    return Promise.reject(error);
+  },
+);
 
 export function getApiErrorMessage(error: unknown, fallback: string) {
   if (axios.isAxiosError<{ message?: string }>(error)) {
