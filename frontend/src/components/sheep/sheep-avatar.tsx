@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { mediaUrl } from '@/lib/media';
 import { cn } from '@/lib/utils';
 
 type SheepAvatarProps = {
@@ -13,7 +14,7 @@ export function SheepAvatar({ sheepCode, name, photoUrl, className }: SheepAvata
 
   return photoUrl ? (
     <img
-      src={photoUrl}
+      src={mediaUrl(photoUrl)}
       alt={name || sheepCode}
       className={cn(box, 'border border-line object-cover', className)}
     />

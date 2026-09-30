@@ -31,6 +31,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
+    // Nama berkas memuat cap waktu dan angka acak, jadi isinya tidak pernah berubah.
+    maxAge: '30d',
+    immutable: true,
   });
 
   app.useGlobalPipes(

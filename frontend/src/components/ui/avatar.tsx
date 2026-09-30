@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { mediaUrl } from '@/lib/media';
 import { cn } from '@/lib/utils';
 
 type AvatarProps = {
@@ -29,7 +30,7 @@ function initials(name: string) {
 export function Avatar({ name, photoUrl, size = 'md', className }: AvatarProps) {
   return photoUrl ? (
     <img
-      src={photoUrl}
+      src={mediaUrl(photoUrl)}
       alt={name}
       className={cn('shrink-0 rounded-full border border-line object-cover', sizes[size], className)}
     />

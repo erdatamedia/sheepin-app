@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react';
 import { Camera, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { uploadImage } from '@/lib/media';
+import { mediaUrl, uploadImage } from '@/lib/media';
 import { getApiErrorMessage } from '@/lib/api';
 
 type PhotoUploadFieldProps = {
@@ -37,7 +37,8 @@ export function PhotoUploadField({
       setUploading(true);
       setMessage('');
       const response = await uploadImage(file);
-      onChange(response.data.url);
+      // Simpan alamat relatif: tidak terikat domain atau protokol tempat backend melihat permintaan.
+      onChange(response.data.path || response.data.url);
       setMessage('Foto berhasil diunggah.');
     } catch (error) {
       console.error(error);
@@ -61,7 +62,7 @@ export function PhotoUploadField({
       <div className="flex items-center gap-4">
         {value ? (
           <img
-            src={value}
+            src={mediaUrl(value)}
             alt={label}
             className="h-20 w-20 rounded-[22px] border border-line object-cover"
           />

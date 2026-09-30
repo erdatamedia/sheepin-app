@@ -53,3 +53,16 @@ export async function uploadImage(file: File) {
     throw error;
   }
 }
+
+/**
+ * Alamat foto yang aman dipakai di halaman HTTPS.
+ *
+ * Foto lama tersimpan dengan alamat penuh (mis. "http://sheep-in.com/uploads/x.jpg" atau alamat internal
+ * backend) sehingga diblokir sebagai "mixed content" atau tidak terjangkau. Bagian "/uploads/..." selalu
+ * diambil dari domain yang sama, lalu diteruskan Next.js ke backend (lihat next.config.ts).
+ */
+export function mediaUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  const index = url.indexOf('/uploads/');
+  return index >= 0 ? url.slice(index) : url;
+}
