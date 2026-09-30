@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Segmented } from '@/components/ui/segmented';
-import { cn } from '@/lib/utils';
+import { cn, sanitizeDecimal } from '@/lib/utils';
 import { api, getApiErrorMessage } from '@/lib/api';
 import {
   labelJenisKelamin,
@@ -269,10 +269,7 @@ export default function RecordingPage() {
   const pickingSheep = !form.sheepId || changingSheep;
 
   const handleWeightChange = (raw: string) => {
-    // Keyboard Indonesia memakai koma desimal; ubah ke titik dan buang karakter lain.
-    const cleaned = raw.replace(',', '.').replace(/[^0-9.]/g, '');
-    const [whole, ...rest] = cleaned.split('.');
-    setForm({ ...form, weightKg: rest.length ? `${whole}.${rest.join('')}` : whole });
+    setForm({ ...form, weightKg: sanitizeDecimal(raw) });
   };
 
   const submitLabel = saving
