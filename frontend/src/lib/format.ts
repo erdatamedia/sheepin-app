@@ -29,3 +29,28 @@ export function labelTimeAgo(iso?: string | null, now: Date = new Date()): strin
   if (days < 30) return `${Math.floor(days / 7)} minggu lalu`;
   return `${Math.floor(days / 30)} bulan lalu`;
 }
+
+/** Ambil tanggal kalender dari ISO (tanpa geser zona waktu) sebagai Date lokal. */
+export function parseDay(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+/** "3 Sep" */
+export function formatDayShort(iso: string) {
+  return parseDay(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+/** "30 September 2026" */
+export function formatDayLong(iso: string) {
+  return parseDay(iso).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+/** "September 2026" */
+export function formatMonthYear(iso: string) {
+  return parseDay(iso).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+}

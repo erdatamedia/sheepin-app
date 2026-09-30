@@ -46,8 +46,8 @@ type ListRowProps = {
   subtitle?: React.ReactNode;
   /** Ikon atau avatar di kiri. */
   leading?: React.ReactNode;
-  /** Lebar leading untuk pemisah: 'icon' (30px, bawaan untuk RowIcon) atau 'avatar' (44px). */
-  leadingSize?: 'icon' | 'avatar';
+  /** Lebar leading untuk pemisah: 'icon' (30px), 'circle' (36px), atau 'avatar' (44px, bawaan). */
+  leadingSize?: 'icon' | 'circle' | 'avatar';
   /** Teks nilai di kanan (abu-abu). */
   value?: React.ReactNode;
   /** Elemen di kanan, mis. <Badge>. */
@@ -96,7 +96,9 @@ export function ListRow({
           <span className="block truncate text-[14px] leading-snug text-ink-muted">{subtitle}</span>
         )}
       </span>
-      {value && <span className="shrink-0 text-[15px] text-ink-muted">{value}</span>}
+      {value && (
+        <span className="max-w-[60%] shrink-0 break-words text-right text-[15px] text-ink-muted">{value}</span>
+      )}
       {trailing && <span className="flex shrink-0 items-center">{trailing}</span>}
       {showChevron && (
         <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-primary-icon" />
@@ -123,7 +125,13 @@ export function ListRow({
         aria-hidden="true"
         className={cn(
           'pointer-events-none absolute bottom-0 right-0 h-px bg-line group-last:hidden',
-          leading ? (leadingSize === 'icon' ? 'left-[58px]' : 'left-[72px]') : 'left-4',
+          leading
+            ? leadingSize === 'icon'
+              ? 'left-[58px]'
+              : leadingSize === 'circle'
+                ? 'left-[64px]'
+                : 'left-[72px]'
+            : 'left-4',
         )}
       />
     </li>

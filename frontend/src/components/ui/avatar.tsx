@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 type AvatarProps = {
   name: string;
   photoUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 };
 
@@ -12,6 +12,7 @@ const sizes = {
   sm: 'h-9 w-9 text-[13px]',
   md: 'h-11 w-11 text-[15px]',
   lg: 'h-16 w-16 text-[22px]',
+  xl: 'h-20 w-20 text-[28px]',
 };
 
 function initials(name: string) {

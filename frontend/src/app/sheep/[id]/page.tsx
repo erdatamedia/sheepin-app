@@ -3,7 +3,18 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ClipboardPlus, PencilLine, PawPrint } from 'lucide-react';
+import {
+  ArrowLeft,
+  Baby,
+  CircleX,
+  CirclePlus,
+  Heart,
+  PencilLine,
+  PawPrint,
+  Sparkles,
+  Stethoscope,
+  Tag,
+} from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
@@ -15,7 +26,14 @@ import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Toast, useToast } from '@/components/ui/toast';
-import { SheepAvatar } from '@/components/sheep/sheep-avatar';
+import { Avatar } from '@/components/ui/avatar';
+import { BackLink } from '@/components/ui/back-link';
+import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
+import { StatTile } from '@/components/ui/stat-tile';
+import { ProgressTimeline } from '@/components/sheep/progress-timeline';
+import { WeightChart } from '@/components/sheep/weight-chart';
+import { bcsLabel } from '@/lib/progress';
+import { formatDiff, formatKg, labelTimeAgo } from '@/lib/format';
 import { PhotoUploadField } from '@/components/ui/photo-upload-field';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { cn, sanitizeDecimal } from '@/lib/utils';
@@ -527,33 +545,34 @@ export default function SheepDetailPage() {
   }
 
   const isFarmer = me?.role === 'FARMER';
+  const recordHref = `/recording?sheepId=${sheep.id}`;
+
+  const weightDiff =
+    weights[0] && weights[1]
+      ? Math.round((weights[0].weightKg - weights[1].weightKg) * 10) / 10
+      : null;
+  const weightHint =
+    weightDiff !== null && Math.abs(weightDiff) > 0.1
+      ? `${weightDiff > 0 ? '▲' : '▼'} ${formatDiff(weightDiff)} kg`
+      : latestWeight
+        ? labelTimeAgo(latestWeight.recordDate)
+        : 'Belum ditimbang';
 
   const hero = (
     <div className="mb-5">
-      <Link
-        href="/sheep"
-        className="mb-2 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink-muted transition hover:text-ink"
-      >
-        <ArrowLeft size={16} aria-hidden="true" />
-        {isFarmer ? 'Kembali ke ternak saya' : 'Kembali ke daftar ternak'}
-      </Link>
+      <BackLink href="/sheep" label={isFarmer ? 'Ternak saya' : 'Ternak'} />
 
       <div className="flex items-center gap-4">
-        <SheepAvatar
-          sheepCode={sheep.sheepCode}
-          name={sheep.name}
-          photoUrl={sheep.photoUrl}
-          className="h-20 w-20 rounded-[24px] text-xl"
-        />
+        <Avatar name={sheep.name || sheep.sheepCode} photoUrl={sheep.photoUrl} size="xl" />
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold text-ink">{sheep.sheepCode}</h1>
-          <p className="truncate text-sm text-ink-muted">
-            {sheep.name || sheep.breed}
+          <h1 className="truncate text-[28px] font-bold leading-tight tracking-tight text-ink">
+            {sheep.sheepCode}
+          </h1>
+          <p className="truncate text-[15px] text-ink-muted">
+            {[sheep.name, sheep.breed, labelJenisKelamin(sheep.gender)].filter(Boolean).join(' · ')}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant={getStatusVariant(sheep.status)}>
-              {labelStatusTernak(sheep.status)}
-            </Badge>
+            <Badge variant={getStatusVariant(sheep.status)}>{labelStatusTernak(sheep.status)}</Badge>
             {isFarmer && evaluation && (
               <Badge variant={getStatusVariant(evaluation.evaluation.breedingStatus)}>
                 {labelStatusData(evaluation.evaluation.breedingStatus)}
@@ -565,147 +584,130 @@ export default function SheepDetailPage() {
     </div>
   );
 
+  const recordButton = (
+    <Link href={recordHref} className={buttonClassName({ size: 'lg', className: 'mb-5 w-full' })}>
+      <CirclePlus size={22} aria-hidden="true" />
+      Catat perkembangan
+    </Link>
+  );
+
   const summaryTiles = (
-    <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <Card className="p-3 sm:p-4">
-        <p className="text-xs text-ink-muted sm:text-sm">Bobot terakhir</p>
-        <p className="mt-1 text-xl font-bold text-ink">
-          {latestWeight ? `${latestWeight.weightKg} kg` : '-'}
-        </p>
-      </Card>
-      <Card className="p-3 sm:p-4">
-        <p className="text-xs text-ink-muted sm:text-sm">BCS terakhir</p>
-        <p className="mt-1 text-xl font-bold text-ink">
-          {latestBcs ? latestBcs.bcsScore : '-'}
-        </p>
-      </Card>
-      <Card className="p-3 sm:p-4">
-        <p className="text-xs text-ink-muted sm:text-sm">Kesehatan</p>
-        <div className="mt-2">
+    <div
+      className={
+        isFarmer ? 'mb-6 grid grid-cols-3 gap-3' : 'mb-6 grid grid-cols-2 gap-3 md:grid-cols-4'
+      }
+    >
+      <StatTile
+        label="Bobot"
+        value={latestWeight ? formatKg(latestWeight.weightKg) : '-'}
+        hint={weightHint}
+      />
+      <StatTile
+        label="Kondisi tubuh"
+        value={latestBcs ? latestBcs.bcsScore : '-'}
+        hint={latestBcs ? bcsLabel(latestBcs.bcsScore) : 'Belum dinilai'}
+      />
+      <StatTile
+        label="Kesehatan"
+        value={
           <Badge variant={getStatusVariant(latestHealth?.healthStatus)}>
             {labelStatusKesehatan(latestHealth?.healthStatus)}
           </Badge>
-        </div>
-      </Card>
-      <Card className="p-3 sm:p-4">
-        <p className="text-xs text-ink-muted sm:text-sm">Reproduksi</p>
-        <div className="mt-2">
-          <Badge variant={getStatusVariant(latestReproduction?.status)}>
-            {labelStatusReproduksi(latestReproduction?.status)}
-          </Badge>
-        </div>
-      </Card>
+        }
+      />
+      {!isFarmer && (
+        <StatTile
+          label="Reproduksi"
+          value={
+            <Badge variant={getStatusVariant(latestReproduction?.status)}>
+              {labelStatusReproduksi(latestReproduction?.status)}
+            </Badge>
+          }
+        />
+      )}
     </div>
   );
 
+  const progress = (
+    <>
+      <section className="mb-6" aria-labelledby="sec-bobot">
+        <h2 id="sec-bobot" className="mb-2 px-1 text-[20px] font-bold tracking-tight text-ink">
+          Perkembangan bobot
+        </h2>
+        <Card>
+          <WeightChart weights={weights} recordHref={recordHref} />
+        </Card>
+      </section>
+
+      <section className="mb-6" aria-labelledby="sec-linimasa">
+        <h2 id="sec-linimasa" className="mb-2 px-1 text-[20px] font-bold tracking-tight text-ink">
+          Linimasa
+        </h2>
+        <ProgressTimeline
+          weights={weights}
+          bcs={bcs}
+          health={health}
+          reproduction={reproduction}
+          recordHref={recordHref}
+        />
+      </section>
+    </>
+  );
+
+  const info = (
+    <ListGroup header="Tentang ternak ini" className="mb-6">
+      <ListRow title="Jenis / rumpun" value={sheep.breed} />
+      <ListRow title="Jenis kelamin" value={labelJenisKelamin(sheep.gender)} />
+      <ListRow title="Lokasi" value={sheep.location || '-'} />
+      <ListRow title="Warna" value={sheep.color || '-'} />
+      <ListRow title="Tanggal lahir" value={fmtDate(sheep.birthDate)} />
+      <ListRow title="Tanda fisik" value={sheep.physicalMark || '-'} />
+      {!isFarmer && (
+        <>
+          <ListRow title="Pemilik" value={sheep.ownerUser?.name || '-'} />
+          <ListRow title="Dibuat oleh" value={sheep.createdBy?.name || '-'} />
+          <ListRow title="Sire ID" value={sheep.sireId || '-'} />
+          <ListRow title="Dam ID" value={sheep.damId || '-'} />
+        </>
+      )}
+    </ListGroup>
+  );
+
   if (isFarmer) {
-    const quickActions = [
-      { event: 'SICK', label: 'Catat Sakit', variant: 'dangerOutline' as const },
-      { event: 'MATED', label: 'Catat Kawin', variant: 'outline' as const },
-      { event: 'PREGNANT', label: 'Catat Bunting', variant: 'outline' as const },
-      { event: 'LAMBED', label: 'Catat Beranak', variant: 'outline' as const },
-      { event: 'DEAD', label: 'Catat Mati', variant: 'dangerOutline' as const },
-      { event: 'SOLD', label: 'Catat Terjual', variant: 'successOutline' as const },
+    const events = [
+      { event: 'SICK', label: 'Sakit', icon: Stethoscope, tone: 'default' as const },
+      { event: 'MATED', label: 'Dikawinkan', icon: Heart, tone: 'default' as const },
+      { event: 'PREGNANT', label: 'Bunting', icon: Sparkles, tone: 'default' as const },
+      { event: 'LAMBED', label: 'Beranak', icon: Baby, tone: 'default' as const },
+      { event: 'SOLD', label: 'Terjual', icon: Tag, tone: 'default' as const },
+      { event: 'DEAD', label: 'Mati', icon: CircleX, tone: 'danger' as const },
     ];
 
     return shell(
       <>
         {hero}
+        {recordButton}
         {summaryTiles}
+        {progress}
 
-        <Card className="mb-5">
-          <h2 className="mb-3 text-lg font-semibold text-ink">Aksi cepat</h2>
-          <Link
-            href={`/recording?sheepId=${sheep.id}`}
-            className={buttonClassName({ size: 'lg', className: 'mb-3 w-full' })}
-          >
-            <ClipboardPlus size={20} aria-hidden="true" />
-            Rekord Bobot / BCS / Kesehatan
-          </Link>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            {quickActions.map((action) => (
-              <Link
-                key={action.event}
-                href={`/recording?sheepId=${sheep.id}&event=${action.event}`}
-                className={buttonClassName({ variant: action.variant, className: 'h-12' })}
-              >
-                {action.label}
-              </Link>
-            ))}
-            <Link
-              href="/history"
-              className={buttonClassName({ variant: 'outline', className: 'h-12' })}
-            >
-              Lihat Riwayat
-            </Link>
-          </div>
-        </Card>
+        <ListGroup
+          header="Catat kejadian"
+          footer="Pilih kejadian yang baru terjadi pada ternak ini."
+          className="mb-6"
+        >
+          {events.map((item) => (
+            <ListRow
+              key={item.event}
+              href={`${recordHref}&event=${item.event}`}
+              leading={<RowIcon icon={item.icon} tone={item.tone} />}
+              leadingSize="icon"
+              title={item.label}
+              tone={item.tone}
+            />
+          ))}
+        </ListGroup>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card>
-            <h3 className="mb-3 text-lg font-semibold text-ink">Bobot terakhir</h3>
-            <div className="space-y-2">
-              {weights.slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-xl border border-line p-3 text-sm">
-                  <p className="text-base font-semibold text-ink">{item.weightKg} kg</p>
-                  <p className="text-ink-muted">{fmtDate(item.recordDate)}</p>
-                  {item.note && <p className="mt-1 text-ink/80">{item.note}</p>}
-                </div>
-              ))}
-              {weights.length === 0 && (
-                <p className="text-sm text-ink-muted">Belum ada data bobot.</p>
-              )}
-            </div>
-          </Card>
-
-          <Card>
-            <h3 className="mb-3 text-lg font-semibold text-ink">Kesehatan terakhir</h3>
-            <div className="space-y-2">
-              {health.slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-xl border border-line p-3 text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold text-ink">{item.diseaseName || 'Kondisi umum'}</p>
-                    <Badge variant={getStatusVariant(item.healthStatus)}>
-                      {labelStatusKesehatan(item.healthStatus)}
-                    </Badge>
-                  </div>
-                  <p className="text-ink-muted">{fmtDate(item.checkDate)}</p>
-                  {(item.note || item.treatment) && (
-                    <p className="mt-1 text-ink/80">{item.note || item.treatment}</p>
-                  )}
-                </div>
-              ))}
-              {health.length === 0 && (
-                <p className="text-sm text-ink-muted">Belum ada data kesehatan.</p>
-              )}
-            </div>
-          </Card>
-
-          <Card>
-            <h3 className="mb-3 text-lg font-semibold text-ink">Reproduksi terakhir</h3>
-            <div className="space-y-2">
-              {reproduction.slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-xl border border-line p-3 text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold text-ink">{labelStatusReproduksi(item.status)}</p>
-                    <Badge variant={getStatusVariant(item.status)}>
-                      {labelStatusReproduksi(item.status)}
-                    </Badge>
-                  </div>
-                  <p className="text-ink-muted">
-                    {fmtDate(item.matingDate || item.lambingDate)}
-                  </p>
-                  {(item.note || item.maleParent) && (
-                    <p className="mt-1 text-ink/80">{item.note || item.maleParent}</p>
-                  )}
-                </div>
-              ))}
-              {reproduction.length === 0 && (
-                <p className="text-sm text-ink-muted">Belum ada data reproduksi.</p>
-              )}
-            </div>
-          </Card>
-        </div>
+        {info}
       </>,
     );
   }
@@ -731,41 +733,13 @@ export default function SheepDetailPage() {
   return shell(
     <>
       {hero}
-
-      <Link
-        href={`/recording?sheepId=${sheep.id}`}
-        className={buttonClassName({ size: 'lg', className: 'mb-5 w-full sm:w-auto' })}
-      >
-        <ClipboardPlus size={20} aria-hidden="true" />
-        Rekord ternak ini
-      </Link>
-
+      {recordButton}
       {summaryTiles}
-
-      <Card className="mb-5">
-        <h3 className="mb-3 text-lg font-semibold text-ink">Informasi umum</h3>
-        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          {[
-            ['Jenis', sheep.breed],
-            ['Jenis kelamin', labelJenisKelamin(sheep.gender)],
-            ['Lokasi', sheep.location || '-'],
-            ['Warna', sheep.color || '-'],
-            ['Tanggal lahir', fmtDate(sheep.birthDate)],
-            ['Tanda fisik', sheep.physicalMark || '-'],
-            ['Sire ID', sheep.sireId || '-'],
-            ['Dam ID', sheep.damId || '-'],
-            ['Dibuat oleh', sheep.createdBy?.name || '-'],
-            ['Pemilik', sheep.ownerUser?.name || '-'],
-          ].map(([label, value]) => (
-            <div key={label} className="flex gap-3">
-              <dt className="w-28 shrink-0 text-ink-muted">{label}</dt>
-              <dd className="min-w-0 break-words font-medium text-ink">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </Card>
+      {progress}
 
       {evaluation && <EvaluationPanel evaluation={evaluation} />}
+
+      {info}
 
       {canManageIdentity && (
         <Card className="mb-5">
@@ -860,6 +834,12 @@ export default function SheepDetailPage() {
         </Card>
       )}
 
+      <details className="mb-6 overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
+        <summary className="flex min-h-[56px] cursor-pointer items-center justify-between px-4 text-[17px] font-semibold text-ink">
+          Input manual (petugas)
+          <span className="text-[14px] font-normal text-ink-muted">Bobot, BCS, kesehatan, reproduksi</span>
+        </summary>
+        <div className="space-y-4 border-t border-line p-4">
       <div
         role="tablist"
         aria-label="Riwayat rekording"
@@ -1107,6 +1087,8 @@ export default function SheepDetailPage() {
           </div>
         </Card>
       )}
+        </div>
+      </details>
     </>,
   );
 }
