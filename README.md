@@ -162,7 +162,11 @@ pnpm build
 ### Backend
 
 - `POST /api/auth/login`
-- `POST /api/auth/login-farmer`
+- `POST /api/auth/login-phone` (peternak: no. HP + PIN 6 digit; terkunci 15 menit setelah 5 kali salah)
+- `POST /api/auth/register-farmer` (no. HP + nama + PIN)
+- `POST /api/auth/change-pin`
+- `POST /api/auth/login-farmer` (kode lama; hanya untuk akun yang belum punya PIN, akan dihapus)
+- `POST /api/farmers` dan `POST /api/farmers/:id/reset-pin` (petugas/admin; PIN sementara ditampilkan sekali)
 - `GET /api/auth/me`
 - `GET /api/users/me/sheep`
 - `PATCH /api/users/me/profile`

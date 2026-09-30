@@ -36,8 +36,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : JSON.stringify(exception),
     );
 
+    const code =
+      typeof exceptionResponse === 'object'
+        ? (exceptionResponse as { code?: string }).code
+        : undefined;
+
     response.status(status).json({
       message,
+      ...(code ? { code } : {}),
       statusCode: status,
       path: request.url,
       timestamp: new Date().toISOString(),

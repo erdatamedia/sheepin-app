@@ -1,15 +1,22 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { hash } from 'bcrypt';
+import { generateTempPin } from '../common/pin';
 import { EvaluationService } from '../evaluation/evaluation.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 
 @Injectable()
 export class FarmersService {
+  private readonly logger = new Logger(FarmersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly evaluationService: EvaluationService,
@@ -77,6 +84,80 @@ export class FarmersService {
     };
   }
 
+  /** Petugas/admin mendaftarkan peternak; PIN sementara ditampilkan sekali. */
+  async create(dto: CreateFarmerDto, actorId: string) {
+    const pin = generateTempPin();
+
+    try {
+      const farmer = await this.prisma.user.create({
+        data: {
+          name: dto.name,
+          phone: dto.phone,
+          address: dto.address,
+          groupName: dto.groupName,
+          pinHash: await hash(pin, 12),
+          pinChangedAt: new Date(),
+          mustChangePin: true,
+          role: UserRole.FARMER,
+          isActive: true,
+        },
+        select: { id: true, name: true },
+      });
+
+      this.logger.log(
+        `Peternak ${farmer.id} didaftarkan oleh ${actorId} (PIN sementara dibuat)`,
+      );
+
+      return {
+        message:
+          'Peternak berhasil didaftarkan. Berikan PIN sementara ini kepada peternak; PIN hanya ditampilkan sekali.',
+        data: { ...farmer, pin },
+      };
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') {
+        throw new ConflictException('Nomor HP sudah terdaftar');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Reset PIN: membuat PIN sementara baru (dipakai juga untuk memberi PIN awal
+   * peternak lama). Peternak wajib menggantinya saat masuk; sesi lama dicabut.
+   */
+  async resetPin(id: string, actorId: string) {
+    const farmer = await this.prisma.user.findFirst({
+      where: { id, role: UserRole.FARMER },
+      select: { id: true, name: true },
+    });
+
+    if (!farmer) {
+      throw new NotFoundException('Data peternak tidak ditemukan');
+    }
+
+    const pin = generateTempPin();
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        pinHash: await hash(pin, 12),
+        pinChangedAt: new Date(),
+        mustChangePin: true,
+        failedPinAttempts: 0,
+        lockedUntil: null,
+      },
+      select: { id: true },
+    });
+
+    this.logger.log(`PIN peternak ${id} direset oleh ${actorId}`);
+
+    return {
+      message:
+        'PIN sementara dibuat. Berikan kepada peternak; PIN hanya ditampilkan sekali.',
+      data: { id: farmer.id, name: farmer.name, pin },
+    };
+  }
+
   async update(id: string, dto: UpdateFarmerDto) {
     const farmer = await this.prisma.user.findFirst({
       where: {
@@ -90,41 +171,48 @@ export class FarmersService {
       throw new NotFoundException('Data peternak tidak ditemukan');
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        phone: dto.phone,
-        address: dto.address,
-        groupName: dto.groupName,
-        province: dto.province,
-        regency: dto.regency,
-        district: dto.district,
-        village: dto.village,
-        addressDetail: dto.addressDetail,
-        isActive: dto.isActive,
-      },
-      select: {
-        id: true,
-        name: true,
-        loginCode: true,
-        phone: true,
-        address: true,
-        groupName: true,
-        province: true,
-        regency: true,
-        district: true,
-        village: true,
-        addressDetail: true,
-        latitude: true,
-        longitude: true,
-        locationSource: true,
-        locationUpdatedAt: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    const updated = await this.prisma.user
+      .update({
+        where: { id },
+        data: {
+          name: dto.name,
+          phone: dto.phone,
+          address: dto.address,
+          groupName: dto.groupName,
+          province: dto.province,
+          regency: dto.regency,
+          district: dto.district,
+          village: dto.village,
+          addressDetail: dto.addressDetail,
+          isActive: dto.isActive,
+        },
+        select: {
+          id: true,
+          name: true,
+          loginCode: true,
+          phone: true,
+          address: true,
+          groupName: true,
+          province: true,
+          regency: true,
+          district: true,
+          village: true,
+          addressDetail: true,
+          latitude: true,
+          longitude: true,
+          locationSource: true,
+          locationUpdatedAt: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+      .catch((error: unknown) => {
+        if ((error as { code?: string }).code === 'P2002') {
+          throw new ConflictException('Nomor HP sudah dipakai peternak lain');
+        }
+        throw error;
+      });
 
     return {
       message: 'Data peternak berhasil diperbarui',

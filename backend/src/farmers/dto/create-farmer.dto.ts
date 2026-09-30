@@ -1,13 +1,8 @@
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Matches,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { IsIndonesianPhone } from '../../common/validators/indonesian-phone.decorator';
 
-export class RegisterFarmerDto {
+/** Pendaftaran peternak oleh petugas/admin; PIN sementara dibuat otomatis. */
+export class CreateFarmerDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -15,9 +10,6 @@ export class RegisterFarmerDto {
 
   @IsIndonesianPhone()
   phone: string;
-
-  @Matches(/^\d{6}$/, { message: 'PIN harus 6 angka' })
-  pin: string;
 
   @IsOptional()
   @IsString()

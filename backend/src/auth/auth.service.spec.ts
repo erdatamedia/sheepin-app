@@ -1,10 +1,18 @@
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { hashSync } from 'bcrypt';
+import { compare, hashSync } from 'bcrypt';
 import { getJwtSecret } from '../common/config/jwt-secret';
 import { AuthService } from './auth.service';
 
 const PASSWORD = 'rahasia-panjang-123';
+const PIN = '482915';
+const PHONE = '6281234567890';
+const PHONE_FAILED =
+  'Nomor HP atau PIN salah. Jika sudah salah 5 kali, tunggu 15 menit.';
 
 type UserRow = {
   id: string;
@@ -14,6 +22,10 @@ type UserRow = {
   loginCode: string | null;
   role: UserRole;
   isActive: boolean;
+  pinHash: string | null;
+  failedPinAttempts: number;
+  lockedUntil: Date | null;
+  mustChangePin: boolean;
 };
 
 function makeUser(overrides: Partial<UserRow> = {}): UserRow {
@@ -25,8 +37,22 @@ function makeUser(overrides: Partial<UserRow> = {}): UserRow {
     loginCode: null,
     role: UserRole.ADMIN,
     isActive: true,
+    pinHash: null,
+    failedPinAttempts: 0,
+    lockedUntil: null,
+    mustChangePin: false,
     ...overrides,
   };
+}
+
+function makeFarmer(overrides: Partial<UserRow> = {}): UserRow {
+  return makeUser({
+    role: UserRole.FARMER,
+    email: null,
+    password: null,
+    pinHash: hashSync(PIN, 4),
+    ...overrides,
+  });
 }
 
 function setup() {
@@ -37,7 +63,11 @@ function setup() {
   };
   const jwtService = { signAsync: jest.fn().mockResolvedValue('token-tes') };
   const prisma = {
-    user: { create: jest.fn(), findFirst: jest.fn() },
+    user: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn().mockResolvedValue({ id: 'u1', failedPinAttempts: 1 }),
+    },
   };
 
   const service = new AuthService(
@@ -88,8 +118,8 @@ describe('AuthService.login (petugas/admin)', () => {
     ).rejects.toThrow('Email atau password salah');
   });
 
-  it('kredensial benar -> token', async () => {
-    const { service, usersService } = setup();
+  it('kredensial benar -> token dengan payload minimal', async () => {
+    const { service, usersService, jwtService } = setup();
     usersService.findByEmail.mockResolvedValue(makeUser());
 
     const result = await service.login({
@@ -98,21 +128,21 @@ describe('AuthService.login (petugas/admin)', () => {
     });
 
     expect(result.access_token).toBe('token-tes');
+    expect(jwtService.signAsync).toHaveBeenCalledWith({
+      sub: 'u1',
+      role: UserRole.ADMIN,
+    });
   });
 });
 
-describe('AuthService.loginFarmer', () => {
-  const farmer = makeUser({
-    role: UserRole.FARMER,
-    email: null,
-    password: null,
-    loginCode: 'FRM001',
-  });
+describe('AuthService.loginFarmer (kode lama)', () => {
+  const legacy = makeFarmer({ loginCode: 'FRM001', pinHash: null });
 
   it.each([
     ['kode tidak ada', null],
-    ['akun nonaktif', { ...farmer, isActive: false }],
-    ['bukan peternak', { ...farmer, role: UserRole.ADMIN }],
+    ['akun nonaktif', { ...legacy, isActive: false }],
+    ['bukan peternak', { ...legacy, role: UserRole.ADMIN }],
+    ['sudah punya PIN', { ...legacy, pinHash: hashSync(PIN, 4) }],
   ])('%s -> satu pesan yang sama', async (_label, user) => {
     const { service, usersService } = setup();
     usersService.findByLoginCode.mockResolvedValue(user);
@@ -122,9 +152,9 @@ describe('AuthService.loginFarmer', () => {
     );
   });
 
-  it('kode dinormalisasi ke huruf besar lalu berhasil', async () => {
+  it('akun tanpa PIN masih bisa masuk (masa transisi)', async () => {
     const { service, usersService } = setup();
-    usersService.findByLoginCode.mockResolvedValue(farmer);
+    usersService.findByLoginCode.mockResolvedValue(legacy);
 
     const result = await service.loginFarmer({ loginCode: ' frm001 ' });
 
@@ -133,48 +163,244 @@ describe('AuthService.loginFarmer', () => {
   });
 });
 
-describe('AuthService.registerFarmer', () => {
-  const uniqueViolation = Object.assign(new Error('unique'), { code: 'P2002' });
-
-  it('mengulang dengan kode berikutnya bila kode bentrok', async () => {
+describe('AuthService.loginPhone', () => {
+  it('nomor + PIN benar -> token, dan penghitung gagal direset', async () => {
     const { service, prisma } = setup();
-    prisma.user.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ loginCode: 'FRM001' });
-    prisma.user.create
-      .mockRejectedValueOnce(uniqueViolation)
-      .mockResolvedValueOnce({ id: 'baru', loginCode: 'FRM002' });
-
-    const result = await service.registerFarmer({ name: 'Budi' });
-
-    expect(prisma.user.create).toHaveBeenCalledTimes(2);
-    const codes = prisma.user.create.mock.calls.map(
-      (call: [{ data: { loginCode: string } }]) => call[0].data.loginCode,
+    prisma.user.findUnique.mockResolvedValue(
+      makeFarmer({ failedPinAttempts: 3 }),
     );
-    expect(codes).toEqual(['FRM001', 'FRM002']);
-    expect(result.data.loginCode).toBe('FRM002');
+
+    const result = await service.loginPhone({ phone: PHONE, pin: PIN });
+
+    expect(result.access_token).toBe('token-tes');
+    expect(result.user.mustChangePin).toBe(false);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { failedPinAttempts: 0, lockedUntil: null },
+      }),
+    );
   });
 
-  it('error selain pelanggaran unik langsung dilempar', async () => {
+  it('PIN sementara -> mustChangePin true di respons', async () => {
     const { service, prisma } = setup();
-    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(
+      makeFarmer({ mustChangePin: true }),
+    );
+
+    const result = await service.loginPhone({ phone: PHONE, pin: PIN });
+
+    expect(result.user.mustChangePin).toBe(true);
+  });
+
+  it('semua jenis kegagalan memakai satu pesan yang sama', async () => {
+    const cases: Array<[string, UserRow | null]> = [
+      ['nomor tidak terdaftar', null],
+      ['PIN salah', makeFarmer()],
+      ['akun nonaktif', makeFarmer({ isActive: false })],
+      ['belum punya PIN', makeFarmer({ pinHash: null })],
+      ['akun staf', makeUser({ pinHash: hashSync(PIN, 4) })],
+      [
+        'sedang terkunci',
+        makeFarmer({ lockedUntil: new Date(Date.now() + 60_000) }),
+      ],
+    ];
+
+    for (const [label, user] of cases) {
+      const { service, prisma } = setup();
+      prisma.user.findUnique.mockResolvedValue(user);
+      const pin = label === 'PIN salah' ? '907351' : PIN;
+
+      await expect(service.loginPhone({ phone: PHONE, pin })).rejects.toThrow(
+        new UnauthorizedException(PHONE_FAILED),
+      );
+    }
+  });
+
+  it('PIN salah menaikkan penghitung', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(makeFarmer());
+    prisma.user.update.mockResolvedValue({ failedPinAttempts: 2 });
+
+    await expect(
+      service.loginPhone({ phone: PHONE, pin: '907351' }),
+    ).rejects.toThrow(PHONE_FAILED);
+
+    expect(prisma.user.update).toHaveBeenCalledTimes(1);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { failedPinAttempts: { increment: 1 } },
+      }),
+    );
+  });
+
+  it('salah kelima kalinya mengunci akun 15 menit dan mereset penghitung', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(
+      makeFarmer({ failedPinAttempts: 4 }),
+    );
+    prisma.user.update.mockResolvedValueOnce({ failedPinAttempts: 5 });
+
+    const before = Date.now();
+    await expect(
+      service.loginPhone({ phone: PHONE, pin: '907351' }),
+    ).rejects.toThrow(PHONE_FAILED);
+
+    expect(prisma.user.update).toHaveBeenCalledTimes(2);
+    const lockCall = prisma.user.update.mock.calls[1] as [
+      { data: { failedPinAttempts: number; lockedUntil: Date } },
+    ];
+    expect(lockCall[0].data.failedPinAttempts).toBe(0);
+    const lockedMs = lockCall[0].data.lockedUntil.getTime() - before;
+    expect(lockedMs).toBeGreaterThanOrEqual(15 * 60_000 - 1000);
+    expect(lockedMs).toBeLessThanOrEqual(15 * 60_000 + 5000);
+  });
+
+  it('akun terkunci ditolak walau PIN benar dan tidak menambah penghitung', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(
+      makeFarmer({ lockedUntil: new Date(Date.now() + 60_000) }),
+    );
+
+    await expect(
+      service.loginPhone({ phone: PHONE, pin: PIN }),
+    ).rejects.toThrow(PHONE_FAILED);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('kunci yang sudah lewat tidak lagi menghalangi', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(
+      makeFarmer({ lockedUntil: new Date(Date.now() - 1000) }),
+    );
+
+    const result = await service.loginPhone({ phone: PHONE, pin: PIN });
+
+    expect(result.access_token).toBe('token-tes');
+  });
+});
+
+describe('AuthService.registerFarmer', () => {
+  const dto = { name: 'Budi', phone: PHONE, pin: PIN };
+
+  it('PIN lemah ditolak sebelum menyentuh database', async () => {
+    const { service, prisma } = setup();
+
+    await expect(
+      service.registerFarmer({ ...dto, pin: '123456' }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('menyimpan hash PIN (bukan PIN asli) dan langsung memberi token', async () => {
+    const { service, prisma } = setup();
+    prisma.user.create.mockResolvedValue({
+      id: 'baru',
+      name: 'Budi',
+      email: null,
+      loginCode: null,
+      role: UserRole.FARMER,
+      mustChangePin: false,
+    });
+
+    const result = await service.registerFarmer(dto);
+
+    const call = prisma.user.create.mock.calls[0] as [
+      { data: { pinHash: string; phone: string; role: UserRole } },
+    ];
+    expect(call[0].data.pinHash).not.toContain(PIN);
+    expect(await compare(PIN, call[0].data.pinHash)).toBe(true);
+    expect(call[0].data.phone).toBe(PHONE);
+    expect(call[0].data.role).toBe(UserRole.FARMER);
+    expect(result.access_token).toBe('token-tes');
+  });
+
+  it('nomor sudah terdaftar -> pesan yang tidak menyebut "sudah terdaftar"', async () => {
+    const { service, prisma } = setup();
+    prisma.user.create.mockRejectedValue(
+      Object.assign(new Error('unique'), { code: 'P2002' }),
+    );
+
+    const error = await service.registerFarmer(dto).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as Error).message).not.toMatch(/sudah terdaftar/i);
+  });
+
+  it('error lain dilempar apa adanya', async () => {
+    const { service, prisma } = setup();
     prisma.user.create.mockRejectedValue(new Error('db mati'));
 
-    await expect(service.registerFarmer({ name: 'Budi' })).rejects.toThrow(
-      'db mati',
+    await expect(service.registerFarmer(dto)).rejects.toThrow('db mati');
+  });
+});
+
+describe('AuthService.changePin', () => {
+  const dto = { currentPin: PIN, newPin: '907351' };
+
+  it('PIN saat ini salah -> gagal dan dihitung', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(makeFarmer());
+
+    await expect(
+      service.changePin('u1', { ...dto, currentPin: '111222' }),
+    ).rejects.toThrow('PIN saat ini salah');
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { failedPinAttempts: { increment: 1 } },
+      }),
     );
-    expect(prisma.user.create).toHaveBeenCalledTimes(1);
   });
 
-  it('menyerah setelah 5 kali bentrok', async () => {
+  it('PIN baru lemah atau sama dengan lama ditolak', async () => {
     const { service, prisma } = setup();
-    prisma.user.findFirst.mockResolvedValue(null);
-    prisma.user.create.mockRejectedValue(uniqueViolation);
+    prisma.user.findUnique.mockResolvedValue(makeFarmer());
 
-    await expect(service.registerFarmer({ name: 'Budi' })).rejects.toBe(
-      uniqueViolation,
+    await expect(
+      service.changePin('u1', { ...dto, newPin: '123456' }),
+    ).rejects.toThrow(BadRequestException);
+    await expect(
+      service.changePin('u1', { currentPin: PIN, newPin: PIN }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('akun tanpa PIN tidak bisa menetapkan PIN sendiri (harus lewat petugas)', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(makeFarmer({ pinHash: null }));
+
+    await expect(service.changePin('u1', dto)).rejects.toThrow(
+      BadRequestException,
     );
-    expect(prisma.user.create).toHaveBeenCalledTimes(5);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('berhasil: hash baru, sesi lama dicabut, PIN sementara selesai, token baru', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findUnique.mockResolvedValue(
+      makeFarmer({ mustChangePin: true }),
+    );
+
+    const before = Date.now();
+    const result = await service.changePin('u1', dto);
+
+    const call = prisma.user.update.mock.calls[0] as [
+      {
+        data: {
+          pinHash: string;
+          pinChangedAt: Date;
+          mustChangePin: boolean;
+          failedPinAttempts: number;
+          lockedUntil: null;
+        };
+      },
+    ];
+    const data = call[0].data;
+    expect(await compare('907351', data.pinHash)).toBe(true);
+    expect(data.mustChangePin).toBe(false);
+    expect(data.failedPinAttempts).toBe(0);
+    expect(data.lockedUntil).toBeNull();
+    expect(data.pinChangedAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(result.access_token).toBe('token-tes');
+    expect(result.user.mustChangePin).toBe(false);
   });
 });
 
