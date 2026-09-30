@@ -159,15 +159,45 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Bilah tab mobile */}
+      {/* Bilah tab mobile: kapsul kaca mengambang, tombol Catat di tengah lebih besar dan menonjol */}
       <nav
         aria-label="Menu utama"
-        className="fixed inset-x-0 bottom-0 z-40 glass-bar-top pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden"
       >
-        <div className="grid h-[var(--tabbar-h)] grid-cols-5">
+        <div className="glass-strong pointer-events-auto mx-auto grid h-16 max-w-md grid-cols-5 items-center rounded-[28px] border shadow-[var(--shadow-sheet)]">
           {tabs.filter(visible).map((item) => {
             const Icon = item.icon;
             const active = tabActive(item.href);
+
+            if (item.href === '/recording') {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-label="Catat"
+                  aria-current={active ? 'page' : undefined}
+                  className="relative flex h-full flex-col items-center justify-end pb-1.5"
+                >
+                  <span
+                    className={cn(
+                      'absolute -top-6 flex h-[60px] w-[60px] items-center justify-center rounded-full border-4 border-[var(--background)] text-white shadow-[0_8px_18px_rgba(94,70,50,0.35)] transition active:scale-95',
+                      'bg-gradient-to-b from-[var(--btn-top)] to-[var(--btn-bottom)]',
+                      active && 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--background)]',
+                    )}
+                  >
+                    <Icon size={30} strokeWidth={2} aria-hidden="true" />
+                  </span>
+                  <span
+                    className={cn(
+                      'text-[11px] font-medium',
+                      active ? 'text-primary' : 'text-ink-muted',
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            }
 
             return (
               <Link
@@ -175,11 +205,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors active:opacity-60',
+                  'flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors active:opacity-60',
                   active ? 'text-primary' : 'text-ink-muted',
                 )}
               >
-                <Icon size={25} strokeWidth={active ? 2.3 : 1.7} aria-hidden="true" />
+                <Icon size={24} strokeWidth={active ? 2.3 : 1.7} aria-hidden="true" />
                 {item.label}
               </Link>
             );

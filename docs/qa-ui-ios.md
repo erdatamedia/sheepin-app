@@ -77,3 +77,14 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Ciri pembeda: baris **Wajah dan hidung / Telinga dan tanduk / Ekor dan postur / Tanda khusus** membuka lembar isian; ketuk saran untuk mengisi cepat; kosongkan isian lalu simpan untuk menghapus.
 - [ ] Ciri yang terisi tampil di pelihat foto, di bawah nama ternak.
 - [ ] Isi semua opsional: ternak tanpa ciri dan tanpa foto sudut tetap bekerja seperti biasa.
+
+## Navigasi mengambang dan pasang ke layar utama
+
+- [ ] Bilah bawah berupa kapsul kaca yang mengambang (ada jarak ke tepi layar dan ke bawah), tidak menutupi konten terakhir di halaman mana pun.
+- [ ] Tombol **Catat** di tengah lebih besar dan menonjol di atas kapsul; ketuk membuka rekording; tampil ring saat aktif.
+- [ ] Di halaman Catat, tombol Simpan berada di atas bilah dan tidak tertimpa tombol Catat; toast tidak tertutup bilah.
+- [ ] iPhone dengan home indicator: jarak bawah aman (tidak menempel).
+- [ ] **Android (Chrome):** di Beranda muncul ajakan "Pasang di layar utama"; ketuk **Pasang** memunculkan dialog pasang bawaan; setelah terpasang ajakan hilang.
+- [ ] **iPhone (Safari):** ketuk **Pasang** menampilkan langkah Bagikan → Tambah ke Layar Utama; setelah ditambahkan, ikon domba tampil dan app terbuka layar penuh ke Beranda.
+- [ ] Ajakan tidak tampil di desktop maupun saat dibuka dari layar utama; tombol ✕ menyembunyikannya 14 hari.
+- [ ] Akun → **Pasang di layar utama** membuka panduan yang sama; baris hilang bila sudah terpasang.

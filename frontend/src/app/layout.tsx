@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { InstallProvider } from '@/components/pwa/install-provider';
 
 export const metadata: Metadata = {
   title: 'Sheep-In',
@@ -7,7 +8,12 @@ export const metadata: Metadata = {
   icons: {
     icon: '/icon.png',
     shortcut: '/icon.png',
-    apple: '/icon.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'Sheep-In',
+    statusBarStyle: 'default',
   },
 };
 
@@ -25,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="h-full antialiased">
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col"><InstallProvider>{children}</InstallProvider></body>
     </html>
   );
 }

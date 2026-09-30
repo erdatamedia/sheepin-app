@@ -61,7 +61,7 @@
 
   /* Ukuran sentuh minimal dan tinggi bilah tab bawah (di luar safe-area) */
   --tap-min: 44px;
-  --tabbar-h: 3.25rem;
+  --tabbar-h: 6rem;
 }
 
 @theme inline {

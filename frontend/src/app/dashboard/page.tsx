@@ -11,6 +11,7 @@ import { Button, buttonClassName } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ListGroup, ListRow } from '@/components/ui/list-group';
 import { PageHeader } from '@/components/ui/page-header';
+import { InstallBanner } from '@/components/pwa/install-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/stat-tile';
 import { SheepStatusRow } from '@/components/sheep/sheep-status-row';
@@ -332,6 +333,7 @@ export default function DashboardPage() {
   return (
     <DashboardShell>
       <PageHeader title="Beranda" description={`${dateLabel} · ${me.name}`} />
+      <InstallBanner />
 
       {!summary ? (
         <EmptyState

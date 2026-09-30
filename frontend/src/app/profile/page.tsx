@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
+import { Download, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
 import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
 import { PageHeader } from '@/components/ui/page-header';
+import { useInstall } from '@/components/pwa/install-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { removeToken } from '@/lib/auth';
 import { getMe, type MeResponse } from '@/lib/me';
@@ -19,6 +20,7 @@ import { labelPeran } from '@/lib/labels';
 /** Halaman Akun: ringkasan diri dan pintu ke pengaturan, gaya "Pengaturan" iOS. */
 export default function AccountPage() {
   const router = useRouter();
+  const { canGuide, install } = useInstall();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -120,6 +122,18 @@ export default function AccountPage() {
                   leadingSize="icon"
                   title="Riwayat rekording"
                   href="/history"
+                />
+              </ListGroup>
+            )}
+
+            {canGuide && (
+              <ListGroup footer="Buka Sheep-In dari layar utama seperti aplikasi biasa.">
+                <ListRow
+                  leading={<RowIcon icon={Download} />}
+                  leadingSize="icon"
+                  title="Pasang di layar utama"
+                  subtitle="Android dan iPhone"
+                  onClick={install}
                 />
               </ListGroup>
             )}
