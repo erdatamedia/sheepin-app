@@ -11,10 +11,10 @@ type StatTileProps = {
 
 const toneClasses = {
   default: '',
-  success: 'border-[color:var(--success-border)] bg-success-soft',
-  warning: 'border-[color:var(--warning-border)] bg-warning-soft',
-  danger: 'border-[color:var(--danger-border)] bg-danger-soft',
-  info: 'border-[color:var(--info-border)] bg-info-soft',
+  success: 'border-[color:var(--success-border)] bg-success-soft/80',
+  warning: 'border-[color:var(--warning-border)] bg-warning-soft/80',
+  danger: 'border-[color:var(--danger-border)] bg-danger-soft/80',
+  info: 'border-[color:var(--info-border)] bg-info-soft/80',
 };
 
 export function StatTile({ label, value, hint, tone = 'default', className }: StatTileProps) {

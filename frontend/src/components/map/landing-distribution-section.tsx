@@ -56,19 +56,19 @@ export function LandingDistributionSection() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-        <Card className="bg-surface/82">
+        <Card>
           <p className="text-sm text-ink-muted">Titik peternak</p>
           <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.farmers}</p>
         </Card>
-        <Card className="bg-surface/82">
+        <Card>
           <p className="text-sm text-ink-muted">Total ternak</p>
           <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.sheep}</p>
         </Card>
-        <Card className="bg-surface/82">
+        <Card>
           <p className="text-sm text-ink-muted">Ternak aktif</p>
           <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.active}</p>
         </Card>
-        <Card className="bg-surface/82">
+        <Card>
           <p className="text-sm text-ink-muted">Kabupaten tercakup</p>
           <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.regencies}</p>
         </Card>
@@ -76,11 +76,11 @@ export function LandingDistributionSection() {
 
       <Card className="overflow-hidden p-4 md:p-5">
         {loading ? (
-          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-soft)] bg-surface/80">
+          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl glass">
             <p className="text-sm text-ink-muted">Memuat peta sebaran peternak...</p>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-soft)] bg-surface/80">
+          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl glass">
             <p className="max-w-md text-center text-sm leading-7 text-ink-muted">
               Belum ada data lokasi peternak yang bisa ditampilkan di landing page.
             </p>

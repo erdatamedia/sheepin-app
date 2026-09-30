@@ -114,7 +114,7 @@ export function PhotoUploadField({
       </div>
 
       {message && (
-        <div role="status" className="rounded-[var(--radius-control)] border border-line bg-surface/80 px-4 py-3 text-sm text-ink">
+        <div role="status" className="glass rounded-[var(--radius-control)] px-4 py-3 text-sm text-ink">
           {message}
         </div>
       )}

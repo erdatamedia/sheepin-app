@@ -16,7 +16,7 @@ export function ListGroup({ header, footer, children, className }: ListGroupProp
   return (
     <section className={className}>
       {header && <h2 className="mb-1.5 px-4 text-[13px] font-medium text-ink-muted">{header}</h2>}
-      <ul className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
+      <ul className="glass overflow-hidden rounded-[var(--radius-card)]">
         {children}
       </ul>
       {footer && <p className="mt-1.5 px-4 text-[13px] leading-snug text-ink-muted">{footer}</p>}
@@ -116,7 +116,7 @@ export function ListRow({
     </>
   );
 
-  const classes = cn(rowBase, interactive && 'active:bg-tint', className);
+  const classes = cn(rowBase, interactive && 'active:bg-primary-soft/50', className);
 
   return (
     <li className="group relative">

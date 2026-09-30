@@ -851,7 +851,7 @@ export default function SheepDetailPage() {
         </Card>
       )}
 
-      <details className="mb-6 overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-soft)]">
+      <details className="glass mb-6 overflow-hidden rounded-[var(--radius-card)]">
         <summary className="flex min-h-[56px] cursor-pointer items-center justify-between px-4 text-[17px] font-semibold text-ink">
           Input manual (petugas)
           <span className="text-[14px] font-normal text-ink-muted">Bobot, BCS, kesehatan, reproduksi</span>
@@ -860,7 +860,7 @@ export default function SheepDetailPage() {
       <div
         role="tablist"
         aria-label="Riwayat rekording"
-        className="mb-4 grid grid-cols-4 gap-1 rounded-[var(--radius-control)] border border-line bg-surface p-1"
+        className="mb-4 grid grid-cols-4 gap-1 glass rounded-[var(--radius-control)] p-1"
       >
         {tabs.map((tab) => {
           const active = activeTab === tab.key;

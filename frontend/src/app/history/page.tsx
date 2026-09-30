@@ -198,7 +198,9 @@ export default function HistoryPage() {
                   onClick={() => setQuickFilter(item.key)}
                   className={cn(
                     'min-h-11 shrink-0 rounded-full px-3.5 text-[14px] font-semibold transition',
-                    active ? 'bg-primary text-white' : 'bg-tint text-ink-soft active:brightness-95',
+                    active
+                      ? 'border border-white/30 bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-white'
+                      : 'glass text-ink-soft active:brightness-95',
                   )}
                 >
                   {item.label}

@@ -659,7 +659,7 @@ export default function RecordingPage() {
                 </>
               )}
 
-              <details className="rounded-[var(--radius-card)] border border-line bg-surface px-4 shadow-[var(--shadow-soft)]">
+              <details className="glass rounded-[var(--radius-card)] px-4">
                 <summary className="flex min-h-[52px] cursor-pointer items-center justify-between text-[15px] text-ink">
                   <span>Tanggal</span>
                   <span className="text-ink-muted">
@@ -732,7 +732,7 @@ export default function RecordingPage() {
 
         {/* Tombol lanjut/simpan menempel di atas bilah tab pada mobile */}
         {(step === 2 || step === 3) && (
-          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/90 px-4 py-3 backdrop-blur-xl md:static md:mt-5 md:max-w-xl md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-30 glass-bar-top px-4 py-3 md:static md:mt-5 md:max-w-xl md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
             <div className="mx-auto max-w-xl md:mx-0">
               {step === 2 ? (
                 <>
@@ -779,7 +779,7 @@ export default function RecordingPage() {
                 key={item.score}
                 className="flex gap-3 rounded-[var(--radius-control)] bg-tint p-3"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-[17px] font-bold text-primary-strong">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-[17px] font-bold text-primary-strong">
                   {item.score}
                 </span>
                 <span className="min-w-0">

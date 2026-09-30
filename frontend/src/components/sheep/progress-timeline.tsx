@@ -65,7 +65,7 @@ export function ProgressTimeline({ weights, bcs, health, reproduction, recordHre
 
   if (all.length === 0) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-line bg-surface px-4 py-8 text-center shadow-[var(--shadow-soft)]">
+      <div className="glass rounded-[var(--radius-card)] px-4 py-8 text-center">
         <p className="text-[17px] font-semibold text-ink">Belum ada catatan</p>
         <p className="mx-auto mt-1 max-w-xs text-[15px] text-ink-muted">
           Setiap penimbangan, pemeriksaan, dan kejadian akan muncul di sini sebagai riwayat perkembangan.
@@ -101,7 +101,9 @@ export function ProgressTimeline({ weights, bcs, health, reproduction, recordHre
               }}
               className={cn(
                 'min-h-11 shrink-0 rounded-full px-3.5 text-[14px] font-semibold transition',
-                active ? 'bg-primary text-white' : 'bg-tint text-ink-soft active:brightness-95',
+                active
+                  ? 'border border-white/30 bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-white'
+                  : 'glass text-ink-soft active:brightness-95',
               )}
             >
               {item.label}
@@ -111,7 +113,7 @@ export function ProgressTimeline({ weights, bcs, health, reproduction, recordHre
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-[var(--radius-card)] border border-line bg-surface px-4 py-6 text-center text-[15px] text-ink-muted">
+        <p className="glass rounded-[var(--radius-card)] px-4 py-6 text-center text-[15px] text-ink-muted">
           Belum ada catatan untuk jenis ini.
         </p>
       ) : (

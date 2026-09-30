@@ -44,3 +44,11 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Akun tanpa ternak: ajakan *Tambah ternak* (bukan layar kosong).
 - [ ] Pembaca layar (VoiceOver/TalkBack): judul halaman dibaca; tombol ikon punya nama; arah tren dibaca "naik/turun".
 - [ ] Pengaturan "kurangi gerakan" aktif: lembar tidak beranimasi.
+
+## Kaca (glassmorphism)
+- [ ] Latar menampakkan bercak warna (coklat susu, karamel, krem), bukan satu warna rata, dan tidak ikut tergulir.
+- [ ] Kartu, daftar, bilah tab, dan lembar tampak seperti kaca buram: isi di belakangnya samar terlihat saat digulir.
+- [ ] Teks di atas kaca tetap jelas di bagian latar yang paling gelap (pojok kanan atas dan kanan tengah).
+- [ ] Tombol utama bergradien coklat dengan garis terang di tepi atas; teks putih terbaca di atas maupun di bawah.
+- [ ] Gulir panjang (daftar ternak, linimasa) tetap mulus di HP Anda. Bila tersendat, catat tipe HP-nya.
+- [ ] Pengaturan "kurangi transparansi" aktif: panel berubah solid, tetap terbaca.

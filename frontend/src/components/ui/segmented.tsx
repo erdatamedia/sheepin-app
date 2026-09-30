@@ -28,7 +28,7 @@ export function Segmented({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('grid gap-0.5 rounded-[12px] bg-tint p-[3px]', className)}
+      className={cn('grid gap-0.5 rounded-[12px] border border-white/40 bg-[rgba(94,70,50,0.10)] p-[3px] backdrop-blur-md', className)}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((option) => {
@@ -44,8 +44,8 @@ export function Segmented({
             className={cn(
               'flex min-h-12 flex-col items-center justify-center rounded-[10px] px-2 text-[15px] transition duration-150',
               active
-                ? 'bg-surface font-semibold text-ink shadow-[0_1px_3px_rgba(62,46,36,0.22)]'
-                : 'font-medium text-ink-muted active:bg-surface/50',
+                ? 'border border-white/80 bg-white/85 font-semibold text-ink shadow-[0_1px_3px_rgba(62,46,36,0.22)]'
+                : 'border border-transparent font-medium text-ink-muted active:bg-white/40',
             )}
           >
             {option.label}

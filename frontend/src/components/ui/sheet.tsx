@@ -66,7 +66,7 @@ export function Sheet({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'absolute inset-x-0 bottom-0 mx-auto max-h-[88%] w-full max-w-lg animate-[sheetIn_.28s_cubic-bezier(.2,.8,.2,1)] overflow-auto rounded-t-[var(--radius-sheet)] bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-[var(--shadow-sheet)] outline-none motion-reduce:animate-none',
+          'absolute inset-x-0 bottom-0 mx-auto max-h-[88%] w-full max-w-lg animate-[sheetIn_.28s_cubic-bezier(.2,.8,.2,1)] overflow-auto glass-strong rounded-t-[var(--radius-sheet)] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-[var(--shadow-sheet)] outline-none motion-reduce:animate-none',
           'md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:rounded-[var(--radius-sheet)]',
           className,
         )}

@@ -82,7 +82,7 @@ export default function DistributionMap({ items, publicView = false }: Props) {
         <div
           role="dialog"
           aria-label={`Detail ${selected.name}`}
-          className="absolute inset-x-0 bottom-0 z-[1000] max-h-[75%] overflow-auto rounded-t-[var(--radius-sheet)] border-t border-line bg-surface p-4 shadow-[var(--shadow-sheet)] md:inset-x-auto md:bottom-3 md:left-3 md:w-80 md:rounded-[24px] md:border"
+          className="absolute inset-x-0 bottom-0 z-[1000] max-h-[75%] overflow-auto glass-strong rounded-t-[var(--radius-sheet)] p-4 shadow-[var(--shadow-sheet)] md:inset-x-auto md:bottom-3 md:left-3 md:w-80 md:rounded-[24px] md:border"
         >
           <div
             aria-hidden="true"

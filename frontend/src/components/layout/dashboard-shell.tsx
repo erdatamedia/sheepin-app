@@ -93,9 +93,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen text-ink">
       <div className="flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="hidden w-[17rem] shrink-0 border-r border-line bg-surface/80 p-5 backdrop-blur-xl md:flex md:flex-col">
+        <aside className="hidden w-[17rem] shrink-0 glass-bar-right p-5 md:flex md:flex-col">
           <div className="mb-6">
-            <div className="inline-flex rounded-[var(--radius-card)] border border-line bg-surface px-3 py-2">
+            <div className="glass inline-flex rounded-[var(--radius-card)] px-3 py-2">
               <Image
                 src="/sheepin-logo.png"
                 alt="Sheep-In"
@@ -109,7 +109,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {me && (
               <Link
                 href="/profile"
-                className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] bg-tint p-3 transition active:brightness-95"
+                className="mt-4 flex items-center gap-3 glass rounded-[var(--radius-card)] p-3 transition active:brightness-95"
               >
                 <Avatar name={me.name} photoUrl={me.photoUrl} size="md" />
                 <div className="min-w-0">
@@ -162,7 +162,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Bilah tab mobile */}
       <nav
         aria-label="Menu utama"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 glass-bar-top pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <div className="grid h-[var(--tabbar-h)] grid-cols-5">
           {tabs.filter(visible).map((item) => {

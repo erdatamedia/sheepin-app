@@ -18,12 +18,17 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 // Gaya iOS: isi penuh (solid), isi pastel (tinted), bingkai tipis, dan teks saja (ghost).
 const variantClasses: Record<ButtonVariant, string> = {
-  solid: 'bg-primary text-white active:bg-primary-strong',
-  tinted: 'bg-primary-soft text-primary-strong active:brightness-95',
-  outline: 'border border-line bg-surface text-ink active:bg-tint',
+  // Kaca bergradien: gradasi coklat, garis terang di tepi atas, dan cahaya lembut di bawah
+  solid:
+    'border border-white/30 bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-white shadow-[var(--shadow-accent)] active:brightness-90',
+  tinted:
+    'border border-white/60 bg-primary-soft/80 text-primary-strong shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] backdrop-blur-md active:brightness-95',
+  outline: 'glass text-ink active:brightness-95',
   ghost: 'text-primary active:bg-primary-soft/60',
-  dangerOutline: 'bg-danger-soft text-danger active:brightness-95',
-  successOutline: 'bg-success-soft text-success active:brightness-95',
+  dangerOutline:
+    'border border-white/60 bg-danger-soft/85 text-danger shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-md active:brightness-95',
+  successOutline:
+    'border border-white/60 bg-success-soft/85 text-success shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-md active:brightness-95',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
