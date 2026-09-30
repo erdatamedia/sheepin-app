@@ -20,7 +20,7 @@ JWT_SECRET=<acak panjang, bukan nilai contoh>
 JWT_EXPIRES_IN=7d
 ```
 
-`frontend/.env.local` (dibaca **saat build**; ubah lalu build ulang):
+`frontend/.env.local` (opsional; dibaca **saat build**, ubah lalu build ulang). Tanpa file ini, frontend memakai `/api` sehingga reverse proxy satu domain cukup:
 
 ```
 NEXT_PUBLIC_API_URL=https://DOMAIN-ANDA/api

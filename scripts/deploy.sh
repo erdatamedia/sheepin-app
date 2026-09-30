@@ -9,7 +9,7 @@ cd "$ROOT"
 
 echo "==> Pemeriksaan awal"
 [ -f backend/.env ] || { echo "backend/.env belum ada"; exit 1; }
-[ -f frontend/.env.local ] || { echo "frontend/.env.local belum ada (NEXT_PUBLIC_API_URL dibaca saat build)"; exit 1; }
+[ -f frontend/.env.local ] || echo "Catatan: frontend/.env.local tidak ada; frontend memakai /api (reverse proxy satu domain)."
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   echo "Working tree punya perubahan lokal. Bersihkan dulu (git status)."; exit 1
 fi
