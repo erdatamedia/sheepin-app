@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Update Sheep-In di VPS: tarik kode, pasang dependensi, migrasi, build, restart.
 # Pakai:  ./scripts/deploy.sh [branch]      (default: main)
+#         SKIP_MIGRATE=1 ./scripts/deploy.sh [branch]   (lewati migrasi Prisma)
 set -euo pipefail
 
 BRANCH="${1:-main}"
@@ -23,7 +24,11 @@ echo "==> Backend"
 cd backend
 pnpm install --frozen-lockfile
 pnpm prisma:generate
-pnpm db:migrate:deploy
+if [ "${SKIP_MIGRATE:-0}" = "1" ]; then
+  echo "SKIP_MIGRATE=1: migrasi dilewati (pakai hanya bila rilis tidak mengubah prisma/)"
+else
+  pnpm db:migrate:deploy
+fi
 pnpm build
 cd ..
 
