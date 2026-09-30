@@ -41,48 +41,43 @@ export function LandingDistributionSection() {
     };
   }, [items]);
 
+  const stats = [
+    { label: 'Titik peternak', value: summary.farmers },
+    { label: 'Total ternak', value: summary.sheep },
+    { label: 'Ternak aktif', value: summary.active },
+    { label: 'Kabupaten tercakup', value: summary.regencies },
+  ];
+
   return (
-    <section className="mt-12 md:mt-16">
-      <div className="mb-6 max-w-3xl">
-        <div className="inline-flex rounded-full border border-line bg-primary-soft px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Sebaran peternak terdaftar
-        </div>
-        <h2 className="mt-4 text-2xl font-semibold text-ink sm:text-3xl md:text-4xl">
-          Peta lapangan memperlihatkan titik peternak yang sudah tercatat di Sheep-In.
+    <section className="py-10 md:py-14 lg:py-20">
+      <div className="max-w-3xl">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Sebaran peternak</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink md:text-4xl lg:text-5xl">
+          Peternak yang sudah tercatat di Sheep-In
         </h2>
-        <p className="mt-3 text-base leading-7 text-ink-muted">
-          Tampilan ini memberi gambaran cepat tentang persebaran peternak aktif dan populasi ternak yang sudah masuk ke sistem.
+        <p className="mt-3 text-base leading-7 text-ink-muted lg:text-lg">
+          Gambaran cepat persebaran peternak dan populasi ternak yang sudah masuk ke sistem.
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-        <Card>
-          <p className="text-sm text-ink-muted">Titik peternak</p>
-          <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.farmers}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-ink-muted">Total ternak</p>
-          <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.sheep}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-ink-muted">Ternak aktif</p>
-          <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.active}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-ink-muted">Kabupaten tercakup</p>
-          <p className="mt-2 text-2xl font-semibold text-ink sm:text-3xl">{summary.regencies}</p>
-        </Card>
+      <div className="mt-8 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4 lg:gap-6">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="lg:p-7">
+            <p className="text-sm text-ink-muted lg:text-base">{stat.label}</p>
+            <p className="mt-2 text-3xl font-semibold tabular-nums text-ink lg:text-5xl">{stat.value}</p>
+          </Card>
+        ))}
       </div>
 
-      <Card className="overflow-hidden p-4 md:p-5">
+      <Card className="mt-4 overflow-hidden p-3 md:mt-6 md:p-5">
         {loading ? (
-          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl glass">
+          <div className="flex h-[320px] items-center justify-center rounded-2xl bg-tint md:h-[440px] lg:h-[560px]">
             <p className="text-sm text-ink-muted">Memuat peta sebaran peternak...</p>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex h-[320px] md:h-[420px] items-center justify-center rounded-2xl glass">
+          <div className="flex h-[320px] items-center justify-center rounded-2xl bg-tint md:h-[440px] lg:h-[560px]">
             <p className="max-w-md text-center text-sm leading-7 text-ink-muted">
-              Belum ada data lokasi peternak yang bisa ditampilkan di landing page.
+              Belum ada data lokasi peternak yang bisa ditampilkan.
             </p>
           </div>
         ) : (

@@ -239,3 +239,16 @@ body::before {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Layar laptop dan monitor: semua ukuran rem ikut membesar sedikit. */
+@media (min-width: 1280px) {
+  html {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1800px) {
+  html {
+    font-size: 18px;
+  }
+}

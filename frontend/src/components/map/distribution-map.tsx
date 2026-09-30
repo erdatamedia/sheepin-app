@@ -61,7 +61,7 @@ export default function DistributionMap({ items, publicView = false }: Props) {
     : '';
 
   return (
-    <div className="relative h-[60vh] min-h-[320px] overflow-hidden rounded-2xl border border-line md:h-[480px]">
+    <div className="relative h-[60vh] min-h-[320px] overflow-hidden rounded-2xl border border-line md:h-[480px] lg:h-[560px]">
       <LeafletMapContainer center={center} zoom={10} style={{ height: '100%', width: '100%' }}>
         <LeafletTileLayer
           attribution="&copy; OpenStreetMap contributors"

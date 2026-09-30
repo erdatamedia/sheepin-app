@@ -93,7 +93,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen text-ink">
       <div className="flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="hidden w-[17rem] shrink-0 glass-bar-right p-5 md:flex md:flex-col">
+        <aside className="hidden w-[17rem] shrink-0 glass-bar-right p-5 xl:w-[19rem] xl:p-6 md:flex md:flex-col">
           <div className="mb-6">
             <div className="glass inline-flex rounded-[var(--radius-card)] px-3 py-2">
               <Image
@@ -154,8 +154,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] md:p-8">
-          <div className="mx-auto max-w-7xl">{children}</div>
+        <main className="min-w-0 flex-1 px-4 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] md:p-8 lg:px-12 lg:py-10">
+          <div className="mx-auto max-w-[90rem]">{children}</div>
         </main>
       </div>
 
