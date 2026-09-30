@@ -1,41 +1,94 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardPlus, Info, Camera, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, ChevronLeft, ChevronRight, ClipboardPlus, Info, Check, X } from 'lucide-react';
 import { SheepPhoto } from '@/components/sheep/sheep-photo';
 import type { GalleryItem } from '@/components/sheep/photo-gallery';
-import { buttonClassName } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
+import { ANGLES, getSheepPhotos, type SheepPhotoSlide } from '@/lib/sheep-photo';
+import { cn } from '@/lib/utils';
 
 type PhotoViewerProps = {
   items: GalleryItem[];
+  /** Ternak yang sedang dilihat. */
   index: number;
+  /** Sudut foto awal (mis. dari kotak sudut di detail ternak). */
+  initialSlide?: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  /** Bila ada, menggantikan tombol Catat/Detail (mis. "Pilih ternak ini" di halaman Catat). */
+  primaryAction?: { label: string; onSelect: (item: GalleryItem) => void };
 };
 
-const SWIPE_PX = 50;
+const SWIPE_X_PX = 50;
+const SWIPE_Y_PX = 60;
+const shortLabel = (angle: string) => ANGLES.find((item) => item.angle === angle)?.label ?? angle;
 
 /**
- * Pelihat foto layar penuh: geser kiri-kanan (atau tombol panah) untuk pindah antar ternak.
- * Foto ternak sebelum dan sesudahnya dimuat lebih dulu agar perpindahan terasa instan.
+ * Pelihat foto layar penuh.
+ * - Geser kiri-kanan: sudut foto lain dari ternak yang sama (wajah dan hidung pertama).
+ * - Geser atas-bawah, atau tombol panah di bilah atas: ternak berikutnya/sebelumnya.
+ * Foto tetangga dan daftar sudut dimuat lebih dulu agar perpindahan terasa instan.
  */
-export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewerProps) {
+export function PhotoViewer({
+  items,
+  index,
+  initialSlide = 0,
+  onIndexChange,
+  onClose,
+  primaryAction,
+}: PhotoViewerProps) {
   const item = items[index];
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const dragStartX = useRef<number | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const requested = useRef(new Set<string>());
+  const [slide, setSlide] = useState(initialSlide);
+  const [cache, setCache] = useState<Record<string, SheepPhotoSlide[]>>({});
 
-  // Nilai terbaru dibaca lewat ref: efek di bawah hanya bergantung pada "terbuka", sehingga
-  // tidak berjalan ulang (dan tidak merebut fokus) setiap kali pemanggil dirender ulang.
-  const live = useRef({ index, count: items.length, onIndexChange, onClose });
+  const slidesFor = (target?: GalleryItem): SheepPhotoSlide[] => {
+    if (!target) return [];
+    return (
+      cache[target.id] ??
+      target.photos ??
+      (target.photoUrl ? [{ angle: 'FACE', url: target.photoUrl }] : [])
+    );
+  };
+
+  // Nilai terbaru dibaca lewat ref: efek pasang-papan-ketik hanya berjalan sekali dan tidak merebut fokus.
+  const live = useRef({
+    index,
+    slide,
+    count: items.length,
+    slides: slidesFor(item),
+    onIndexChange,
+    onClose,
+  });
   useEffect(() => {
-    live.current = { index, count: items.length, onIndexChange, onClose };
+    live.current = {
+      index,
+      slide,
+      count: items.length,
+      slides: slidesFor(item),
+      onIndexChange,
+      onClose,
+    };
   });
 
-  const go = (delta: number) => {
+  const goSheep = (delta: number) => {
     const { index: current, count, onIndexChange: change } = live.current;
     const next = current + delta;
-    if (next >= 0 && next < count) change(next);
+    if (next < 0 || next >= count) return;
+    setSlide(0);
+    change(next);
+  };
+
+  // Geser antar sudut; di ujung, lanjut ke ternak tetangga.
+  const goSlide = (delta: number) => {
+    const { slide: current, slides } = live.current;
+    const next = current + delta;
+    if (next >= 0 && next < slides.length) setSlide(next);
+    else goSheep(delta);
   };
 
   useEffect(() => {
@@ -44,10 +97,12 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
     panelRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      const { index: current, count, onIndexChange: change, onClose: close } = live.current;
+      const { onClose: close } = live.current;
       if (event.key === 'Escape') close();
-      else if (event.key === 'ArrowLeft' && current > 0) change(current - 1);
-      else if (event.key === 'ArrowRight' && current < count - 1) change(current + 1);
+      else if (event.key === 'ArrowLeft') goSlide(-1);
+      else if (event.key === 'ArrowRight') goSlide(1);
+      else if (event.key === 'ArrowUp') goSheep(-1);
+      else if (event.key === 'ArrowDown') goSheep(1);
     };
     document.addEventListener('keydown', onKeyDown);
 
@@ -55,13 +110,29 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', onKeyDown);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Ambil daftar sudut untuk ternak ini dan tetangganya.
+  useEffect(() => {
+    for (const target of [items[index - 1], items[index], items[index + 1]]) {
+      if (!target?.photoUrl || target.photos || requested.current.has(target.id)) continue;
+      requested.current.add(target.id);
+      getSheepPhotos(target.id)
+        .then((photos) => setCache((previous) => ({ ...previous, [target.id]: photos })))
+        .catch(() => undefined); // tanpa daftar sudut, foto utama tetap tampil
+    }
+  }, [index, items]);
 
   if (!item) return null;
 
-  const neighbors = [items[index - 1], items[index + 1]].filter(
-    (other): other is GalleryItem => !!other?.photoUrl,
-  );
+  const slides = slidesFor(item);
+  const current = slides[Math.min(slide, slides.length - 1)];
+  const preload = [
+    slides[slide + 1],
+    slidesFor(items[index + 1])[0],
+    slidesFor(items[index - 1])[0],
+  ].filter((value): value is SheepPhotoSlide => !!value);
 
   return (
     <div
@@ -72,10 +143,34 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
       tabIndex={-1}
       className="fixed inset-0 z-[80] flex flex-col bg-black/95 outline-none"
     >
-      <div className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
-        <p className="text-[15px] font-medium" aria-live="polite">
-          {index + 1} / {items.length}
+      <div className="flex items-center gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
+        <button
+          type="button"
+          onClick={() => goSheep(-1)}
+          disabled={index === 0}
+          aria-label="Ternak sebelumnya"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25 disabled:opacity-30"
+        >
+          <ChevronLeft size={24} aria-hidden="true" />
+        </button>
+        <p className="min-w-0 flex-1 text-center text-[15px] font-medium" aria-live="polite">
+          Ternak {index + 1} / {items.length}
+          {slides.length > 1 && (
+            <span className="text-white/70">
+              {' '}
+              · foto {Math.min(slide, slides.length - 1) + 1}/{slides.length}
+            </span>
+          )}
         </p>
+        <button
+          type="button"
+          onClick={() => goSheep(1)}
+          disabled={index >= items.length - 1}
+          aria-label="Ternak berikutnya"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25 disabled:opacity-30"
+        >
+          <ChevronRight size={24} aria-hidden="true" />
+        </button>
         <button
           type="button"
           onClick={onClose}
@@ -88,26 +183,28 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
 
       <div
         className="relative min-h-0 flex-1 select-none"
-        style={{ touchAction: 'pan-y' }}
+        style={{ touchAction: 'none' }}
         onPointerDown={(event) => {
-          dragStartX.current = event.clientX;
+          dragStart.current = { x: event.clientX, y: event.clientY };
         }}
         onPointerUp={(event) => {
-          if (dragStartX.current === null) return;
-          const dx = event.clientX - dragStartX.current;
-          dragStartX.current = null;
-          if (dx <= -SWIPE_PX) go(1);
-          else if (dx >= SWIPE_PX) go(-1);
+          const start = dragStart.current;
+          dragStart.current = null;
+          if (!start) return;
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (Math.abs(dx) >= SWIPE_X_PX && Math.abs(dx) > Math.abs(dy)) goSlide(dx < 0 ? 1 : -1);
+          else if (Math.abs(dy) >= SWIPE_Y_PX) goSheep(dy < 0 ? 1 : -1);
         }}
         onPointerCancel={() => {
-          dragStartX.current = null;
+          dragStart.current = null;
         }}
       >
-        {item.photoUrl ? (
+        {current ? (
           <SheepPhoto
-            key={item.id}
-            photoUrl={item.photoUrl}
-            alt={`Foto ${item.code}`}
+            key={`${item.id}-${current.url}`}
+            photoUrl={current.url}
+            alt={`${shortLabel(current.angle)} ${item.code}`}
             sizes="100vw"
             quality={75}
             eager
@@ -120,39 +217,51 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
           </div>
         )}
 
-        {index > 0 && (
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            aria-label="Ternak sebelumnya"
-            className="absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white active:bg-white/25"
-          >
-            <ChevronLeft size={26} aria-hidden="true" />
-          </button>
-        )}
-        {index < items.length - 1 && (
-          <button
-            type="button"
-            onClick={() => go(1)}
-            aria-label="Ternak berikutnya"
-            className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white active:bg-white/25"
-          >
-            <ChevronRight size={26} aria-hidden="true" />
-          </button>
+        {current && slides.length > 1 && (
+          <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[13px] font-medium text-white backdrop-blur-sm">
+            {shortLabel(current.angle)}
+          </span>
         )}
 
-        {/* Muat foto tetangga lebih dulu, tanpa terlihat */}
+        {/* Muat foto berikutnya lebih dulu, tanpa terlihat */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
         >
-          {neighbors.map((other) => (
-            <div key={other.id} className="relative h-px w-px">
-              <SheepPhoto photoUrl={other.photoUrl} alt="" sizes="100vw" quality={75} eager />
+          {preload.map((other) => (
+            <div key={other.url} className="relative h-px w-px">
+              <SheepPhoto photoUrl={other.url} alt="" sizes="100vw" quality={75} eager />
             </div>
           ))}
         </div>
       </div>
+
+      {slides.length > 1 && (
+        <div
+          role="tablist"
+          aria-label="Sudut foto"
+          className="flex gap-2 overflow-x-auto px-3 py-2"
+        >
+          {slides.map((photo, position) => {
+            const active = position === Math.min(slide, slides.length - 1);
+            return (
+              <button
+                key={photo.angle}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setSlide(position)}
+                className={cn(
+                  'min-h-10 shrink-0 rounded-full px-3.5 text-[14px] font-medium transition',
+                  active ? 'bg-white text-ink' : 'bg-white/15 text-white active:bg-white/25',
+                )}
+              >
+                {shortLabel(photo.angle)}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="glass-strong mx-3 mb-[max(0.75rem,env(safe-area-inset-bottom))] rounded-[var(--radius-card)] p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -164,6 +273,11 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
             {item.subtitle && (
               <p className="truncate text-[14px] text-ink-muted">{item.subtitle}</p>
             )}
+            {item.traits && item.traits.length > 0 && (
+              <p className="mt-1 line-clamp-2 text-[14px] text-ink-soft">
+                {item.traits.join(' · ')}
+              </p>
+            )}
           </div>
           {item.alert && (
             <span className="shrink-0 rounded-full bg-danger px-2.5 py-1 text-[12px] font-semibold text-white">
@@ -171,19 +285,30 @@ export function PhotoViewer({ items, index, onIndexChange, onClose }: PhotoViewe
             </span>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Link href={`/recording?sheepId=${item.id}`} className={buttonClassName({ size: 'lg' })}>
-            <ClipboardPlus size={20} aria-hidden="true" />
-            Catat
-          </Link>
-          <Link
-            href={`/sheep/${item.id}`}
-            className={buttonClassName({ variant: 'tinted', size: 'lg' })}
-          >
-            <Info size={20} aria-hidden="true" />
-            Detail
-          </Link>
-        </div>
+
+        {primaryAction ? (
+          <Button size="lg" className="w-full" onClick={() => primaryAction.onSelect(item)}>
+            <Check size={20} aria-hidden="true" />
+            {primaryAction.label}
+          </Button>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href={`/recording?sheepId=${item.id}`}
+              className={buttonClassName({ size: 'lg' })}
+            >
+              <ClipboardPlus size={20} aria-hidden="true" />
+              Catat
+            </Link>
+            <Link
+              href={`/sheep/${item.id}`}
+              className={buttonClassName({ variant: 'tinted', size: 'lg' })}
+            >
+              <Info size={20} aria-hidden="true" />
+              Detail
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

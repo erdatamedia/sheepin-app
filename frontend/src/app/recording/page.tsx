@@ -19,6 +19,9 @@ import {
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { LoadError } from '@/components/ui/load-error';
+import { PhotoGrid, type GalleryItem } from '@/components/sheep/photo-gallery';
+import { PhotoViewer } from '@/components/sheep/photo-viewer';
+import { traitList } from '@/lib/sheep-photo';
 import { Avatar } from '@/components/ui/avatar';
 import { Button, buttonClassName } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -127,6 +130,9 @@ export default function RecordingPage() {
   const [form, setForm] = useState(emptyForm());
   const [showBcsHelp, setShowBcsHelp] = useState(false);
   const [savedTitle, setSavedTitle] = useState('');
+  // Pilih ternak lewat daftar atau foto; pilihan sama dengan halaman Ternak dan diingat di perangkat.
+  const [pickView, setPickView] = useState<'LIST' | 'PHOTO'>('LIST');
+  const [zoomIndex, setZoomIndex] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -165,6 +171,24 @@ export default function RecordingPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sheepin:sheep-view');
+      if (saved === 'PHOTO' || saved === 'LIST') setPickView(saved);
+    } catch {
+      // penyimpanan tidak tersedia: tetap daftar
+    }
+  }, []);
+
+  const changePickView = (next: 'LIST' | 'PHOTO') => {
+    setPickView(next);
+    try {
+      localStorage.setItem('sheepin:sheep-view', next);
+    } catch {
+      // abaikan
+    }
+  };
+
   const selectedSheep = useMemo(
     () => sheepOptions.find((item) => item.id === form.sheepId),
     [sheepOptions, form.sheepId],
@@ -179,9 +203,25 @@ export default function RecordingPage() {
         (item.name || '').toLowerCase().includes(q) ||
         item.breed.toLowerCase().includes(q) ||
         (item.ownerUser?.name || '').toLowerCase().includes(q) ||
-        (item.ownerUser?.groupName || '').toLowerCase().includes(q),
+        (item.ownerUser?.groupName || '').toLowerCase().includes(q) ||
+        traitList(item).join(' ').toLowerCase().includes(q),
     );
   }, [sheepOptions, search]);
+
+  const pickGallery: GalleryItem[] = filteredSheep.map((item) => ({
+    id: item.id,
+    code: item.sheepCode,
+    name: item.name,
+    photoUrl: item.photoUrl,
+    traits: traitList(item),
+    subtitle: [item.breed, item.ownerUser?.name].filter(Boolean).join(' · '),
+  }));
+
+  const chooseSheep = (id: string) => {
+    setForm((prev) => ({ ...prev, sheepId: id }));
+    setZoomIndex(null);
+    setStep(2);
+  };
 
   const eventConfig = EVENTS.find((event) => event.key === eventType);
   const weightValue = form.weightKg ? Number(form.weightKg) : undefined;
@@ -406,7 +446,7 @@ export default function RecordingPage() {
               />
             ) : (
               <>
-                <div className="relative mb-4">
+                <div className="relative mb-3">
                   <Search
                     size={18}
                     aria-hidden="true"
@@ -415,11 +455,22 @@ export default function RecordingPage() {
                   <Input
                     className="pl-11"
                     aria-label="Cari ternak"
-                    placeholder="Cari kode, nama, atau pemilik"
+                    placeholder="Cari kode, nama, ciri, atau pemilik"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
+
+                <Segmented
+                  label="Tampilan"
+                  className="mb-4 max-w-xs"
+                  value={pickView}
+                  onChange={(value) => changePickView(value as 'LIST' | 'PHOTO')}
+                  options={[
+                    { value: 'LIST', label: 'Daftar' },
+                    { value: 'PHOTO', label: 'Foto' },
+                  ]}
+                />
 
                 {filteredSheep.length === 0 ? (
                   <EmptyState
@@ -427,6 +478,17 @@ export default function RecordingPage() {
                     title="Ternak tidak ditemukan"
                     description="Coba kata kunci lain, misalnya kode ternak."
                   />
+                ) : pickView === 'PHOTO' ? (
+                  <>
+                    <p className="mb-2 px-1 text-[13px] text-ink-muted">
+                      Ketuk foto untuk memilih. Ikon di pojok memperbesar foto.
+                    </p>
+                    <PhotoGrid
+                      items={pickGallery}
+                      onOpen={(index) => chooseSheep(pickGallery[index].id)}
+                      onZoom={setZoomIndex}
+                    />
+                  </>
                 ) : (
                   <ListGroup>
                     {filteredSheep.map((item) => (
@@ -441,13 +503,23 @@ export default function RecordingPage() {
                         }
                         title={sheepTitle(item)}
                         subtitle={[item.breed, item.ownerUser?.name].filter(Boolean).join(' · ')}
-                        onClick={() => {
-                          setForm((prev) => ({ ...prev, sheepId: item.id }));
-                          setStep(2);
-                        }}
+                        onClick={() => chooseSheep(item.id)}
                       />
                     ))}
                   </ListGroup>
+                )}
+
+                {zoomIndex !== null && (
+                  <PhotoViewer
+                    items={pickGallery}
+                    index={Math.min(zoomIndex, pickGallery.length - 1)}
+                    onIndexChange={setZoomIndex}
+                    onClose={() => setZoomIndex(null)}
+                    primaryAction={{
+                      label: 'Pilih ternak ini',
+                      onSelect: (target) => chooseSheep(target.id),
+                    }}
+                  />
                 )}
               </>
             ))}

@@ -4,12 +4,19 @@ import {
   Delete,
   Get,
   Param,
+  ParseEnumPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { SheepGender, SheepStatus, UserRole } from '@prisma/client';
+import {
+  SheepGender,
+  SheepPhotoAngle,
+  SheepStatus,
+  UserRole,
+} from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -17,7 +24,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateSheepDto } from './dto/create-sheep.dto';
 import { RecordStatusEventDto } from './dto/record-status-event.dto';
 import { UpdateSheepDto } from './dto/update-sheep.dto';
+import { SetSheepPhotoDto } from './dto/set-sheep-photo.dto';
 import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
+import { UpdateSheepTraitsDto } from './dto/update-sheep-traits.dto';
 import { SheepService } from './sheep.service';
 
 @Controller('sheep')
@@ -63,7 +72,47 @@ export class SheepController {
     return this.sheepService.findOne(id, user);
   }
 
-  // Peternak boleh mengganti foto ternaknya sendiri (dicek di service).
+  // Foto per sudut dan ciri pembeda: peternak hanya untuk ternaknya sendiri (dicek di service).
+  @Get(':id/photos')
+  listPhotos(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.listPhotos(id, user);
+  }
+
+  @Put(':id/photos/:angle')
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  setPhoto(
+    @Param('id') id: string,
+    @Param('angle', new ParseEnumPipe(SheepPhotoAngle)) angle: SheepPhotoAngle,
+    @Body() dto: SetSheepPhotoDto,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.setPhoto(id, angle, dto, user);
+  }
+
+  @Delete(':id/photos/:angle')
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  removePhoto(
+    @Param('id') id: string,
+    @Param('angle', new ParseEnumPipe(SheepPhotoAngle)) angle: SheepPhotoAngle,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.removePhoto(id, angle, user);
+  }
+
+  @Patch(':id/traits')
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  updateTraits(
+    @Param('id') id: string,
+    @Body() dto: UpdateSheepTraitsDto,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.updateTraits(id, dto, user);
+  }
+
+  // Foto utama (wajah dan hidung); dipertahankan untuk klien lama.
   @Patch(':id/photo')
   @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
   updatePhoto(

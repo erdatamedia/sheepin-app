@@ -121,6 +121,10 @@ export class UsersService {
         gender: true,
         status: true,
         photoUrl: true,
+        faceNose: true,
+        earsHorns: true,
+        tailBody: true,
+        physicalMark: true,
         location: true,
         weights: {
           take: 2, // terbaru + sebelumnya, untuk tren
@@ -181,6 +185,10 @@ export class UsersService {
           gender: item.gender,
           status: item.status,
           photoUrl: item.photoUrl,
+          faceNose: item.faceNose,
+          earsHorns: item.earsHorns,
+          tailBody: item.tailBody,
+          physicalMark: item.physicalMark,
           location: item.location,
           latestWeight: weight.latest,
           previousWeight: weight.previous,

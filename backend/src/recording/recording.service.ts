@@ -133,6 +133,9 @@ export class RecordingService {
         breed: true,
         gender: true,
         photoUrl: true,
+        faceNose: true,
+        earsHorns: true,
+        tailBody: true,
         location: true,
         ownerUser: {
           select: {

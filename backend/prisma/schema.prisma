@@ -30,6 +30,15 @@ enum SheepStatus {
   CULLED
 }
 
+// Sudut foto ternak. FACE (wajah dan hidung) adalah pratinjau utama.
+enum SheepPhotoAngle {
+  FACE
+  SIDE
+  REAR
+  EARS_HORNS
+  TAIL
+}
+
 enum HealthStatus {
   HEALTHY
   SICK
@@ -95,6 +104,10 @@ model Sheep {
   birthDate    DateTime?
   color        String?
   physicalMark String?
+  // Ciri pembeda (opsional), teks bebas: bantu membedakan ternak yang sama-sama putih.
+  faceNose     String?
+  earsHorns    String?
+  tailBody     String?
   sireId       String?
   damId        String?
   location     String?
@@ -112,9 +125,24 @@ model Sheep {
   healthRecords SheepHealth[]
   reproductions SheepReproduction[]
   activityLogs  ActivityLog[]
+  photos        SheepPhoto[]
 
   @@index([ownerUserId, status])
   @@index([createdById, createdAt])
+}
+
+// Satu foto per sudut per ternak; mengganti foto sudut yang sama menimpa baris yang ada.
+model SheepPhoto {
+  id        String          @id @default(cuid())
+  sheepId   String
+  angle     SheepPhotoAngle
+  url       String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  sheep Sheep @relation(fields: [sheepId], references: [id], onDelete: Cascade)
+
+  @@unique([sheepId, angle])
 }
 
 model SheepWeight {

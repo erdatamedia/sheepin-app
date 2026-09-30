@@ -1,16 +1,22 @@
 'use client';
 
-import { Camera } from 'lucide-react';
+import { Camera, Maximize2 } from 'lucide-react';
 import { SheepPhoto } from '@/components/sheep/sheep-photo';
+import type { SheepPhotoSlide } from '@/lib/sheep-photo';
 import { cn } from '@/lib/utils';
 
 export type GalleryItem = {
   id: string;
   code: string;
   name?: string | null;
+  /** Pratinjau utama (wajah dan hidung). */
   photoUrl?: string | null;
+  /** Foto semua sudut bila sudah diketahui; bila tidak, pelihat mengambilnya sendiri. */
+  photos?: SheepPhotoSlide[];
   /** Baris singkat di pelihat, mis. "32,5 kg · kemarin" atau "Garut · Budi". */
   subtitle?: string;
+  /** Ciri pembeda yang sudah diisi (teks singkat). */
+  traits?: string[];
   /** Penanda mencolok di foto, mis. "Sakit". */
   alert?: string;
 };
@@ -25,22 +31,27 @@ function initialsOf(item: GalleryItem) {
     .toUpperCase();
 }
 
-/** Kisi foto ternak: kode besar di atas foto supaya cepat dikenali di antara banyak ternak. */
+/**
+ * Kisi foto ternak: kode besar di atas foto supaya cepat dikenali di antara banyak ternak.
+ * `onOpen` = aksi utama saat foto diketuk; `onZoom` (opsional) menambah tombol kecil untuk memperbesar.
+ */
 export function PhotoGrid({
   items,
   onOpen,
+  onZoom,
 }: {
   items: GalleryItem[];
   onOpen: (index: number) => void;
+  onZoom?: (index: number) => void;
 }) {
   return (
     <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
       {items.map((item, index) => (
-        <li key={item.id}>
+        <li key={item.id} className="relative">
           <button
             type="button"
             onClick={() => onOpen(index)}
-            aria-label={`Lihat foto ${item.code}${item.name ? `, ${item.name}` : ''}`}
+            aria-label={`${onZoom ? 'Pilih' : 'Lihat foto'} ${item.code}${item.name ? `, ${item.name}` : ''}`}
             className="glass relative block aspect-square w-full overflow-hidden rounded-[var(--radius-control)] text-left active:scale-[0.97] active:brightness-95"
           >
             {item.photoUrl ? (
@@ -85,6 +96,19 @@ export function PhotoGrid({
               </span>
             )}
           </button>
+
+          {onZoom && item.photoUrl && (
+            <button
+              type="button"
+              onClick={() => onZoom(index)}
+              aria-label={`Perbesar foto ${item.code}`}
+              className="absolute left-0 top-0 flex h-11 w-11 items-center justify-center active:opacity-70"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm">
+                <Maximize2 size={14} aria-hidden="true" />
+              </span>
+            </button>
+          )}
         </li>
       ))}
     </ul>

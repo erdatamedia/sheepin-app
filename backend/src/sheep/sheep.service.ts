@@ -4,12 +4,29 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, SheepGender, SheepStatus, UserRole } from '@prisma/client';
+import {
+  Prisma,
+  SheepGender,
+  SheepPhotoAngle,
+  SheepStatus,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSheepDto } from './dto/create-sheep.dto';
 import { RecordStatusEventDto } from './dto/record-status-event.dto';
 import { UpdateSheepDto } from './dto/update-sheep.dto';
+import { SetSheepPhotoDto } from './dto/set-sheep-photo.dto';
 import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
+import { UpdateSheepTraitsDto } from './dto/update-sheep-traits.dto';
+
+/** Urutan sudut di pelihat: wajah dan hidung selalu pertama (pratinjau utama). */
+export const ANGLE_ORDER: SheepPhotoAngle[] = [
+  SheepPhotoAngle.FACE,
+  SheepPhotoAngle.SIDE,
+  SheepPhotoAngle.REAR,
+  SheepPhotoAngle.EARS_HORNS,
+  SheepPhotoAngle.TAIL,
+];
 
 @Injectable()
 export class SheepService {
@@ -216,18 +233,13 @@ export class SheepService {
     };
   }
 
-  /**
-   * Ganti atau hapus foto ternak. Peternak hanya boleh untuk ternaknya sendiri;
-   * admin dan petugas untuk semua ternak.
-   */
-  async updatePhoto(
+  private async loadForPhotoEdit(
     id: string,
-    dto: UpdateSheepPhotoDto,
     user: { id: string; role: UserRole },
   ) {
     const sheep = await this.prisma.sheep.findUnique({
       where: { id },
-      select: { id: true, ownerUserId: true },
+      select: { id: true, ownerUserId: true, photoUrl: true },
     });
 
     if (!sheep) {
@@ -240,9 +252,159 @@ export class SheepService {
       );
     }
 
+    return sheep;
+  }
+
+  /**
+   * Foto semua sudut satu ternak, berurutan (wajah dan hidung pertama).
+   * Foto tunggal lama (Sheep.photoUrl tanpa baris sudut) dianggap foto wajah.
+   */
+  async listPhotos(id: string, user: { id: string; role: UserRole }) {
+    const sheep = await this.loadForPhotoEdit(id, user);
+    const rows = await this.prisma.sheepPhoto.findMany({
+      where: { sheepId: id },
+      select: { angle: true, url: true },
+    });
+
+    const photos = ANGLE_ORDER.flatMap((angle) => {
+      const row = rows.find((item) => item.angle === angle);
+      return row ? [{ angle, url: row.url }] : [];
+    });
+
+    if (
+      !photos.some((photo) => photo.angle === SheepPhotoAngle.FACE) &&
+      sheep.photoUrl
+    ) {
+      photos.unshift({ angle: SheepPhotoAngle.FACE, url: sheep.photoUrl });
+    }
+
+    return { message: 'Foto ternak berhasil diambil', data: { photos } };
+  }
+
+  /** Pasang atau ganti foto satu sudut. Foto wajah menjadi pratinjau utama (Sheep.photoUrl). */
+  async setPhoto(
+    id: string,
+    angle: SheepPhotoAngle,
+    dto: SetSheepPhotoDto,
+    user: { id: string; role: UserRole },
+  ) {
+    const sheep = await this.loadForPhotoEdit(id, user);
+
+    await this.prisma.sheepPhoto.upsert({
+      where: { sheepId_angle: { sheepId: id, angle } },
+      create: { sheepId: id, angle, url: dto.photoUrl },
+      update: { url: dto.photoUrl },
+      select: { id: true },
+    });
+
+    // Pratinjau utama: foto wajah; bila belum ada pratinjau sama sekali, foto pertama apa pun.
+    if (angle === SheepPhotoAngle.FACE || !sheep.photoUrl) {
+      await this.prisma.sheep.update({
+        where: { id },
+        data: { photoUrl: dto.photoUrl },
+        select: { id: true },
+      });
+    }
+
+    return this.listPhotos(id, user);
+  }
+
+  /** Hapus foto satu sudut; pratinjau utama dihitung ulang bila yang dihapus adalah pratinjaunya. */
+  async removePhoto(
+    id: string,
+    angle: SheepPhotoAngle,
+    user: { id: string; role: UserRole },
+  ) {
+    const sheep = await this.loadForPhotoEdit(id, user);
+
+    const existing = await this.prisma.sheepPhoto.findUnique({
+      where: { sheepId_angle: { sheepId: id, angle } },
+      select: { id: true, url: true },
+    });
+
+    if (existing) {
+      await this.prisma.sheepPhoto.delete({
+        where: { id: existing.id },
+        select: { id: true },
+      });
+    }
+
+    const wasPreview =
+      angle === SheepPhotoAngle.FACE ||
+      (!!existing && sheep.photoUrl === existing.url);
+
+    if (wasPreview) {
+      const rows = await this.prisma.sheepPhoto.findMany({
+        where: { sheepId: id },
+        select: { angle: true, url: true },
+      });
+      const next = ANGLE_ORDER.map((item) =>
+        rows.find((row) => row.angle === item),
+      ).find((row) => !!row);
+
+      await this.prisma.sheep.update({
+        where: { id },
+        data: { photoUrl: next?.url ?? null },
+        select: { id: true },
+      });
+    }
+
+    return this.listPhotos(id, user);
+  }
+
+  /** Ciri pembeda (opsional). String kosong menghapus isian; yang tidak dikirim tidak diubah. */
+  async updateTraits(
+    id: string,
+    dto: UpdateSheepTraitsDto,
+    user: { id: string; role: UserRole },
+  ) {
+    await this.loadForPhotoEdit(id, user);
+
+    const normalize = (value: string | undefined) =>
+      value === undefined ? undefined : value || null;
+
     const updated = await this.prisma.sheep.update({
       where: { id },
-      data: { photoUrl: dto.photoUrl || null },
+      data: {
+        faceNose: normalize(dto.faceNose),
+        earsHorns: normalize(dto.earsHorns),
+        tailBody: normalize(dto.tailBody),
+        physicalMark: normalize(dto.physicalMark),
+      },
+      select: {
+        id: true,
+        faceNose: true,
+        earsHorns: true,
+        tailBody: true,
+        physicalMark: true,
+      },
+    });
+
+    return { message: 'Ciri ternak berhasil diperbarui', data: updated };
+  }
+
+  /**
+   * Ganti atau hapus foto utama (wajah dan hidung). Dipertahankan untuk klien lama;
+   * sama dengan memasang atau menghapus foto sudut FACE. String kosong menghapus.
+   */
+  async updatePhoto(
+    id: string,
+    dto: UpdateSheepPhotoDto,
+    user: { id: string; role: UserRole },
+  ) {
+    if (!dto.photoUrl) {
+      await this.removePhoto(id, SheepPhotoAngle.FACE, user);
+    } else {
+      await this.setPhoto(
+        id,
+        SheepPhotoAngle.FACE,
+        { photoUrl: dto.photoUrl },
+        user,
+      );
+    }
+
+    const updated = await this.prisma.sheep.findUnique({
+      where: { id },
       select: { id: true, photoUrl: true },
     });
 

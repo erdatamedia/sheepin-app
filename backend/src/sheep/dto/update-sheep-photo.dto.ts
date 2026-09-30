@@ -20,3 +20,6 @@ export class UpdateSheepPhotoDto {
   })
   photoUrl: string;
 }
+
+/** Pola alamat foto unggahan yang sah; dipakai bersama DTO foto per sudut. */
+export const UPLOAD_PATH_PATTERN = /^\/uploads\/(?!\.{1,2}$)[A-Za-z0-9._-]+$/;

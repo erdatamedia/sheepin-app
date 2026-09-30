@@ -35,6 +35,10 @@ export type MySheepResponse = {
     gender: string;
     status: 'ACTIVE' | 'SOLD' | 'DEAD' | 'CULLED';
     photoUrl?: string | null;
+    faceNose?: string | null;
+    earsHorns?: string | null;
+    tailBody?: string | null;
+    physicalMark?: string | null;
     location?: string | null;
     latestWeight?: {
       recordDate: string;

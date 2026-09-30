@@ -28,9 +28,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Toast, useToast } from '@/components/ui/toast';
 import { LoadError } from '@/components/ui/load-error';
 import { Avatar } from '@/components/ui/avatar';
-import { Sheet } from '@/components/ui/sheet';
 import { PhotoViewer } from '@/components/sheep/photo-viewer';
-import { updateSheepPhoto } from '@/lib/sheep-photo';
+import { getSheepPhotos, traitList, type SheepPhotoSlide } from '@/lib/sheep-photo';
+import { AnglePhotos } from '@/components/sheep/angle-photos';
+import { TraitsSheet } from '@/components/sheep/traits-sheet';
 import { BackLink } from '@/components/ui/back-link';
 import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
 import { StatTile } from '@/components/ui/stat-tile';
@@ -38,7 +39,6 @@ import { ProgressTimeline } from '@/components/sheep/progress-timeline';
 import { WeightChart } from '@/components/sheep/weight-chart';
 import { bcsLabel } from '@/lib/progress';
 import { formatDiff, formatKg, labelTimeAgo } from '@/lib/format';
-import { PhotoUploadField } from '@/components/ui/photo-upload-field';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { cn, sanitizeDecimal } from '@/lib/utils';
 import { getMe, type MeResponse } from '@/lib/me';
@@ -62,6 +62,9 @@ type SheepDetail = {
   birthDate?: string;
   color?: string;
   physicalMark?: string;
+  faceNose?: string;
+  earsHorns?: string;
+  tailBody?: string;
   sireId?: string;
   damId?: string;
   location?: string;
@@ -184,7 +187,9 @@ export default function SheepDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('weights');
   const [failed, setFailed] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
-  const [showPhotoEdit, setShowPhotoEdit] = useState(false);
+  const [viewSlide, setViewSlide] = useState(0);
+  const [showTraits, setShowTraits] = useState(false);
+  const [photos, setPhotos] = useState<SheepPhotoSlide[]>([]);
   const [showEdit, setShowEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const { toast, notify } = useToast();
@@ -197,7 +202,6 @@ export default function SheepDetailPage() {
     color: '',
     location: '',
     physicalMark: '',
-    photoUrl: '',
     status: 'ACTIVE',
     ownerUserId: '',
   });
@@ -239,8 +243,8 @@ export default function SheepDetailPage() {
   const fetchAll = useCallback(async () => {
     try {
       setFailed(false);
-      const [meRes, sheepRes, weightsRes, bcsRes, healthRes, reproRes, evalRes] = await Promise.all(
-        [
+      const [meRes, sheepRes, weightsRes, bcsRes, healthRes, reproRes, evalRes, photosRes] =
+        await Promise.all([
           getMe(),
           api.get(`/sheep/${id}`),
           api.get(`/weights/sheep/${id}`),
@@ -248,8 +252,9 @@ export default function SheepDetailPage() {
           api.get(`/health/sheep/${id}`),
           api.get(`/reproduction/sheep/${id}`),
           getSheepEvaluation(id),
-        ],
-      );
+          // Gagal memuat foto sudut tidak boleh menggagalkan seluruh halaman.
+          getSheepPhotos(id).catch(() => [] as SheepPhotoSlide[]),
+        ]);
 
       const sheepData = sheepRes.data.data as SheepDetail;
 
@@ -260,6 +265,7 @@ export default function SheepDetailPage() {
       setHealth(healthRes.data.data || []);
       setReproduction(reproRes.data.data || []);
       setEvaluation(evalRes.data);
+      setPhotos(photosRes);
 
       if (meRes.role === 'ADMIN' || meRes.role === 'OFFICER') {
         const farmerRes = await getFarmers();
@@ -274,7 +280,6 @@ export default function SheepDetailPage() {
         color: sheepData.color || '',
         location: sheepData.location || '',
         physicalMark: sheepData.physicalMark || '',
-        photoUrl: sheepData.photoUrl || '',
         status: sheepData.status || 'ACTIVE',
         ownerUserId: sheepData.ownerUser?.id || '',
       });
@@ -388,7 +393,6 @@ export default function SheepDetailPage() {
           color: editForm.color || undefined,
           location: editForm.location || undefined,
           physicalMark: editForm.physicalMark || undefined,
-          photoUrl: editForm.photoUrl || undefined,
           status: editForm.status,
           ownerUserId: editForm.ownerUserId || undefined,
         });
@@ -507,18 +511,6 @@ export default function SheepDetailPage() {
   const fmtDate = (value?: string | null) =>
     value ? new Date(value).toLocaleDateString('id-ID') : '-';
 
-  // Ganti atau hapus foto: peternak untuk ternaknya sendiri, petugas untuk semua.
-  const savePhoto = async (photoUrl: string) => {
-    try {
-      await updateSheepPhoto(id, photoUrl);
-      notify('success', photoUrl ? 'Foto ternak diperbarui' : 'Foto ternak dihapus');
-      await fetchAll();
-    } catch (error) {
-      console.error(error);
-      notify('error', getApiErrorMessage(error, 'Gagal menyimpan foto'));
-    }
-  };
-
   const shell = (content: React.ReactNode) => (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
@@ -598,7 +590,10 @@ export default function SheepDetailPage() {
         {sheep.photoUrl ? (
           <button
             type="button"
-            onClick={() => setShowPhoto(true)}
+            onClick={() => {
+              setViewSlide(0);
+              setShowPhoto(true);
+            }}
             aria-label="Perbesar foto ternak"
             className="rounded-full active:opacity-80"
           >
@@ -709,40 +704,83 @@ export default function SheepDetailPage() {
               code: sheep.sheepCode,
               name: sheep.name,
               photoUrl: sheep.photoUrl,
+              photos,
               subtitle: [sheep.breed, labelJenisKelamin(sheep.gender)].filter(Boolean).join(' · '),
+              traits: traitList(sheep),
             },
           ]}
           index={0}
+          initialSlide={viewSlide}
           onIndexChange={() => undefined}
           onClose={() => setShowPhoto(false)}
         />
       )}
 
-      <Sheet open={showPhotoEdit} onClose={() => setShowPhotoEdit(false)} title="Foto ternak">
-        <PhotoUploadField
-          label="Foto ternak"
-          value={sheep.photoUrl || ''}
-          onChange={(value) => void savePhoto(value)}
-          helperText="Foto dari samping, dengan wajah dan badan terlihat, paling mudah dikenali di kandang."
-          emptyLabel="FOTO"
+      {showTraits && (
+        <TraitsSheet
+          sheepId={sheep.id}
+          initial={sheep}
+          onClose={() => setShowTraits(false)}
+          onSaved={fetchAll}
+          notify={notify}
         />
-      </Sheet>
+      )}
     </>
+  );
+
+  const photoSection = (
+    <section className="mb-6" aria-labelledby="sec-foto">
+      <h2 id="sec-foto" className="mb-1 px-1 text-[20px] font-bold tracking-tight text-ink">
+        Foto dan ciri
+      </h2>
+      <p className="mb-3 px-1 text-[14px] text-ink-muted">
+        Foto wajah dan hidung menjadi pratinjau utama. Sudut lain opsional, dan bisa digeser saat
+        foto dibuka.
+      </p>
+
+      <AnglePhotos
+        sheepId={sheep.id}
+        photos={photos}
+        onChanged={fetchAll}
+        onView={(position) => {
+          setViewSlide(position);
+          setShowPhoto(true);
+        }}
+        notify={notify}
+      />
+
+      <ListGroup header="Ciri pembeda (opsional)" className="mt-4">
+        <ListRow
+          title="Wajah dan hidung"
+          value={sheep.faceNose || 'Belum diisi'}
+          onClick={() => setShowTraits(true)}
+        />
+        <ListRow
+          title="Telinga dan tanduk"
+          value={sheep.earsHorns || 'Belum diisi'}
+          onClick={() => setShowTraits(true)}
+        />
+        <ListRow
+          title="Ekor dan postur"
+          value={sheep.tailBody || 'Belum diisi'}
+          onClick={() => setShowTraits(true)}
+        />
+        <ListRow
+          title="Tanda khusus"
+          value={sheep.physicalMark || 'Belum diisi'}
+          onClick={() => setShowTraits(true)}
+        />
+      </ListGroup>
+    </section>
   );
 
   const info = (
     <ListGroup header="Tentang ternak ini" className="mb-6">
-      <ListRow
-        title="Foto ternak"
-        value={sheep.photoUrl ? 'Ganti foto' : 'Tambah foto'}
-        onClick={() => setShowPhotoEdit(true)}
-      />
       <ListRow title="Jenis / rumpun" value={sheep.breed} />
       <ListRow title="Jenis kelamin" value={labelJenisKelamin(sheep.gender)} />
       <ListRow title="Lokasi" value={sheep.location || '-'} />
       <ListRow title="Warna" value={sheep.color || '-'} />
       <ListRow title="Tanggal lahir" value={fmtDate(sheep.birthDate)} />
-      <ListRow title="Tanda fisik" value={sheep.physicalMark || '-'} />
       {!isFarmer && (
         <>
           <ListRow title="Pemilik" value={sheep.ownerUser?.name || '-'} />
@@ -770,6 +808,7 @@ export default function SheepDetailPage() {
         {photoOverlays}
         {recordButton}
         {summaryTiles}
+        {photoSection}
         {progress}
 
         <ListGroup
@@ -818,6 +857,7 @@ export default function SheepDetailPage() {
       {photoOverlays}
       {recordButton}
       {summaryTiles}
+      {photoSection}
       {progress}
 
       {evaluation && <EvaluationPanel evaluation={evaluation} />}
@@ -919,14 +959,6 @@ export default function SheepDetailPage() {
                   ]}
                 />
               </div>
-
-              <PhotoUploadField
-                label="Foto ternak"
-                value={editForm.photoUrl}
-                onChange={(value) => setEditForm({ ...editForm, photoUrl: value })}
-                helperText="Foto membantu mengenali ternak dengan cepat di kandang."
-                emptyLabel="FOTO"
-              />
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button size="lg" disabled={busy} onClick={() => void handleUpdateIdentity()}>

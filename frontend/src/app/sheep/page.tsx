@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { formatKg, labelTimeAgo } from '@/lib/format';
+import { traitList } from '@/lib/sheep-photo';
 import { PawPrint, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
@@ -39,6 +40,10 @@ type Sheep = {
   status: string;
   color?: string;
   photoUrl?: string | null;
+  faceNose?: string | null;
+  earsHorns?: string | null;
+  tailBody?: string | null;
+  physicalMark?: string | null;
   location?: string;
   ownerUser?: {
     id: string;
@@ -154,7 +159,8 @@ export default function SheepPage() {
         item.breed.toLowerCase().includes(keyword) ||
         (item.location || '').toLowerCase().includes(keyword) ||
         (item.ownerUser?.name || '').toLowerCase().includes(keyword) ||
-        (item.ownerUser?.groupName || '').toLowerCase().includes(keyword);
+        (item.ownerUser?.groupName || '').toLowerCase().includes(keyword) ||
+        traitList(item).join(' ').toLowerCase().includes(keyword);
 
       const matchesGender = genderFilter === 'ALL' || item.gender === genderFilter;
       const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
@@ -171,7 +177,8 @@ export default function SheepPage() {
         !search ||
         item.sheepCode.toLowerCase().includes(keyword) ||
         (item.name || '').toLowerCase().includes(keyword) ||
-        item.breed.toLowerCase().includes(keyword),
+        item.breed.toLowerCase().includes(keyword) ||
+        traitList(item).join(' ').toLowerCase().includes(keyword),
     );
   }, [mySheep, search]);
 
@@ -287,6 +294,7 @@ export default function SheepPage() {
       code: item.sheepCode,
       name: item.name,
       photoUrl: item.photoUrl,
+      traits: traitList(item),
       subtitle: [
         item.latestWeight ? formatKg(item.latestWeight.weightKg) : null,
         `dicatat ${labelTimeAgo(item.lastRecordedAt)}`,
@@ -315,7 +323,7 @@ export default function SheepPage() {
           {createForm}
 
           <div className="mb-4 space-y-3">
-            <div className="flex gap-2">{searchField('Cari kode, nama, atau jenis')}</div>
+            <div className="flex gap-2">{searchField('Cari kode, nama, jenis, atau ciri')}</div>
             <div className="grid grid-cols-2 gap-2">
               <Segmented
                 label="Tampilkan"
@@ -398,6 +406,7 @@ export default function SheepPage() {
     code: item.sheepCode,
     name: item.name,
     photoUrl: item.photoUrl,
+    traits: traitList(item),
     subtitle: [item.breed, item.ownerUser?.name].filter(Boolean).join(' · '),
     alert: item.status !== 'ACTIVE' ? labelStatusTernak(item.status) : undefined,
   }));
@@ -414,7 +423,7 @@ export default function SheepPage() {
         {createForm}
 
         <div className="mb-3 flex gap-2">
-          {searchField('Cari kode, nama, jenis, atau pemilik')}
+          {searchField('Cari kode, nama, jenis, ciri, atau pemilik')}
           <Button
             variant={activeFilterCount ? 'solid' : 'tinted'}
             className="h-12"

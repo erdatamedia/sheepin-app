@@ -65,3 +65,15 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] **Peternak** dapat menambah atau mengganti foto ternaknya sendiri (sebelumnya hanya petugas).
 - [ ] Unggah foto dari kamera HP terasa cepat (foto diperkecil dulu sebelum dikirim).
 - [ ] Halaman **Catat → pilih ternak** menampilkan foto kecil di samping tiap ternak.
+
+## Foto per sudut dan ciri pembeda (opsional)
+- [ ] Halaman **Catat → Pilih ternak**: tombol **Daftar / Foto** di bawah kolom cari. Di tampilan Foto, mengetuk foto langsung memilih ternak; ikon kecil di pojok kiri atas memperbesar foto, dengan tombol **Pilih ternak ini**.
+- [ ] Pencarian di Ternak dan Catat juga mencocokkan **ciri** (mis. ketik "cembung" atau "tahi lalat").
+- [ ] Detail ternak → **Foto dan ciri**: lima kotak (Wajah & hidung, Samping, Belakang, Telinga & tanduk, Ekor). Kotak kosong langsung membuka kamera; kotak berisi membuka menu Perbesar / Ambil foto baru / Pilih dari galeri / Hapus.
+- [ ] Setelah foto **Wajah & hidung** diisi, foto itulah yang tampil sebagai pratinjau utama di daftar, kisi foto, beranda, dan pilih ternak.
+- [ ] Ternak lama yang hanya punya satu foto: foto itu tetap tampil sebagai wajah & hidung.
+- [ ] Menghapus foto wajah: pratinjau pindah ke sudut foto berikutnya, atau kosong bila tidak ada.
+- [ ] Pelihat layar penuh: **geser kiri-kanan** = sudut foto lain dari ternak yang sama (label sudut di atas foto dan deretan tombol sudut di bawah); **geser atas-bawah** atau tombol panah di bilah atas = ternak berikutnya/sebelumnya.
+- [ ] Ciri pembeda: baris **Wajah dan hidung / Telinga dan tanduk / Ekor dan postur / Tanda khusus** membuka lembar isian; ketuk saran untuk mengisi cepat; kosongkan isian lalu simpan untuk menghapus.
+- [ ] Ciri yang terisi tampil di pelihat foto, di bawah nama ternak.
+- [ ] Isi semua opsional: ternak tanpa ciri dan tanpa foto sudut tetap bekerja seperti biasa.

@@ -9,6 +9,9 @@ export type RecordingSheepOptionResponse = {
     breed: string;
     gender: string;
     photoUrl?: string | null;
+    faceNose?: string | null;
+    earsHorns?: string | null;
+    tailBody?: string | null;
     location?: string | null;
     ownerUser?: {
       id: string;
