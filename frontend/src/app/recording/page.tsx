@@ -321,7 +321,7 @@ export default function RecordingPage() {
                       'min-h-11 rounded-[var(--radius-control)] border px-2 text-sm font-semibold transition active:scale-[0.97]',
                       active
                         ? 'border-primary bg-primary text-white'
-                        : 'border-line bg-white text-ink hover:border-primary/40',
+                        : 'border-line bg-surface text-ink hover:border-primary/40',
                     )}
                   >
                     {item.label}
@@ -400,7 +400,7 @@ export default function RecordingPage() {
                               'flex min-h-16 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] border px-4 py-3 text-left transition',
                               active
                                 ? 'border-primary bg-primary-soft'
-                                : 'border-line bg-white hover:border-primary/40',
+                                : 'border-line bg-surface hover:border-primary/40',
                             )}
                           >
                             <span className="min-w-0">
@@ -570,7 +570,7 @@ export default function RecordingPage() {
           </Card>
 
           {/* Tombol simpan: menempel di atas bottom nav pada mobile */}
-          <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-[rgba(255,252,245,0.97)] px-4 py-3 backdrop-blur md:static md:mt-5 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/90 px-4 py-3 backdrop-blur md:static md:mt-5 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
             <div className="mx-auto flex max-w-7xl gap-2">
               <Button
                 size="lg"

@@ -44,7 +44,7 @@ function getStatusVariant(status?: string): Variant {
 
 const barColor: Record<Variant, string> = {
   success: 'bg-success',
-  warning: 'bg-[#d97706]',
+  warning: 'bg-[color:var(--warning-fill)]',
   danger: 'bg-danger',
   info: 'bg-info',
   default: 'bg-primary',
@@ -106,7 +106,7 @@ export function EvaluationPanel({ evaluation }: Props) {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={score}
-          className="mt-3 h-3 overflow-hidden rounded-full bg-white"
+          className="mt-3 h-3 overflow-hidden rounded-full bg-surface"
         >
           <div className={cn('h-full rounded-full', barColor[variant])} style={{ width: `${score}%` }} />
         </div>

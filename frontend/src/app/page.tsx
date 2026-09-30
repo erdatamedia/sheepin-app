@@ -31,7 +31,7 @@ export default function HomePage() {
     <main className="relative overflow-hidden">
       <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-16 pt-6 md:px-8 md:pb-20 md:pt-8">
         <header className="mb-10 flex items-center justify-between gap-4">
-          <div className="inline-flex rounded-[var(--radius-card)] border border-line bg-white/80 px-3 py-2 shadow-[var(--shadow-soft)] md:px-4 md:py-3">
+          <div className="inline-flex rounded-[var(--radius-card)] border border-line bg-surface/80 px-3 py-2 shadow-[var(--shadow-soft)] md:px-4 md:py-3">
             <Image
               src="/sheepin-logo.png"
               alt="Sheep-In"
@@ -57,7 +57,7 @@ export default function HomePage() {
 
         <div className="grid flex-1 items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="animate-[fadeInUp_.45s_ease-out]">
-            <div className="inline-flex rounded-full border border-[color:rgba(33,73,61,0.14)] bg-[rgba(33,73,61,0.08)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <div className="inline-flex rounded-full border border-line bg-primary-soft px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               Rekording domba berbasis alur kerja
             </div>
             <h1 className="mt-5 max-w-4xl text-3xl font-semibold leading-tight text-ink sm:text-4xl md:text-5xl lg:text-6xl">
@@ -83,7 +83,7 @@ export default function HomePage() {
               {nilaiUtama.map((item) => (
                 <Card
                   key={item.judul}
-                  className="bg-[linear-gradient(180deg,rgba(255,253,250,0.96),rgba(248,243,234,0.92))] p-5"
+                  className="p-5"
                 >
                   <p className="text-base font-semibold text-ink">{item.judul}</p>
                   <p className="mt-2 text-sm leading-7 text-ink-muted">{item.isi}</p>
@@ -93,12 +93,10 @@ export default function HomePage() {
           </div>
 
           <div className="animate-[fadeInUp_.55s_ease-out]">
-            <Card className="relative overflow-hidden border-[color:rgba(33,73,61,0.14)] bg-[linear-gradient(180deg,rgba(255,252,245,0.98),rgba(239,246,241,0.96))] p-6 md:p-7">
-              <div className="absolute -right-14 -top-16 h-36 w-36 rounded-full bg-[rgba(33,73,61,0.10)] blur-2xl" />
-              <div className="absolute -bottom-12 -left-10 h-32 w-32 rounded-full bg-[rgba(210,178,120,0.14)] blur-2xl" />
+            <Card className="relative overflow-hidden p-6 md:p-7">
 
               <div className="relative">
-                <div className="hidden rounded-[28px] border border-[color:rgba(33,73,61,0.10)] bg-white/80 p-4 shadow-[0_10px_24px_rgba(53,43,24,0.06)] md:block">
+                <div className="hidden rounded-[var(--radius-card)] border border-line bg-surface p-4 md:block">
                   <Image
                     src="/sheepin-logo.png"
                     alt="Logo Sheep-In"
@@ -109,7 +107,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid gap-4 md:mt-5">
-                  <Card className="bg-white/82 p-5">
+                  <Card className="bg-surface/82 p-5">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                       Alur kerja utama
                     </p>
@@ -126,13 +124,13 @@ export default function HomePage() {
                   </Card>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Card className="bg-white/78 p-5">
+                    <Card className="bg-surface/78 p-5">
                       <p className="text-sm font-semibold text-ink">Untuk Peternak</p>
                       <p className="mt-2 text-sm leading-7 text-ink-muted">
                         Fokus pada ternak saya, kerja hari ini, riwayat, dan lokasi kandang.
                       </p>
                     </Card>
-                    <Card className="bg-white/78 p-5">
+                    <Card className="bg-surface/78 p-5">
                       <p className="text-sm font-semibold text-ink">Untuk Admin dan Petugas</p>
                       <p className="mt-2 text-sm leading-7 text-ink-muted">
                         Pantau distribusi, kelola peternak, lihat kepadatan data, dan audit rekording.
@@ -145,7 +143,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 rounded-[28px] border border-line bg-white/72 px-5 py-4 text-sm text-ink-muted shadow-[0_10px_24px_rgba(53,43,24,0.04)] md:flex-row md:items-center md:justify-between">
+        <div className="mt-10 flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface/72 px-5 py-4 text-sm text-ink-muted md:flex-row md:items-center md:justify-between">
           <p>
             Sheep-In dirancang untuk rekording ternak domba yang lebih dekat dengan kerja lapangan, bukan sekadar struktur tabel data.
           </p>

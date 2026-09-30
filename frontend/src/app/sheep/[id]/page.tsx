@@ -863,7 +863,7 @@ export default function SheepDetailPage() {
       <div
         role="tablist"
         aria-label="Riwayat rekording"
-        className="mb-4 grid grid-cols-4 gap-1 rounded-[var(--radius-control)] border border-line bg-white p-1"
+        className="mb-4 grid grid-cols-4 gap-1 rounded-[var(--radius-control)] border border-line bg-surface p-1"
       >
         {tabs.map((tab) => {
           const active = activeTab === tab.key;

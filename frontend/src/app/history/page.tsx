@@ -150,7 +150,7 @@ export default function HistoryPage() {
                     'min-h-11 shrink-0 rounded-full border px-4 text-sm font-semibold transition',
                     active
                       ? 'border-primary bg-primary text-white'
-                      : 'border-line bg-white text-ink hover:border-primary/40',
+                      : 'border-line bg-surface text-ink hover:border-primary/40',
                   )}
                 >
                   {item.label}

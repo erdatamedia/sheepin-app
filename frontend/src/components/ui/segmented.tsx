@@ -28,7 +28,7 @@ export function Segmented({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('grid gap-2', className)}
+      className={cn('grid gap-0.5 rounded-[12px] bg-tint p-[3px]', className)}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((option) => {
@@ -42,15 +42,15 @@ export function Segmented({
             aria-checked={active}
             onClick={() => onChange(allowClear && active ? '' : option.value)}
             className={cn(
-              'flex min-h-14 flex-col items-center justify-center rounded-[var(--radius-control)] border px-2 text-base font-semibold transition active:scale-[0.97]',
+              'flex min-h-12 flex-col items-center justify-center rounded-[10px] px-2 text-[15px] transition duration-150',
               active
-                ? 'border-primary bg-primary text-white shadow-[var(--shadow-accent)]'
-                : 'border-line bg-white text-ink hover:border-primary/40',
+                ? 'bg-surface font-semibold text-ink shadow-[0_1px_3px_rgba(62,46,36,0.22)]'
+                : 'font-medium text-ink-muted active:bg-surface/50',
             )}
           >
             {option.label}
             {option.hint && (
-              <span className={cn('text-xs font-normal', active ? 'text-white/80' : 'text-ink-muted')}>
+              <span className="text-xs font-normal text-ink-muted">
                 {option.hint}
               </span>
             )}

@@ -151,9 +151,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen text-ink">
       <div className="flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="hidden w-72 shrink-0 border-r border-line bg-[linear-gradient(180deg,rgba(255,252,245,0.92),rgba(246,240,228,0.88))] p-6 md:block">
+        <aside className="hidden w-72 shrink-0 border-r border-line bg-surface/80 backdrop-blur-xl p-6 md:block">
           <div className="mb-8">
-            <div className="inline-flex rounded-[var(--radius-card)] border border-line bg-white/80 px-4 py-3 shadow-[var(--shadow-soft)]">
+            <div className="inline-flex rounded-[var(--radius-card)] border border-line bg-surface/80 px-4 py-3 shadow-[var(--shadow-soft)]">
               <Image
                 src="/sheepin-logo.png"
                 alt="Sheep-In"
@@ -170,7 +170,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {me && (
               <Link
                 href="/profile"
-                className="mt-5 flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-white/70 px-4 py-4 text-xs text-ink-muted shadow-[var(--shadow-soft)] transition hover:bg-white"
+                className="mt-5 flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface/70 px-4 py-4 text-xs text-ink-muted shadow-[var(--shadow-soft)] transition hover:bg-surface"
               >
                 <Avatar me={me} size="lg" />
                 <div className="min-w-0">
@@ -195,7 +195,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     'flex min-h-11 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition',
                     active
                       ? 'bg-primary text-white shadow-[var(--shadow-accent)]'
-                      : 'text-ink/80 hover:bg-white/70',
+                      : 'text-ink/80 hover:bg-surface/70',
                   )}
                 >
                   <Icon size={18} aria-hidden="true" />
@@ -238,7 +238,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="mb-5 hidden justify-end md:flex">
                 <Link
                   href="/profile"
-                  className="inline-flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-white/80 px-3 py-2 text-left shadow-[var(--shadow-soft)] transition hover:bg-white"
+                  className="inline-flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface/80 px-3 py-2 text-left shadow-[var(--shadow-soft)] transition hover:bg-surface"
                 >
                   <Avatar me={me} size="sm" />
                   <div className="min-w-0">
@@ -260,7 +260,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Bottom nav mobile */}
       <nav
         aria-label="Menu utama"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-[rgba(255,252,245,0.97)] pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
       >
         <div className="grid grid-cols-5">
           {bottomItems.filter(visible).map((item) => {
@@ -326,7 +326,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu lainnya"
-            className="absolute inset-x-0 bottom-0 rounded-t-[28px] bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-12px_32px_rgba(39,33,21,0.18)]"
+            className="absolute inset-x-0 bottom-0 rounded-t-[var(--radius-sheet)] bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[var(--shadow-sheet)]"
           >
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-base font-semibold text-ink">Menu lainnya</h2>

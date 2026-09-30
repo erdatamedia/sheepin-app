@@ -66,7 +66,7 @@ export function PhotoUploadField({
             className="h-20 w-20 rounded-[22px] border border-line object-cover"
           />
         ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-[rgba(33,73,61,0.1)] px-3 text-center text-xs font-semibold text-[color:var(--accent)]">
+          <div className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-primary-soft px-3 text-center text-xs font-semibold text-primary">
             {emptyLabel}
           </div>
         )}
@@ -114,7 +114,7 @@ export function PhotoUploadField({
       </div>
 
       {message && (
-        <div role="status" className="rounded-[var(--radius-control)] border border-line bg-white/80 px-4 py-3 text-sm text-ink">
+        <div role="status" className="rounded-[var(--radius-control)] border border-line bg-surface/80 px-4 py-3 text-sm text-ink">
           {message}
         </div>
       )}

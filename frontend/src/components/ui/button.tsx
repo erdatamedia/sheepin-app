@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 
 type ButtonVariant =
   | 'solid'
+  | 'tinted'
   | 'outline'
   | 'ghost'
   | 'dangerOutline'
@@ -15,19 +16,19 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: ButtonSize;
 };
 
+// Gaya iOS: isi penuh (solid), isi pastel (tinted), bingkai tipis, dan teks saja (ghost).
 const variantClasses: Record<ButtonVariant, string> = {
-  solid: 'bg-primary text-white shadow-[var(--shadow-accent)] hover:brightness-110',
-  outline: 'border border-line bg-surface text-ink hover:bg-primary-soft/50',
-  ghost: 'text-primary hover:bg-primary-soft/60',
-  dangerOutline:
-    'border border-[color:var(--danger-border)] bg-surface text-danger hover:bg-danger-soft',
-  successOutline:
-    'border border-[color:var(--success-border)] bg-surface text-success hover:bg-success-soft',
+  solid: 'bg-primary text-white active:bg-primary-strong',
+  tinted: 'bg-primary-soft text-primary-strong active:brightness-95',
+  outline: 'border border-line bg-surface text-ink active:bg-tint',
+  ghost: 'text-primary active:bg-primary-soft/60',
+  dangerOutline: 'bg-danger-soft text-danger active:brightness-95',
+  successOutline: 'bg-success-soft text-success active:brightness-95',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  md: 'h-11 px-5 text-sm',
-  lg: 'h-14 px-6 text-base',
+  md: 'h-11 px-5 text-[15px]',
+  lg: 'h-[52px] px-6 text-[17px] rounded-[14px]',
 };
 
 /** Kelas tombol yang bisa dipakai juga pada <Link> agar tidak ada <a><button> bersarang. */
@@ -41,7 +42,7 @@ export function buttonClassName({
   className?: string;
 } = {}) {
   return cn(
-    'inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50',
+    'inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold transition duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:active:scale-100',
     sizeClasses[size],
     variantClasses[variant],
     className,

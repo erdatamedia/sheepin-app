@@ -7,6 +7,7 @@ type PageHeaderProps = {
   className?: string;
 };
 
+/** Judul besar gaya iOS di bagian atas halaman. */
 export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
     <div
@@ -16,8 +17,10 @@ export function PageHeader({ title, description, actions, className }: PageHeade
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold text-ink">{title}</h1>
-        {description && <p className="mt-1 text-sm text-ink-muted">{description}</p>}
+        <h1 className="text-[32px] font-bold leading-[1.1] tracking-tight text-ink">{title}</h1>
+        {description && (
+          <p className="mt-1.5 text-[15px] leading-snug text-ink-muted">{description}</p>
+        )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

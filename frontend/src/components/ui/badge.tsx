@@ -12,7 +12,7 @@ export function Badge({
   className,
 }: BadgeProps) {
   const variants = {
-    default: 'border border-line bg-[rgba(120,108,82,0.1)] text-[#5f5340]',
+    default: 'border border-line bg-tint text-ink-soft',
     success:
       'border border-[color:var(--success-border)] bg-success-soft text-success',
     warning:
@@ -25,7 +25,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold',
+        'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
         variants[variant],
         className,
       )}

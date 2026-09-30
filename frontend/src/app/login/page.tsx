@@ -83,7 +83,7 @@ export default function LoginPage() {
       <div
         role="tablist"
         aria-label="Jenis akses"
-        className="mb-6 grid grid-cols-2 gap-1 rounded-[var(--radius-control)] border border-line bg-white p-1"
+        className="mb-6 grid grid-cols-2 gap-1 rounded-[var(--radius-control)] border border-line bg-surface p-1"
       >
         {modes.map((item) => (
           <button
