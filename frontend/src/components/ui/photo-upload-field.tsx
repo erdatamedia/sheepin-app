@@ -63,7 +63,7 @@ export function PhotoUploadField({
           <img
             src={value}
             alt={label}
-            className="h-20 w-20 rounded-[22px] border border-[color:rgba(86,74,50,0.12)] object-cover"
+            className="h-20 w-20 rounded-[22px] border border-line object-cover"
           />
         ) : (
           <div className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-[rgba(33,73,61,0.1)] px-3 text-center text-xs font-semibold text-[color:var(--accent)]">
