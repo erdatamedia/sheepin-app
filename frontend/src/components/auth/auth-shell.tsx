@@ -17,6 +17,7 @@ export function AuthShell({ title, description, children }: AuthShellProps) {
           <Link href="/" className="mb-4 inline-flex items-center gap-3" aria-label="Sheep-In, beranda">
             <Image
               src="/icons/icon-192.png"
+        unoptimized
               alt=""
               width={56}
               height={56}

@@ -49,6 +49,7 @@ function Brand({ className }: { className?: string }) {
     <Link href="/" className={cn('flex items-center gap-2.5', className)} aria-label="Sheep-In, beranda">
       <Image
         src="/icons/icon-192.png"
+        unoptimized
         alt=""
         width={44}
         height={44}
