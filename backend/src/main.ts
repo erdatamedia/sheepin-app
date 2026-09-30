@@ -9,8 +9,22 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Di belakang reverse proxy (nginx) IP klien ada di X-Forwarded-For; tanpa ini
+  // batas per-IP akan menghitung semua pengguna sebagai satu IP (IP proxy).
+  app.set('trust proxy', 1);
+
+  // CORS_ORIGINS: daftar asal dipisah koma. Kosong = terbuka (pengembangan lokal).
+  const corsOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (corsOrigins.length === 0) {
+    logger.warn('CORS_ORIGINS kosong: semua asal diizinkan');
+  }
+
   app.enableCors({
-    origin: true,
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
     credentials: true,
   });
 

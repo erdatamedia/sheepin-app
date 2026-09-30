@@ -1,5 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 
+@SkipThrottle()
 @Controller('pemantauan')
 export class ObservabilityController {
   @Get('status')

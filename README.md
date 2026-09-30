@@ -96,13 +96,17 @@ Minimal variabel yang perlu disiapkan di `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql://...
-JWT_SECRET=...
+JWT_SECRET=...            # wajib, minimal 16 karakter; backend menolak start tanpanya
+CORS_ORIGINS=              # opsional: asal dipisah koma; kosong = semua asal (lokal)
 MEDIA_PUBLIC_BASE_URL=https://aset.domain-anda.com
 STORAGE_DRIVER=lokal
 ```
 
 Catatan:
 
+- `JWT_SECRET` tidak punya nilai bawaan; buat dengan `openssl rand -hex 32`
+- di belakang reverse proxy, teruskan `X-Forwarded-For` (nginx: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`) agar batas per-IP menghitung klien yang benar
+- `pnpm seed:admin` tidak menimpa admin yang sudah ada; pakai `--reset-password` untuk mereset, dan isi `ADMIN_PASSWORD` untuk database non-lokal
 - `MEDIA_PUBLIC_BASE_URL` dipakai agar URL aset siap dipindah ke object storage atau CDN
 - implementasi upload saat ini masih menggunakan penyimpanan lokal sebagai fallback
 
