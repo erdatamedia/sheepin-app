@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/avatar';
+import { ListGroup, ListRow } from '@/components/ui/list-group';
+import { Sheet } from '@/components/ui/sheet';
+import { StatTile } from '@/components/ui/stat-tile';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -14,12 +16,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { getMapDistribution, type MapDistributionResponse } from '@/lib/location';
-import { labelSumberLokasi } from '@/lib/labels';
 
-const DistributionMap = dynamic(
-  () => import('@/components/map/distribution-map'),
-  { ssr: false },
-);
+const DistributionMap = dynamic(() => import('@/components/map/distribution-map'), { ssr: false });
 
 export default function MapPage() {
   const [loading, setLoading] = useState(true);
@@ -47,18 +45,14 @@ export default function MapPage() {
   }, []);
 
   const regencyOptions = useMemo(() => {
-    return Array.from(
-      new Set(items.map((item) => item.regency).filter(Boolean)),
-    ).sort();
+    return Array.from(new Set(items.map((item) => item.regency).filter(Boolean))).sort();
   }, [items]);
 
   const districtOptions = useMemo(() => {
     return Array.from(
       new Set(
         items
-          .filter((item) =>
-            regencyFilter === 'ALL' ? true : item.regency === regencyFilter,
-          )
+          .filter((item) => (regencyFilter === 'ALL' ? true : item.regency === regencyFilter))
           .map((item) => item.district)
           .filter(Boolean),
       ),
@@ -69,12 +63,8 @@ export default function MapPage() {
     return Array.from(
       new Set(
         items
-          .filter((item) =>
-            regencyFilter === 'ALL' ? true : item.regency === regencyFilter,
-          )
-          .filter((item) =>
-            districtFilter === 'ALL' ? true : item.district === districtFilter,
-          )
+          .filter((item) => (regencyFilter === 'ALL' ? true : item.regency === regencyFilter))
+          .filter((item) => (districtFilter === 'ALL' ? true : item.district === districtFilter))
           .map((item) => item.village)
           .filter(Boolean),
       ),
@@ -89,21 +79,13 @@ export default function MapPage() {
         (item.groupName || '').toLowerCase().includes(search.toLowerCase()) ||
         (item.addressDetail || '').toLowerCase().includes(search.toLowerCase());
 
-      const matchesRegency =
-        regencyFilter === 'ALL' || item.regency === regencyFilter;
+      const matchesRegency = regencyFilter === 'ALL' || item.regency === regencyFilter;
 
-      const matchesDistrict =
-        districtFilter === 'ALL' || item.district === districtFilter;
+      const matchesDistrict = districtFilter === 'ALL' || item.district === districtFilter;
 
-      const matchesVillage =
-        villageFilter === 'ALL' || item.village === villageFilter;
+      const matchesVillage = villageFilter === 'ALL' || item.village === villageFilter;
 
-      return (
-        matchesSearch &&
-        matchesRegency &&
-        matchesDistrict &&
-        matchesVillage
-      );
+      return matchesSearch && matchesRegency && matchesDistrict && matchesVillage;
     });
   }, [items, search, regencyFilter, districtFilter, villageFilter]);
 
@@ -134,102 +116,98 @@ export default function MapPage() {
     { label: 'Layak bibit', value: summary.eligible },
   ];
 
+  const selectField = (
+    label: string,
+    value: string,
+    onChange: (value: string) => void,
+    allLabel: string,
+    options: Array<string | null | undefined>,
+  ) => (
+    <label className="block">
+      <span className="mb-1.5 block text-[14px] font-medium text-ink">{label}</span>
+      <Select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="ALL">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option} value={option || ''}>
+            {option}
+          </option>
+        ))}
+      </Select>
+    </label>
+  );
+
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER']}>
       <DashboardShell>
-        <PageHeader
-          title="Peta Sebaran Domba"
-          description="Lokasi peternak dan ringkasan populasi ternak"
-        />
+        <PageHeader title="Peta" description="Lokasi peternak dan sebaran populasi ternak" />
 
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {tiles.map((tile) => (
-            <Card key={tile.label} className="p-3 sm:p-4">
-              <p className="text-xs text-ink-muted sm:text-sm">{tile.label}</p>
-              <p className="mt-1 text-2xl font-bold text-ink">{tile.value}</p>
-            </Card>
+            <StatTile key={tile.label} label={tile.label} value={tile.value} />
           ))}
         </div>
 
-        <div className="mb-4 space-y-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search
-                size={18}
-                aria-hidden="true"
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
-              />
-              <Input
-                className="pl-11"
-                aria-label="Cari peternak"
-                placeholder="Cari nama, kelompok, atau alamat"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button
-              variant={activeFilterCount ? 'solid' : 'outline'}
-              className="h-12 md:hidden"
-              aria-expanded={showFilters}
-              aria-controls="map-filters"
-              onClick={() => setShowFilters((value) => !value)}
-            >
-              <SlidersHorizontal size={18} aria-hidden="true" />
-              Wilayah{activeFilterCount ? ` (${activeFilterCount})` : ''}
-            </Button>
+        <div className="mb-4 flex gap-2">
+          <div className="relative flex-1">
+            <Search
+              size={18}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
+            />
+            <Input
+              className="pl-11"
+              aria-label="Cari peternak"
+              placeholder="Cari nama, kelompok, atau alamat"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-
-          <div
-            id="map-filters"
-            className={`${showFilters ? 'grid' : 'hidden'} gap-3 md:grid md:grid-cols-3`}
+          <Button
+            variant={activeFilterCount ? 'solid' : 'tinted'}
+            className="h-12"
+            onClick={() => setShowFilters(true)}
           >
-            <Select
-              aria-label="Filter kabupaten"
-              value={regencyFilter}
-              onChange={(e) => {
-                setRegencyFilter(e.target.value);
-                setDistrictFilter('ALL');
-                setVillageFilter('ALL');
-              }}
-            >
-              <option value="ALL">Semua kabupaten</option>
-              {regencyOptions.map((option) => (
-                <option key={option} value={option || ''}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-            <Select
-              aria-label="Filter kecamatan"
-              value={districtFilter}
-              onChange={(e) => {
-                setDistrictFilter(e.target.value);
-                setVillageFilter('ALL');
-              }}
-            >
-              <option value="ALL">Semua kecamatan</option>
-              {districtOptions.map((option) => (
-                <option key={option} value={option || ''}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-            <Select
-              aria-label="Filter desa"
-              value={villageFilter}
-              onChange={(e) => setVillageFilter(e.target.value)}
-            >
-              <option value="ALL">Semua desa</option>
-              {villageOptions.map((option) => (
-                <option key={option} value={option || ''}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-          </div>
+            <SlidersHorizontal size={18} aria-hidden="true" />
+            Wilayah{activeFilterCount ? ` (${activeFilterCount})` : ''}
+          </Button>
         </div>
 
-        <div className="mb-5">
+        <Sheet open={showFilters} onClose={() => setShowFilters(false)} title="Filter wilayah">
+          <div className="space-y-4">
+            {selectField(
+              'Kabupaten',
+              regencyFilter,
+              (value) => {
+                setRegencyFilter(value);
+                setDistrictFilter('ALL');
+                setVillageFilter('ALL');
+              },
+              'Semua kabupaten',
+              regencyOptions,
+            )}
+            {selectField(
+              'Kecamatan',
+              districtFilter,
+              (value) => {
+                setDistrictFilter(value);
+                setVillageFilter('ALL');
+              },
+              'Semua kecamatan',
+              districtOptions,
+            )}
+            {selectField('Desa', villageFilter, setVillageFilter, 'Semua desa', villageOptions)}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Button variant="tinted" size="lg" onClick={resetFilters}>
+                Reset
+              </Button>
+              <Button size="lg" onClick={() => setShowFilters(false)}>
+                Lihat {filteredItems.length} peternak
+              </Button>
+            </div>
+          </div>
+        </Sheet>
+
+        <div className="mb-6">
           {loading ? (
             <Skeleton
               aria-label="Memuat peta distribusi"
@@ -238,7 +216,9 @@ export default function MapPage() {
           ) : filteredItems.length === 0 ? (
             <EmptyState
               icon={items.length === 0 ? MapPin : Search}
-              title={items.length === 0 ? 'Belum ada titik lokasi' : 'Tidak ada peternak yang cocok'}
+              title={
+                items.length === 0 ? 'Belum ada titik lokasi' : 'Tidak ada peternak yang cocok'
+              }
               description={
                 items.length === 0
                   ? 'Titik akan muncul setelah peternak mengisi lokasinya.'
@@ -246,7 +226,7 @@ export default function MapPage() {
               }
               action={
                 items.length > 0 && (
-                  <Button variant="outline" onClick={resetFilters}>
+                  <Button variant="tinted" onClick={resetFilters}>
                     Reset pencarian dan filter
                   </Button>
                 )
@@ -258,54 +238,32 @@ export default function MapPage() {
         </div>
 
         {filteredItems.length > 0 && (
-          <>
-            <h2 className="mb-3 text-lg font-semibold text-ink">
-              Daftar peternak ({filteredItems.length})
-            </h2>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {filteredItems.map((item) => (
-                <Card key={item.userId}>
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-lg font-semibold text-ink">{item.name}</h3>
-                      <p className="truncate text-sm text-ink-muted">
-                        {item.groupName || 'Tanpa kelompok'}
-                      </p>
-                    </div>
-                    <Badge variant="info">{labelSumberLokasi(item.locationSource)}</Badge>
-                  </div>
-
-                  <dl className="space-y-1 text-sm">
-                    <div className="flex gap-2">
-                      <dt className="w-16 shrink-0 text-ink-muted">Wilayah</dt>
-                      <dd className="min-w-0">
-                        {[item.village, item.district, item.regency].filter(Boolean).join(', ') || '-'}
-                      </dd>
-                    </div>
-                    <div className="flex gap-2">
-                      <dt className="w-16 shrink-0 text-ink-muted">Alamat</dt>
-                      <dd className="min-w-0">{item.addressDetail || '-'}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl bg-primary-soft/50 px-2 py-2">
-                      <p className="text-xs text-ink-muted">Ternak</p>
-                      <p className="font-semibold text-ink">{item.totalSheep}</p>
-                    </div>
-                    <div className="rounded-xl bg-primary-soft/50 px-2 py-2">
-                      <p className="text-xs text-ink-muted">Aktif</p>
-                      <p className="font-semibold text-ink">{item.activeSheep}</p>
-                    </div>
-                    <div className="rounded-xl bg-primary-soft/50 px-2 py-2">
-                      <p className="text-xs text-ink-muted">Layak bibit</p>
-                      <p className="font-semibold text-ink">{item.eligibleBreeding}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </>
+          <ListGroup header={`Daftar peternak (${filteredItems.length})`} className="lg:max-w-3xl">
+            {filteredItems.map((item) => (
+              <ListRow
+                key={item.userId}
+                href={`/farmers/${item.userId}`}
+                leading={<Avatar name={item.name} size="md" />}
+                title={item.name}
+                subtitle={
+                  [
+                    item.groupName,
+                    [item.village, item.district, item.regency].filter(Boolean).join(', '),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || '-'
+                }
+                trailing={
+                  <span className="text-right text-[13px] leading-tight text-ink-muted">
+                    <span className="block text-[17px] font-semibold text-ink">
+                      {item.totalSheep}
+                    </span>
+                    ternak
+                  </span>
+                }
+              />
+            ))}
+          </ListGroup>
         )}
       </DashboardShell>
     </RoleGuard>

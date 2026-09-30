@@ -95,9 +95,10 @@ export default function DistributionMap({ items, publicView = false }: Props) {
           aria-label={`Detail ${selected.name}`}
           className="absolute inset-x-0 bottom-0 z-[1000] max-h-[75%] overflow-auto rounded-t-[var(--radius-sheet)] border-t border-line bg-surface p-4 shadow-[var(--shadow-sheet)] md:inset-x-auto md:bottom-3 md:left-3 md:w-80 md:rounded-[24px] md:border"
         >
+          <div aria-hidden="true" className="mx-auto -mt-1 mb-3 h-1.5 w-10 rounded-full bg-line md:hidden" />
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-lg font-semibold text-ink">{selected.name}</p>
+              <p className="truncate text-[20px] font-bold tracking-tight text-ink">{selected.name}</p>
               <p className="text-sm text-ink-muted">{selected.groupName || '-'}</p>
               <p className="text-sm text-ink-muted">{region}</p>
             </div>
@@ -105,7 +106,7 @@ export default function DistributionMap({ items, publicView = false }: Props) {
               type="button"
               onClick={() => setSelected(null)}
               aria-label="Tutup detail"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-primary-soft/60"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tint text-ink-muted active:brightness-95"
             >
               <X size={20} aria-hidden="true" />
             </button>
@@ -136,7 +137,7 @@ export default function DistributionMap({ items, publicView = false }: Props) {
                 </Link>
                 <Link
                   href="/sheep"
-                  className={buttonClassName({ variant: 'outline', className: 'w-full' })}
+                  className={buttonClassName({ variant: 'tinted', className: 'w-full' })}
                 >
                   Lihat Data Ternak
                 </Link>
@@ -146,7 +147,7 @@ export default function DistributionMap({ items, publicView = false }: Props) {
               href={`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`}
               target="_blank"
               rel="noreferrer"
-              className={buttonClassName({ variant: 'outline', className: 'w-full' })}
+              className={buttonClassName({ variant: 'tinted', className: 'w-full' })}
             >
               <Navigation size={18} aria-hidden="true" />
               {publicView ? 'Buka Titik di Google Maps' : 'Buka Rute di Google Maps'}

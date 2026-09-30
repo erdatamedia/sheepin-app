@@ -10,6 +10,7 @@ import { Button, buttonClassName } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/ui/field';
+import { BackLink } from '@/components/ui/back-link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toast, useToast } from '@/components/ui/toast';
@@ -116,8 +117,9 @@ export default function LocationPage() {
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
+        <BackLink href="/profile" label="Akun" />
         <PageHeader
-          title="Lokasi Peternak"
+          title="Lokasi kandang"
           description="Atur titik lokasi kandang untuk kebutuhan pemetaan"
         />
 
@@ -143,7 +145,7 @@ export default function LocationPage() {
                   href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
                   target="_blank"
                   rel="noreferrer"
-                  className={buttonClassName({ variant: 'outline', size: 'lg' })}
+                  className={buttonClassName({ variant: 'tinted', size: 'lg' })}
                 >
                   <Navigation size={20} aria-hidden="true" />
                   Buka di Google Maps

@@ -12,8 +12,8 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { PinInput } from '@/components/ui/pin-input';
 import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/ui/segmented';
 import { PIN_LENGTH } from '@/lib/pin';
-import { cn } from '@/lib/utils';
 
 type LoginMode = 'farmer' | 'staff';
 
@@ -80,32 +80,16 @@ export default function LoginPage() {
 
   return (
     <AuthShell title="Masuk ke Sheep-In" description="Pilih jenis akses yang sesuai">
-      <div
-        role="tablist"
-        aria-label="Jenis akses"
-        className="mb-6 grid grid-cols-2 gap-1 rounded-[var(--radius-control)] border border-line bg-surface p-1"
-      >
-        {modes.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={mode === item.key}
-            onClick={() => {
-              setMode(item.key);
-              setServerError('');
-            }}
-            className={cn(
-              'min-h-11 rounded-[10px] px-3 text-sm font-semibold transition',
-              mode === item.key
-                ? 'bg-primary text-white'
-                : 'text-ink-muted hover:bg-primary-soft/50',
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Jenis akses"
+        className="mb-6"
+        value={mode}
+        onChange={(value) => {
+          setMode(value as LoginMode);
+          setServerError('');
+        }}
+        options={modes.map((item) => ({ value: item.key, label: item.label }))}
+      />
 
       {mode === 'farmer' ? (
         <div className="space-y-4">
@@ -168,7 +152,8 @@ export default function LoginPage() {
               }}
             >
               <p className="text-sm text-ink-muted">
-                ID lama hanya berlaku sementara. Minta petugas membuatkan PIN agar bisa masuk dengan nomor HP.
+                ID lama hanya berlaku sementara. Minta petugas membuatkan PIN agar bisa masuk dengan
+                nomor HP.
               </p>
               <Input
                 placeholder="Contoh: FRM001"
@@ -180,7 +165,7 @@ export default function LoginPage() {
               />
               <Button
                 type="submit"
-                variant="outline"
+                variant="tinted"
                 className="w-full"
                 disabled={loading || !legacyCode.trim()}
               >

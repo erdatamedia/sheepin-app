@@ -23,8 +23,8 @@ export function AuthShell({ title, description, children }: AuthShellProps) {
               className="h-16 w-auto max-w-full object-contain sm:h-20"
             />
           </div>
-          <h1 className="text-2xl font-bold text-ink">{title}</h1>
-          <p className="mt-2 text-sm text-ink-muted">{description}</p>
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-ink">{title}</h1>
+          <p className="mt-2 text-[15px] text-ink-muted">{description}</p>
         </div>
         {children}
       </Card>
