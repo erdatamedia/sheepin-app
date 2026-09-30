@@ -38,7 +38,7 @@ export default function HomePage() {
               width={220}
               height={66}
               priority
-              className="h-9 w-auto object-contain md:h-11"
+              className="h-10 w-auto object-contain md:h-11"
             />
           </div>
 
@@ -48,7 +48,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/register-farmer"
-              className={buttonClassName({ className: 'hidden md:inline-flex' })}
+              className={buttonClassName({ className: 'max-md:hidden' })}
             >
               Daftar Peternak
             </Link>
