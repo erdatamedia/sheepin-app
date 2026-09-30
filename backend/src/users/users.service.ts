@@ -1,5 +1,12 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
+import { normalizePhone } from '../common/phone';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateMyLocationDto } from './dto/update-my-location.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
@@ -36,6 +43,7 @@ export class UsersService {
         loginCode: true,
         role: true,
         isActive: true,
+        pinHash: true,
       },
     });
   }
@@ -210,13 +218,41 @@ export class UsersService {
   async updateMyProfile(userId: string, dto: UpdateMyProfileDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, role: true, phone: true },
     });
 
     if (!user) {
       throw new NotFoundException('User tidak ditemukan');
     }
 
+    // No. HP peternak adalah identitas login; hanya petugas yang boleh mengubahnya.
+    const requestedPhone =
+      dto.phone === undefined
+        ? undefined
+        : (normalizePhone(dto.phone) ?? dto.phone);
+    const currentPhone = normalizePhone(user.phone) ?? user.phone;
+
+    if (
+      user.role === UserRole.FARMER &&
+      requestedPhone !== undefined &&
+      requestedPhone !== currentPhone
+    ) {
+      throw new BadRequestException(
+        'Nomor HP hanya dapat diubah oleh petugas. Hubungi petugas Anda.',
+      );
+    }
+
+    try {
+      return await this.applyProfileUpdate(userId, dto);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') {
+        throw new ConflictException('Nomor HP sudah dipakai akun lain');
+      }
+      throw error;
+    }
+  }
+
+  private async applyProfileUpdate(userId: string, dto: UpdateMyProfileDto) {
     try {
       const updated = await this.prisma.user.update({
         where: { id: userId },

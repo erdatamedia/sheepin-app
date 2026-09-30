@@ -3,14 +3,18 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 import { FarmersService } from './farmers.service';
 
@@ -23,6 +27,20 @@ export class FarmersController {
   @Roles(UserRole.ADMIN, UserRole.OFFICER)
   findAll() {
     return this.farmersService.findAll();
+  }
+
+  @Post()
+  @Roles(UserRole.ADMIN, UserRole.OFFICER)
+  @Header('Cache-Control', 'no-store')
+  create(@Body() dto: CreateFarmerDto, @CurrentUser() actor: { id: string }) {
+    return this.farmersService.create(dto, actor.id);
+  }
+
+  @Post(':id/reset-pin')
+  @Roles(UserRole.ADMIN, UserRole.OFFICER)
+  @Header('Cache-Control', 'no-store')
+  resetPin(@Param('id') id: string, @CurrentUser() actor: { id: string }) {
+    return this.farmersService.resetPin(id, actor.id);
   }
 
   @Get(':id')

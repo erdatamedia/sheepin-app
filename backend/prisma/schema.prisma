@@ -50,7 +50,7 @@ model User {
   password          String?
   loginCode         String?         @unique
   photoUrl          String?
-  phone             String?
+  phone             String?         @unique
   address           String?
   groupName         String?
   province          String?
@@ -64,6 +64,14 @@ model User {
   locationUpdatedAt DateTime?
   role              UserRole        @default(FARMER)
   isActive          Boolean         @default(true)
+
+  // Login peternak: no. HP + PIN. Hash PIN dengan bcrypt; jangan pernah dikembalikan lewat API.
+  pinHash           String?
+  failedPinAttempts Int             @default(0)
+  lockedUntil       DateTime?
+  pinChangedAt      DateTime?
+  mustChangePin     Boolean         @default(false)
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
