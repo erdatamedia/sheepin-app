@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
+import { StatTile } from '@/components/ui/stat-tile';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SheepAvatar } from '@/components/sheep/sheep-avatar';
@@ -59,15 +60,6 @@ function getStatusVariant(status: string) {
     default:
       return 'default';
   }
-}
-
-function StatTile({ label, value }: { label: string; value: number }) {
-  return (
-    <Card className="p-3 sm:p-4">
-      <p className="text-xs text-ink-muted sm:text-sm">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-ink">{value}</p>
-    </Card>
-  );
 }
 
 function ListSkeleton() {

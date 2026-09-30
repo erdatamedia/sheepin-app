@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Segmented } from '@/components/ui/segmented';
-import { cn, sanitizeDecimal } from '@/lib/utils';
+import { cn, sanitizeDecimal, todayLocal } from '@/lib/utils';
 import { api, getApiErrorMessage } from '@/lib/api';
 import {
   labelJenisKelamin,
@@ -38,7 +38,7 @@ export default function RecordingPage() {
     '' | 'SICK' | 'MATED' | 'PREGNANT' | 'LAMBED' | 'DEAD' | 'SOLD'
   >('');
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
 
   const [form, setForm] = useState({
     sheepId: '',

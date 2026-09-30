@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ClipboardPlus, PencilLine, PawPrint } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Toast, type ToastState } from '@/components/ui/toast';
+import { Toast, useToast } from '@/components/ui/toast';
 import { SheepAvatar } from '@/components/sheep/sheep-avatar';
 import { PhotoUploadField } from '@/components/ui/photo-upload-field';
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -162,8 +162,7 @@ export default function SheepDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('weights');
   const [showEdit, setShowEdit] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<ToastState>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast, notify } = useToast();
 
   const [editForm, setEditForm] = useState({
     sheepCode: '',
@@ -264,19 +263,6 @@ export default function SheepDetailPage() {
       void fetchAll();
     }
   }, [id, fetchAll]);
-
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
-
-  const notify = (tone: 'success' | 'error', text: string) => {
-    setToast({ tone, text });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 4000);
-  };
 
   const latestWeight = useMemo(() => weights[0], [weights]);
   const latestBcs = useMemo(() => bcs[0], [bcs]);
