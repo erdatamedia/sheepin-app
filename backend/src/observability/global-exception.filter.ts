@@ -25,11 +25,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ? exception.getResponse()
       : 'Terjadi kesalahan pada server';
 
-    const message =
+    const rawMessage =
       typeof exceptionResponse === 'string'
         ? exceptionResponse
         : (exceptionResponse as { message?: string | string[] }).message ||
           'Terjadi kesalahan pada server';
+
+    // Pesan bawaan throttler berbahasa Inggris; peternak melihatnya langsung di layar.
+    const message =
+      status === 429
+        ? 'Terlalu banyak percobaan. Tunggu beberapa saat lalu coba lagi.'
+        : rawMessage;
 
     const line = `${request.method} ${request.url} -> ${status}`;
 
