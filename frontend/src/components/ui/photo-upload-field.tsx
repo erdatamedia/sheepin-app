@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useRef, useState } from 'react';
+import { Camera, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { uploadImage } from '@/lib/media';
 import { getApiErrorMessage } from '@/lib/api';
@@ -22,6 +23,7 @@ export function PhotoUploadField({
   emptyLabel,
 }: PhotoUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -43,15 +45,16 @@ export function PhotoUploadField({
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
+      if (cameraRef.current) cameraRef.current.value = '';
     }
   };
 
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium text-gray-900">{label}</p>
+        <p className="text-sm font-medium text-ink">{label}</p>
         {helperText && (
-          <p className="mt-1 text-sm text-[color:var(--ink-muted)]">{helperText}</p>
+          <p className="mt-1 text-sm text-ink-muted">{helperText}</p>
         )}
       </div>
 
@@ -68,7 +71,15 @@ export function PhotoUploadField({
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handlePickFile}
+          />
           <input
             ref={inputRef}
             type="file"
@@ -80,12 +91,22 @@ export function PhotoUploadField({
             type="button"
             variant="outline"
             disabled={uploading}
+            onClick={() => cameraRef.current?.click()}
+          >
+            <Camera size={18} aria-hidden="true" />
+            {uploading ? 'Mengunggah...' : 'Ambil Foto'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={uploading}
             onClick={() => inputRef.current?.click()}
           >
-            {uploading ? 'Mengunggah...' : 'Pilih Foto'}
+            <ImageIcon size={18} aria-hidden="true" />
+            Pilih dari Galeri
           </Button>
           {value && (
-            <Button type="button" variant="outline" onClick={() => onChange('')}>
+            <Button type="button" variant="ghost" onClick={() => onChange('')}>
               Hapus Foto
             </Button>
           )}
@@ -93,7 +114,7 @@ export function PhotoUploadField({
       </div>
 
       {message && (
-        <div className="rounded-2xl border border-[color:rgba(86,74,50,0.12)] bg-white/80 px-4 py-3 text-sm text-gray-800">
+        <div role="status" className="rounded-[var(--radius-control)] border border-line bg-white/80 px-4 py-3 text-sm text-ink">
           {message}
         </div>
       )}
