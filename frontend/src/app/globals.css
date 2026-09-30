@@ -46,8 +46,9 @@
   --shadow-accent: none;
   --shadow-sheet: 0 -8px 32px rgba(62, 46, 36, 0.18);
 
-  /* Ukuran sentuh minimal */
+  /* Ukuran sentuh minimal dan tinggi bilah tab bawah (di luar safe-area) */
   --tap-min: 44px;
+  --tabbar-h: 3.25rem;
 }
 
 @theme inline {

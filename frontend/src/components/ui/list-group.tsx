@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ListGroupProps = {
@@ -26,11 +26,28 @@ export function ListGroup({ header, footer, children, className }: ListGroupProp
   );
 }
 
+/** Ikon kotak membulat untuk leading ListRow (seperti daftar Pengaturan iOS). */
+export function RowIcon({ icon: Icon, tone = 'default' }: { icon: LucideIcon; tone?: 'default' | 'danger' }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'flex h-[30px] w-[30px] items-center justify-center rounded-[8px]',
+        tone === 'danger' ? 'bg-danger-soft text-danger' : 'bg-primary-soft text-primary-strong',
+      )}
+    >
+      <Icon size={18} />
+    </span>
+  );
+}
+
 type ListRowProps = {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   /** Ikon atau avatar di kiri. */
   leading?: React.ReactNode;
+  /** Lebar leading untuk pemisah: 'icon' (30px, bawaan untuk RowIcon) atau 'avatar' (44px). */
+  leadingSize?: 'icon' | 'avatar';
   /** Teks nilai di kanan (abu-abu). */
   value?: React.ReactNode;
   /** Elemen di kanan, mis. <Badge>. */
@@ -51,6 +68,7 @@ export function ListRow({
   title,
   subtitle,
   leading,
+  leadingSize = 'avatar',
   value,
   trailing,
   href,
@@ -105,7 +123,7 @@ export function ListRow({
         aria-hidden="true"
         className={cn(
           'pointer-events-none absolute bottom-0 right-0 h-px bg-line group-last:hidden',
-          leading ? 'left-[68px]' : 'left-4',
+          leading ? (leadingSize === 'icon' ? 'left-[58px]' : 'left-[72px]') : 'left-4',
         )}
       />
     </li>

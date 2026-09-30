@@ -1,50 +1,32 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { KeyRound, MapPin } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
-import { Card } from '@/components/ui/card';
-import { Button, buttonClassName } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Field } from '@/components/ui/field';
+import { Card } from '@/components/ui/card';
+import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Toast, useToast } from '@/components/ui/toast';
-import { PhotoUploadField } from '@/components/ui/photo-upload-field';
-import { getMe, updateMyProfile, type MeResponse } from '@/lib/me';
-import { getApiErrorMessage } from '@/lib/api';
+import { removeToken } from '@/lib/auth';
+import { getMe, type MeResponse } from '@/lib/me';
 import { labelPeran } from '@/lib/labels';
 
-export default function ProfilePage() {
+/** Halaman Akun: ringkasan diri dan pintu ke pengaturan, gaya "Pengaturan" iOS. */
+export default function AccountPage() {
+  const router = useRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const { toast, notify } = useToast();
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    groupName: '',
-    address: '',
-  });
 
   useEffect(() => {
     const load = async () => {
       try {
-        const meRes = await getMe();
-        setMe(meRes);
-        setForm({
-          name: meRes.name || '',
-          phone: meRes.phone || '',
-          groupName: meRes.groupName || '',
-          address: meRes.address || '',
-        });
-        setPhotoUrl(meRes.photoUrl || '');
+        setMe(await getMe());
       } catch (error) {
-        console.error('Gagal memuat profil:', error);
+        console.error('Gagal memuat akun:', error);
       } finally {
         setLoading(false);
       }
@@ -54,149 +36,94 @@ export default function ProfilePage() {
   }, []);
 
   const isFarmer = me?.role === 'FARMER';
+  const isStaff = !!me && !isFarmer;
 
-  const initials = useMemo(() => {
-    if (!me?.name) return 'SI';
-    return me.name
-      .split(' ')
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase();
-  }, [me?.name]);
-
-  const handleSave = async () => {
-    if (!me) return;
-
-    try {
-      setSaving(true);
-
-      const response = await updateMyProfile({
-        name: form.name.trim(),
-        // Nomor HP peternak adalah identitas login: hanya petugas yang boleh mengubahnya.
-        phone: isFarmer ? undefined : form.phone.trim() || undefined,
-        groupName: form.groupName.trim() || undefined,
-        address: form.address.trim() || undefined,
-        photoUrl: photoUrl.trim() || undefined,
-      });
-
-      setMe(response.data);
-      setPhotoUrl(response.data.photoUrl || '');
-      notify('success', 'Profil berhasil diperbarui.');
-    } catch (error) {
-      console.error(error);
-      notify('error', getApiErrorMessage(error, 'Gagal memperbarui profil.'));
-    } finally {
-      setSaving(false);
-    }
+  const handleLogout = () => {
+    removeToken();
+    router.push('/login');
   };
 
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
-        <PageHeader
-          title="Profil"
-          description="Identitas pengguna untuk kebutuhan lapangan dan operasional"
-          actions={me?.role && <Badge variant="info">{labelPeran(me.role)}</Badge>}
-        />
+        <PageHeader title="Akun" />
 
-        {loading ? (
-          <div className="space-y-4" aria-busy="true" aria-label="Memuat profil">
+        {loading || !me ? (
+          <div className="space-y-4" aria-busy="true" aria-label="Memuat akun">
+            <Skeleton className="h-24 rounded-[var(--radius-card)]" />
             <Skeleton className="h-40 rounded-[var(--radius-card)]" />
-            <Skeleton className="h-64 rounded-[var(--radius-card)]" />
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <Card>
-              <h2 className="text-lg font-semibold text-ink">Foto profil</h2>
-              <div className="mt-4">
-                <PhotoUploadField
-                  label="Foto profil"
-                  value={photoUrl}
-                  onChange={setPhotoUrl}
-                  helperText="Tersimpan di server dan tampil di perangkat lain setelah profil disimpan."
-                  emptyLabel={initials}
-                />
-              </div>
-            </Card>
-
-            <Card>
-              <h2 className="text-lg font-semibold text-ink">Data profil</h2>
-              <p className="mb-5 mt-1 text-sm text-ink-muted">
-                Data yang rapi menjaga dasbor, lokasi, dan kepemilikan ternak tetap konsisten.
-              </p>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Nama lengkap">
-                  <Input
-                    autoComplete="name"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                </Field>
-                <Field
-                  label="Nomor HP"
-                  hint={isFarmer ? 'Dipakai untuk masuk. Untuk mengubahnya, hubungi petugas.' : undefined}
-                >
-                  <Input
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    value={form.phone}
-                    disabled={isFarmer}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  />
-                </Field>
-                <Field label="Kelompok / kandang">
-                  <Input
-                    value={form.groupName}
-                    onChange={(e) => setForm({ ...form, groupName: e.target.value })}
-                  />
-                </Field>
-                {!isFarmer && (
-                  <Field label="Email">
-                    <Input value={me?.email || '-'} disabled />
-                  </Field>
-                )}
-                <div className="md:col-span-2">
-                  <Field label="Alamat singkat">
-                    <Input
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    />
-                  </Field>
+          <div className="mx-auto max-w-2xl space-y-6 md:mx-0">
+            <Card className="flex items-center gap-4">
+              <Avatar name={me.name} photoUrl={me.photoUrl} size="lg" />
+              <div className="min-w-0">
+                <p className="truncate text-[20px] font-bold tracking-tight text-ink">{me.name}</p>
+                <p className="truncate text-[15px] text-ink-muted">
+                  {[me.groupName, isFarmer ? me.phone : me.email].filter(Boolean).join(' · ') || '-'}
+                </p>
+                <div className="mt-1.5">
+                  <Badge variant="info">{labelPeran(me.role)}</Badge>
                 </div>
               </div>
-
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                <Button
-                  size="lg"
-                  onClick={handleSave}
-                  disabled={saving || !form.name.trim()}
-                >
-                  {saving ? 'Menyimpan...' : 'Simpan Profil'}
-                </Button>
-                <Link
-                  href="/location"
-                  className={buttonClassName({ variant: 'outline', size: 'lg' })}
-                >
-                  <MapPin size={18} aria-hidden="true" />
-                  Atur Lokasi
-                </Link>
-                {isFarmer && (
-                  <Link
-                    href="/change-pin"
-                    className={buttonClassName({ variant: 'outline', size: 'lg' })}
-                  >
-                    <KeyRound size={18} aria-hidden="true" />
-                    Ganti PIN
-                  </Link>
-                )}
-              </div>
             </Card>
+
+            <ListGroup header="Akun saya">
+              <ListRow
+                leading={<RowIcon icon={PencilLine} />}
+                leadingSize="icon"
+                title="Data profil"
+                subtitle="Nama, kelompok, alamat, foto"
+                href="/profile/edit"
+              />
+              <ListRow
+                leading={<RowIcon icon={MapPin} />}
+                leadingSize="icon"
+                title="Lokasi kandang"
+                subtitle="Titik untuk peta sebaran"
+                href="/location"
+              />
+              {isFarmer && (
+                <ListRow
+                  leading={<RowIcon icon={KeyRound} />}
+                  leadingSize="icon"
+                  title="Ganti PIN"
+                  subtitle="PIN 6 angka untuk masuk"
+                  href="/change-pin"
+                />
+              )}
+            </ListGroup>
+
+            {isStaff && (
+              <ListGroup header="Kelola">
+                <ListRow
+                  leading={<RowIcon icon={Users} />}
+                  leadingSize="icon"
+                  title="Peternak"
+                  subtitle="Daftar, buat PIN, atur data"
+                  href="/farmers"
+                />
+                <ListRow
+                  leading={<RowIcon icon={History} />}
+                  leadingSize="icon"
+                  title="Riwayat rekording"
+                  href="/history"
+                />
+              </ListGroup>
+            )}
+
+            <ListGroup>
+              <ListRow
+                leading={<RowIcon icon={LogOut} tone="danger" />}
+                leadingSize="icon"
+                title="Keluar"
+                tone="danger"
+                chevron={false}
+                onClick={handleLogout}
+              />
+            </ListGroup>
           </div>
         )}
-        <Toast toast={toast} />
       </DashboardShell>
     </RoleGuard>
   );

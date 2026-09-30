@@ -100,7 +100,7 @@ function ChangePinForm() {
               href="/profile"
               className="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4"
             >
-              Kembali ke profil
+              Kembali ke akun
             </Link>
           </p>
         )}

@@ -570,7 +570,7 @@ export default function RecordingPage() {
           </Card>
 
           {/* Tombol simpan: menempel di atas bottom nav pada mobile */}
-          <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/90 px-4 py-3 backdrop-blur md:static md:mt-5 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/90 px-4 py-3 backdrop-blur md:static md:mt-5 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
             <div className="mx-auto flex max-w-7xl gap-2">
               <Button
                 size="lg"
