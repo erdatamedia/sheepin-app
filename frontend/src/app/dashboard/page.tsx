@@ -2,26 +2,28 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ClipboardPlus, Map, PawPrint, RefreshCw } from 'lucide-react';
+import { CirclePlus, PawPrint, RefreshCw } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button, buttonClassName } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ListGroup, ListRow } from '@/components/ui/list-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/stat-tile';
+import { SheepStatusRow } from '@/components/sheep/sheep-status-row';
 import { api } from '@/lib/api';
 import { getMe, getMySheep, type MeResponse, type MySheepResponse } from '@/lib/me';
 import { getEvaluationSummary, type EvaluationSummaryResponse } from '@/lib/evaluation';
 import { getRecordingHistory, type RecordingHistoryResponse } from '@/lib/recording';
+import { daysSince, labelTimeAgo } from '@/lib/format';
 import {
   labelJenisCatatan,
   labelJenisKelamin,
-  labelStatusKesehatan,
   labelStatusTernak,
 } from '@/lib/labels';
-import { todayLocal } from '@/lib/utils';
 
 type DashboardResponse = {
   message: string;
@@ -52,6 +54,10 @@ type DashboardResponse = {
 
 type HistoryItem = RecordingHistoryResponse['data'][number];
 
+/** Ternak aktif yang sudah selama ini belum dicatat dianggap perlu diingatkan. */
+const STALE_AFTER_DAYS = 14;
+const SHEEP_PREVIEW = 8;
+
 function historyVariant(type: HistoryItem['type']) {
   switch (type) {
     case 'STATUS':
@@ -65,62 +71,16 @@ function historyVariant(type: HistoryItem['type']) {
   }
 }
 
-function SectionCard({
-  title,
-  subtitle,
-  badge,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  badge?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-ink">{title}</h2>
-          {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
-        </div>
-        {badge}
-      </div>
-      {children}
-    </Card>
-  );
-}
-
-const rowLink =
-  'block rounded-xl border border-line p-3 transition active:bg-primary-soft/40 sm:p-4';
-
-function ActivityRow({ item, variant }: { item: HistoryItem; variant: 'danger' | 'success' | 'warning' | 'info' }) {
-  return (
-    <Link href={`/sheep/${item.sheep.id}`} className={rowLink}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-ink">{item.title}</p>
-          <p className="truncate text-sm text-ink-muted">
-            {item.sheep.sheepCode}
-            {item.sheep.name ? ` - ${item.sheep.name}` : ''}
-          </p>
-        </div>
-        <Badge variant={variant}>{labelJenisCatatan(item.type)}</Badge>
-      </div>
-      <p className="mt-1.5 text-sm text-ink/80">{item.description}</p>
-    </Link>
-  );
-}
-
 function DashboardSkeleton() {
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Memuat dasbor">
-      <Skeleton className="h-24 rounded-[var(--radius-card)]" />
-      <div className="grid grid-cols-2 gap-3">
-        {[0, 1, 2, 3].map((key) => (
+    <div className="space-y-4" aria-busy="true" aria-label="Memuat beranda">
+      <Skeleton className="h-[52px] rounded-[14px]" />
+      <div className="grid grid-cols-3 gap-3">
+        {[0, 1, 2].map((key) => (
           <Skeleton key={key} className="h-20" />
         ))}
       </div>
-      <Skeleton className="h-40 rounded-[var(--radius-card)]" />
+      <Skeleton className="h-56 rounded-[var(--radius-card)]" />
     </div>
   );
 }
@@ -172,7 +132,7 @@ export default function DashboardPage() {
 
   const retry = (
     <Button
-      variant="outline"
+      variant="tinted"
       onClick={() => {
         setLoading(true);
         void fetchDashboard();
@@ -195,7 +155,7 @@ export default function DashboardPage() {
     return (
       <DashboardShell>
         <EmptyState
-          title="Gagal memuat profil pengguna"
+          title="Gagal memuat profil"
           description="Periksa sambungan internet Anda lalu coba lagi."
           action={retry}
         />
@@ -207,49 +167,58 @@ export default function DashboardPage() {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric',
   });
 
   if (me.role === 'FARMER') {
     const activeSheep = mySheep.filter((item) => item.status === 'ACTIVE');
-    const todayKey = todayLocal();
-    const todayEvents = recentHistory.filter(
-      (item) => item.recordDate.slice(0, 10) === todayKey,
-    );
-    const todayStatusEvents = todayEvents.filter((item) => item.type === 'STATUS');
-    const todayHealthEvents = todayEvents.filter(
-      (item) => item.type === 'HEALTH' || item.title === 'SICK',
-    );
-    const pregnantSheep = mySheep.filter(
-      (item) => item.latestReproduction?.status === 'PREGNANT',
-    );
-    const sickSheep = mySheep.filter(
-      (item) => item.latestHealth?.healthStatus === 'SICK',
-    );
-    const actionQueue = [
-      ...sickSheep.map((item) => ({
-        id: item.id,
-        href: `/recording?sheepId=${item.id}&event=SICK`,
-        label: 'Butuh cek kesehatan',
-        detail: item.sheepCode,
-        variant: 'danger' as const,
-      })),
-      ...pregnantSheep.map((item) => ({
-        id: item.id,
-        href: `/recording?sheepId=${item.id}&event=LAMBED`,
-        label: 'Perlu pantau bunting',
-        detail: item.sheepCode,
-        variant: 'warning' as const,
-      })),
-    ].slice(0, 5);
+
+    // Satu alasan per ternak, urut dari yang paling mendesak.
+    const attention = activeSheep
+      .map((item) => {
+        if (item.latestHealth?.healthStatus === 'SICK') {
+          return {
+            item,
+            reason: 'Sedang sakit',
+            hint: 'Catat kondisi dan tindakan',
+            href: `/recording?sheepId=${item.id}&event=SICK`,
+            rank: 0,
+          };
+        }
+        if (item.latestReproduction?.status === 'PREGNANT') {
+          return {
+            item,
+            reason: 'Bunting',
+            hint: 'Pantau menjelang beranak',
+            href: `/recording?sheepId=${item.id}&event=LAMBED`,
+            rank: 1,
+          };
+        }
+        const idle = daysSince(item.lastRecordedAt);
+        if (idle === null || idle >= STALE_AFTER_DAYS) {
+          return {
+            item,
+            reason: `Dicatat ${labelTimeAgo(item.lastRecordedAt)}`,
+            hint: 'Saatnya timbang dan cek kondisi',
+            href: `/recording?sheepId=${item.id}`,
+            rank: 2,
+          };
+        }
+        return null;
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 5);
+
+    const sickCount = activeSheep.filter((i) => i.latestHealth?.healthStatus === 'SICK').length;
+    const pregnantCount = activeSheep.filter(
+      (i) => i.latestReproduction?.status === 'PREGNANT',
+    ).length;
 
     return (
       <DashboardShell>
         <PageHeader
           title={`Halo, ${me.name.split(' ')[0]}`}
-          description={[dateLabel, me.groupName]
-            .filter(Boolean)
-            .join(' · ')}
+          description={[dateLabel, me.groupName].filter(Boolean).join(' · ')}
         />
 
         {failed && (
@@ -259,126 +228,91 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        <div className="mb-5 grid gap-3 sm:grid-cols-2">
-          <Link
-            href="/recording"
-            className={buttonClassName({ size: 'lg', className: 'w-full justify-start' })}
-          >
-            <ClipboardPlus size={22} aria-hidden="true" />
-            Mulai Rekording
-          </Link>
-          <Link
-            href="/sheep"
-            className={buttonClassName({
-              variant: 'outline',
-              size: 'lg',
-              className: 'w-full justify-start',
-            })}
-          >
-            <PawPrint size={22} aria-hidden="true" />
-            Ternak Saya
-          </Link>
-        </div>
+        <Link
+          href="/recording"
+          className={buttonClassName({ size: 'lg', className: 'mb-5 w-full' })}
+        >
+          <CirclePlus size={22} aria-hidden="true" />
+          Catat perkembangan hari ini
+        </Link>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div className="mb-6 grid grid-cols-3 gap-3">
           <StatTile label="Ternak aktif" value={activeSheep.length} />
-          <StatTile label="Total ternak" value={mySheep.length} />
-          <StatTile label="Kejadian hari ini" value={todayEvents.length} tone="info" />
-          <StatTile label="Sakit hari ini" value={todayHealthEvents.length} tone="danger" />
-          <StatTile label="Bunting dipantau" value={pregnantSheep.length} tone="warning" />
-          <StatTile label="Keluar hari ini" value={todayStatusEvents.length} />
+          <StatTile label="Sakit" value={sickCount} tone={sickCount ? 'danger' : 'default'} />
+          <StatTile label="Bunting" value={pregnantCount} tone={pregnantCount ? 'warning' : 'default'} />
         </div>
 
-        <div className="mb-4 grid gap-4 lg:grid-cols-2">
-          <SectionCard
-            title="Prioritas hari ini"
-            subtitle="Ternak yang perlu tindakan lebih dulu"
-            badge={<Badge variant="warning">{actionQueue.length} antrean</Badge>}
-          >
-            {actionQueue.length === 0 ? (
-              <p className="text-sm text-ink-muted">
-                Belum ada prioritas mendesak. Lanjutkan rekording rutin hari ini.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {actionQueue.map((item) => (
-                  <Link
-                    key={`${item.label}-${item.id}`}
-                    href={item.href}
-                    className={`${rowLink} flex items-center justify-between gap-3`}
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-ink">{item.label}</p>
-                      <p className="text-sm text-ink-muted">{item.detail}</p>
-                    </div>
-                    <Badge variant={item.variant}>Tindak lanjuti</Badge>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title="Ringkasan hari ini"
-            subtitle="Aktivitas lapangan hari ini"
-            badge={<Badge variant="info">{todayEvents.length} kejadian</Badge>}
-          >
-            {todayEvents.length === 0 ? (
-              <p className="text-sm text-ink-muted">
-                Belum ada rekording hari ini. Mulai dari timbang, cek kondisi, atau catat kejadian penting.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {todayEvents.map((item) => (
-                  <ActivityRow
-                    key={`today-${item.type}-${item.id}`}
-                    item={item}
-                    variant={historyVariant(item.type)}
+        <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+          <div className="space-y-6">
+            {attention.length > 0 && (
+              <ListGroup header="Perlu perhatian">
+                {attention.map(({ item, reason, hint, href }) => (
+                  <ListRow
+                    key={item.id}
+                    href={href}
+                    leading={<Avatar name={item.name || item.sheepCode} photoUrl={item.photoUrl} size="md" />}
+                    title={item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode}
+                    subtitle={`${reason} · ${hint}`}
                   />
                 ))}
-              </div>
+              </ListGroup>
             )}
-          </SectionCard>
-        </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <SectionCard title="Ternak siap dicatat">
-            {activeSheep.length === 0 ? (
-              <p className="text-sm text-ink-muted">
-                Belum ada ternak aktif yang terhubung ke akun ini.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {activeSheep.slice(0, 4).map((item) => (
-                  <Link key={item.id} href={`/recording?sheepId=${item.id}`} className={rowLink}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-ink">{item.sheepCode}</p>
-                        <p className="truncate text-sm text-ink-muted">{item.name || item.breed}</p>
-                      </div>
-                      <Badge variant="success">Rekord</Badge>
-                    </div>
-                    <p className="mt-1.5 text-sm text-ink/80">
-                      {item.latestWeight ? `${item.latestWeight.weightKg} kg` : 'Bobot -'} ·{' '}
-                      {labelStatusKesehatan(item.latestHealth?.healthStatus)}
-                    </p>
+            <ListGroup
+              header={`Ternak saya${mySheep.length ? ` (${activeSheep.length} aktif)` : ''}`}
+            >
+              {mySheep.length === 0 ? (
+                <li className="px-4 py-6 text-center">
+                  <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary-strong">
+                    <PawPrint size={22} aria-hidden="true" />
+                  </span>
+                  <p className="text-[17px] font-semibold text-ink">Belum ada ternak</p>
+                  <p className="mt-1 text-[15px] text-ink-muted">
+                    Tambahkan ternak pertama Anda untuk mulai mencatat perkembangannya.
+                  </p>
+                  <Link
+                    href="/sheep"
+                    className={buttonClassName({ className: 'mt-4' })}
+                  >
+                    Tambah ternak
                   </Link>
-                ))}
-              </div>
-            )}
-          </SectionCard>
+                </li>
+              ) : (
+                <>
+                  {activeSheep.slice(0, SHEEP_PREVIEW).map((item) => (
+                    <SheepStatusRow key={item.id} item={item} />
+                  ))}
+                  {activeSheep.length > SHEEP_PREVIEW && (
+                    <ListRow
+                      href="/sheep"
+                      title={`Lihat semua (${activeSheep.length})`}
+                      tone="accent"
+                    />
+                  )}
+                </>
+              )}
+            </ListGroup>
+          </div>
 
-          <SectionCard title="Aktivitas terakhir">
+          <ListGroup header="Aktivitas terakhir">
             {recentHistory.length === 0 ? (
-              <p className="text-sm text-ink-muted">Belum ada aktivitas rekording terakhir.</p>
+              <li className="px-4 py-6 text-center text-[15px] text-ink-muted">
+                Belum ada catatan. Mulai dengan menimbang salah satu ternak.
+              </li>
             ) : (
-              <div className="space-y-2">
-                {recentHistory.map((item) => (
-                  <ActivityRow key={`${item.type}-${item.id}`} item={item} variant="info" />
-                ))}
-              </div>
+              recentHistory.map((item) => (
+                <ListRow
+                  key={`${item.type}-${item.id}`}
+                  href={`/sheep/${item.sheep.id}`}
+                  title={item.title}
+                  subtitle={`${item.sheep.sheepCode}${item.sheep.name ? ` - ${item.sheep.name}` : ''} · ${item.description}`}
+                  trailing={
+                    <Badge variant={historyVariant(item.type)}>{labelJenisCatatan(item.type)}</Badge>
+                  }
+                />
+              ))
             )}
-          </SectionCard>
+          </ListGroup>
         </div>
       </DashboardShell>
     );
@@ -397,41 +331,17 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell>
-      <PageHeader
-        title="Ruang Kerja"
-        description={`${dateLabel} · ${me.name}`}
-      />
-
-      <div className="mb-5 grid gap-3 sm:grid-cols-2">
-        <Link
-          href="/sheep"
-          className={buttonClassName({ size: 'lg', className: 'w-full justify-start' })}
-        >
-          <PawPrint size={22} aria-hidden="true" />
-          Kelola Ternak
-        </Link>
-        <Link
-          href="/map"
-          className={buttonClassName({
-            variant: 'outline',
-            size: 'lg',
-            className: 'w-full justify-start',
-          })}
-        >
-          <Map size={22} aria-hidden="true" />
-          Lihat Distribusi
-        </Link>
-      </div>
+      <PageHeader title="Beranda" description={`${dateLabel} · ${me.name}`} />
 
       {!summary ? (
         <EmptyState
-          title="Gagal memuat data dasbor"
+          title="Gagal memuat data beranda"
           description="Periksa sambungan internet Anda lalu coba lagi."
           action={retry}
         />
       ) : (
-        <>
-          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile
               label="Populasi ternak"
               value={summary.sheep.total}
@@ -451,64 +361,49 @@ export default function DashboardPage() {
             <StatTile label="Ternak aktif" value={`${activePercent}%`} hint="Dari seluruh data ternak" />
           </div>
 
-          {evaluationSummary && (
-            <div className="mb-5">
-              <h2 className="mb-3 text-lg font-semibold text-ink">Ringkasan evaluasi</h2>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <StatTile label="Layak bibit" value={evaluationSummary.eligible} tone="success" />
-                <StatTile label="Perlu pemantauan" value={evaluationSummary.monitoring} tone="warning" />
-                <StatTile label="Belum direkomendasikan" value={evaluationSummary.notRecommended} tone="danger" />
-                <StatTile label="Data lengkap" value={evaluationSummary.completeRecords} tone="info" />
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-4 lg:grid-cols-[1.45fr_0.95fr]">
-            <SectionCard title="Ternak terbaru">
-              {summary.recentSheep.length === 0 ? (
-                <p className="text-sm text-ink-muted">Belum ada data ternak.</p>
-              ) : (
-                <div className="space-y-2">
-                  {summary.recentSheep.map((item) => (
-                    <Link key={item.id} href={`/sheep/${item.id}`} className={rowLink}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-ink">{item.sheepCode}</p>
-                          <p className="truncate text-sm text-ink-muted">
-                            {item.name || 'Tanpa nama'}
-                          </p>
-                        </div>
-                        <Badge variant={item.status === 'ACTIVE' ? 'success' : 'default'}>
-                          {labelStatusTernak(item.status)}
-                        </Badge>
-                      </div>
-                      <p className="mt-1.5 text-sm text-ink/80">
-                        {item.breed} · {labelJenisKelamin(item.gender)} · ditambahkan{' '}
-                        {new Date(item.createdAt).toLocaleDateString('id-ID')}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
+          <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+            <div className="space-y-6">
+              {evaluationSummary && (
+                <ListGroup header="Evaluasi bibit">
+                  <ListRow title="Layak bibit" value={evaluationSummary.eligible} />
+                  <ListRow title="Perlu pemantauan" value={evaluationSummary.monitoring} />
+                  <ListRow title="Belum direkomendasikan" value={evaluationSummary.notRecommended} />
+                  <ListRow title="Data lengkap" value={evaluationSummary.completeRecords} />
+                </ListGroup>
               )}
-            </SectionCard>
 
-            <SectionCard title="Kualitas data">
-              <dl className="space-y-3 text-sm">
-                {[
-                  ['Total data ternak', summary.sheep.total],
-                  ['Total rekording', totalRecords],
-                  ['Reproduksi tercatat', summary.records.reproduction],
-                  ['Persentase aktif', `${activePercent}%`],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between gap-3">
-                    <dt className="text-ink-muted">{label}</dt>
-                    <dd className="font-semibold text-ink">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </SectionCard>
+              <ListGroup header="Kualitas data">
+                <ListRow title="Total data ternak" value={summary.sheep.total} />
+                <ListRow title="Total rekording" value={totalRecords} />
+                <ListRow title="Reproduksi tercatat" value={summary.records.reproduction} />
+                <ListRow title="Persentase aktif" value={`${activePercent}%`} />
+              </ListGroup>
+            </div>
+
+            <ListGroup header="Ternak terbaru">
+              {summary.recentSheep.length === 0 ? (
+                <li className="px-4 py-6 text-center text-[15px] text-ink-muted">
+                  Belum ada data ternak.
+                </li>
+              ) : (
+                summary.recentSheep.map((item) => (
+                  <ListRow
+                    key={item.id}
+                    href={`/sheep/${item.id}`}
+                    leading={<Avatar name={item.name || item.sheepCode} size="md" />}
+                    title={item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode}
+                    subtitle={`${item.breed} · ${labelJenisKelamin(item.gender)} · ${new Date(item.createdAt).toLocaleDateString('id-ID')}`}
+                    trailing={
+                      <Badge variant={item.status === 'ACTIVE' ? 'success' : 'default'}>
+                        {labelStatusTernak(item.status)}
+                      </Badge>
+                    }
+                  />
+                ))
+              )}
+            </ListGroup>
           </div>
-        </>
+        </div>
       )}
     </DashboardShell>
   );

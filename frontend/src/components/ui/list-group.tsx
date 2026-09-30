@@ -56,7 +56,7 @@ type ListRowProps = {
   onClick?: () => void;
   /** Tampilkan panah; default aktif bila ada href/onClick. */
   chevron?: boolean;
-  tone?: 'default' | 'danger';
+  tone?: 'default' | 'danger' | 'accent';
   className?: string;
 };
 
@@ -87,7 +87,7 @@ export function ListRow({
         <span
           className={cn(
             'block truncate text-[17px] leading-snug',
-            tone === 'danger' ? 'text-danger' : 'text-ink',
+            tone === 'danger' ? 'text-danger' : tone === 'accent' ? 'font-medium text-primary' : 'text-ink',
           )}
         >
           {title}

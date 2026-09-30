@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { normalizePhone } from '../common/phone';
+import { latestActivityDate, summarizeWeights } from './my-sheep-summary';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateMyLocationDto } from './dto/update-my-location.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
@@ -122,7 +123,7 @@ export class UsersService {
         photoUrl: true,
         location: true,
         weights: {
-          take: 1,
+          take: 2, // terbaru + sebelumnya, untuk tren
           orderBy: {
             recordDate: 'desc',
           },
@@ -161,6 +162,7 @@ export class UsersService {
             status: true,
             matingDate: true,
             lambingDate: true,
+            createdAt: true,
           },
         },
       },
@@ -168,20 +170,34 @@ export class UsersService {
 
     return {
       message: 'Daftar ternak milik peternak berhasil diambil',
-      data: data.map((item) => ({
-        id: item.id,
-        sheepCode: item.sheepCode,
-        name: item.name,
-        breed: item.breed,
-        gender: item.gender,
-        status: item.status,
-        photoUrl: item.photoUrl,
-        location: item.location,
-        latestWeight: item.weights[0] ?? null,
-        latestBcs: item.bcsRecords[0] ?? null,
-        latestHealth: item.healthRecords[0] ?? null,
-        latestReproduction: item.reproductions[0] ?? null,
-      })),
+      data: data.map((item) => {
+        const weight = summarizeWeights(item.weights);
+
+        return {
+          id: item.id,
+          sheepCode: item.sheepCode,
+          name: item.name,
+          breed: item.breed,
+          gender: item.gender,
+          status: item.status,
+          photoUrl: item.photoUrl,
+          location: item.location,
+          latestWeight: weight.latest,
+          previousWeight: weight.previous,
+          weightDiffKg: weight.diffKg,
+          weightTrend: weight.trend,
+          latestBcs: item.bcsRecords[0] ?? null,
+          latestHealth: item.healthRecords[0] ?? null,
+          latestReproduction: item.reproductions[0] ?? null,
+          // Kapan ternak ini terakhir dicatat (bobot, kondisi, kesehatan, atau reproduksi).
+          lastRecordedAt: latestActivityDate([
+            item.weights[0]?.recordDate,
+            item.bcsRecords[0]?.recordDate,
+            item.healthRecords[0]?.checkDate,
+            item.reproductions[0]?.createdAt,
+          ]),
+        };
+      }),
     };
   }
 

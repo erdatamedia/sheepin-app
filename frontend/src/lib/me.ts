@@ -40,6 +40,15 @@ export type MySheepResponse = {
       recordDate: string;
       weightKg: number;
     } | null;
+    previousWeight?: {
+      recordDate: string;
+      weightKg: number;
+    } | null;
+    /** Selisih bobot terbaru dibanding sebelumnya (kg); null bila baru satu penimbangan. */
+    weightDiffKg?: number | null;
+    weightTrend?: 'UP' | 'DOWN' | 'STABLE' | null;
+    /** Kapan ternak ini terakhir dicatat (jenis catatan apa pun). */
+    lastRecordedAt?: string | null;
     latestBcs?: {
       recordDate: string;
       bcsScore: number;
