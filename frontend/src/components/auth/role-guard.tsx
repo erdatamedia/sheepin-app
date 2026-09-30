@@ -19,6 +19,8 @@ export function RoleGuard({
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  // Halaman mengirim array baru tiap render; kunci berbasis string mencegah efek (dan getMe) berulang.
+  const rolesKey = allowedRoles.join(',');
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -33,7 +35,7 @@ export function RoleGuard({
 
         const me: MeResponse = await getMe();
 
-        if (!allowedRoles.includes(me.role)) {
+        if (!rolesKey.split(',').includes(me.role)) {
           router.replace(fallbackPath);
           return;
         }
@@ -49,12 +51,14 @@ export function RoleGuard({
     };
 
     checkAccess();
-  }, [allowedRoles, fallbackPath, router]);
+  }, [rolesKey, fallbackPath, router]);
 
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-gray-500">Memeriksa akses...</p>
+        <p role="status" className="text-sm text-ink-muted">
+          Memeriksa akses...
+        </p>
       </div>
     );
   }

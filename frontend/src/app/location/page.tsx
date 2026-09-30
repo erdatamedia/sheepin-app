@@ -2,15 +2,19 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
+import { LocateFixed, Navigation } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Field } from '@/components/ui/field';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Toast, useToast } from '@/components/ui/toast';
 import { getMyLocation, updateMyLocation } from '@/lib/location';
-import { getMe, type MeResponse } from '@/lib/me';
-import { labelPeran, labelSumberLokasi } from '@/lib/labels';
+import { labelSumberLokasi } from '@/lib/labels';
 
 const LocationPickerMap = dynamic(
   () => import('@/components/map/location-picker-map'),
@@ -18,10 +22,9 @@ const LocationPickerMap = dynamic(
 );
 
 export default function LocationPage() {
-  const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const { toast, notify } = useToast();
   const [form, setForm] = useState({
     province: '',
     regency: '',
@@ -36,8 +39,7 @@ export default function LocationPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [meRes, locationRes] = await Promise.all([getMe(), getMyLocation()]);
-        setMe(meRes);
+        const locationRes = await getMyLocation();
 
         const loc = locationRes.data;
         setForm({
@@ -61,9 +63,8 @@ export default function LocationPage() {
   }, []);
 
   const handleGetMyLocation = () => {
-    setMessage('');
     if (!navigator.geolocation) {
-      setMessage('Browser/perangkat tidak mendukung geolocation.');
+      notify('error', 'Browser/perangkat tidak mendukung geolocation.');
       return;
     }
 
@@ -75,11 +76,11 @@ export default function LocationPage() {
           longitude: Number(position.coords.longitude.toFixed(6)),
           locationSource: 'GPS',
         }));
-        setMessage('Lokasi perangkat berhasil diambil.');
+        notify('success', 'Lokasi perangkat berhasil diambil. Jangan lupa simpan.');
       },
       (error) => {
         console.error(error);
-        setMessage('Gagal mengambil lokasi perangkat. Pastikan izin lokasi aktif.');
+        notify('error', 'Gagal mengambil lokasi perangkat. Pastikan izin lokasi aktif.');
       },
       {
         enableHighAccuracy: true,
@@ -91,7 +92,6 @@ export default function LocationPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      setMessage('');
 
       await updateMyLocation({
         province: form.province || undefined,
@@ -104,164 +104,149 @@ export default function LocationPage() {
         locationSource: form.locationSource,
       });
 
-      setMessage('Lokasi berhasil disimpan.');
+      notify('success', 'Lokasi berhasil disimpan.');
     } catch (error) {
       console.error(error);
-      setMessage('Gagal menyimpan lokasi.');
+      notify('error', 'Gagal menyimpan lokasi.');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
-        <DashboardShell>
-          <p className="text-sm text-gray-500">Memuat lokasi...</p>
-        </DashboardShell>
-      </RoleGuard>
-    );
-  }
-
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Lokasi Peternak</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Atur titik lokasi kandang/peternak untuk kebutuhan pemetaan
-          </p>
-        </div>
+        <PageHeader
+          title="Lokasi Peternak"
+          description="Atur titik lokasi kandang untuk kebutuhan pemetaan"
+        />
 
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card>
-            <p className="text-sm text-gray-500">Nama</p>
-            <h2 className="mt-2 text-lg font-semibold text-gray-900">
-              {me?.name || '-'}
-            </h2>
-          </Card>
-          <Card>
-            <p className="text-sm text-gray-500">Peran</p>
-            <div className="mt-2">
-              <Badge variant="info">{labelPeran(me?.role)}</Badge>
-            </div>
-          </Card>
-          <Card>
-            <p className="text-sm text-gray-500">ID Peternak</p>
-            <h2 className="mt-2 text-lg font-semibold text-gray-900">
-              {me?.loginCode || '-'}
-            </h2>
-          </Card>
-          <Card>
-            <p className="text-sm text-gray-500">Kelompok</p>
-            <h2 className="mt-2 text-lg font-semibold text-gray-900">
-              {me?.groupName || '-'}
-            </h2>
-          </Card>
-        </div>
-
-        <Card className="mb-6">
-          <div className="mb-4 flex flex-wrap gap-3">
-            <Button type="button" onClick={handleGetMyLocation}>
-              Ambil Lokasi Perangkat
-            </Button>
-            <a
-              href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 px-5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-            >
-              Buka di Google Maps
-            </a>
+        {loading ? (
+          <div className="space-y-4" aria-busy="true" aria-label="Memuat lokasi">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-80 rounded-[var(--radius-card)]" />
           </div>
+        ) : (
+          <div className="space-y-5">
+            <Card>
+              <h2 className="text-lg font-semibold text-ink">Titik lokasi</h2>
+              <p className="mb-4 mt-1 text-sm text-ink-muted">
+                Ambil lokasi dari perangkat saat berada di kandang, atau ketuk peta untuk memindahkan titik.
+              </p>
 
-          {message && (
-            <div className="mb-4 rounded-xl bg-gray-100 px-4 py-3 text-sm text-gray-700">
-              {message}
-            </div>
-          )}
+              <div className="mb-4 grid gap-2 sm:grid-cols-2">
+                <Button size="lg" onClick={handleGetMyLocation}>
+                  <LocateFixed size={20} aria-hidden="true" />
+                  Ambil Lokasi Perangkat
+                </Button>
+                <a
+                  href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonClassName({ variant: 'outline', size: 'lg' })}
+                >
+                  <Navigation size={20} aria-hidden="true" />
+                  Buka di Google Maps
+                </a>
+              </div>
 
-          <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <Input
-              placeholder="Provinsi"
-              value={form.province}
-              onChange={(e) => setForm({ ...form, province: e.target.value })}
-            />
-            <Input
-              placeholder="Kabupaten/Kota"
-              value={form.regency}
-              onChange={(e) => setForm({ ...form, regency: e.target.value })}
-            />
-            <Input
-              placeholder="Kecamatan"
-              value={form.district}
-              onChange={(e) => setForm({ ...form, district: e.target.value })}
-            />
-            <Input
-              placeholder="Desa/Kelurahan"
-              value={form.village}
-              onChange={(e) => setForm({ ...form, village: e.target.value })}
-            />
-            <Input
-              placeholder="Alamat detail"
-              value={form.addressDetail}
-              onChange={(e) =>
-                setForm({ ...form, addressDetail: e.target.value })
-              }
-            />
-            <select
-              className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none"
-              value={form.locationSource}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  locationSource: e.target.value as 'GPS' | 'MAP_PICKER' | 'MANUAL',
-                })
-              }
-            >
-              <option value="GPS">GPS</option>
-              <option value="MAP_PICKER">{labelSumberLokasi('MAP_PICKER')}</option>
-              <option value="MANUAL">{labelSumberLokasi('MANUAL')}</option>
-            </select>
-            <Input
-              type="number"
-              step="0.000001"
-              placeholder="Latitude"
-              value={form.latitude}
-              onChange={(e) =>
-                setForm({ ...form, latitude: Number(e.target.value) })
-              }
-            />
-            <Input
-              type="number"
-              step="0.000001"
-              placeholder="Longitude"
-              value={form.longitude}
-              onChange={(e) =>
-                setForm({ ...form, longitude: Number(e.target.value) })
-              }
-            />
+              <LocationPickerMap
+                latitude={form.latitude}
+                longitude={form.longitude}
+                onPick={(lat, lng) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    latitude: Number(lat.toFixed(6)),
+                    longitude: Number(lng.toFixed(6)),
+                    locationSource: 'MAP_PICKER',
+                  }))
+                }
+              />
+
+              <p className="mt-3 text-sm text-ink-muted">
+                Koordinat: {form.latitude}, {form.longitude} · Sumber:{' '}
+                {form.locationSource === 'GPS' ? 'GPS' : labelSumberLokasi(form.locationSource)}
+              </p>
+            </Card>
+
+            <Card>
+              <h2 className="mb-4 text-lg font-semibold text-ink">Alamat</h2>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <Field label="Provinsi">
+                  <Input value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} />
+                </Field>
+                <Field label="Kabupaten/Kota">
+                  <Input value={form.regency} onChange={(e) => setForm({ ...form, regency: e.target.value })} />
+                </Field>
+                <Field label="Kecamatan">
+                  <Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
+                </Field>
+                <Field label="Desa/Kelurahan">
+                  <Input value={form.village} onChange={(e) => setForm({ ...form, village: e.target.value })} />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Alamat detail">
+                    <Input
+                      value={form.addressDetail}
+                      onChange={(e) => setForm({ ...form, addressDetail: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <details className="mt-5 rounded-[var(--radius-control)] border border-line p-3">
+                <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-ink">
+                  Pengaturan lanjutan (koordinat manual)
+                </summary>
+                <div className="mt-3 grid gap-4 md:grid-cols-3">
+                  <Field label="Latitude">
+                    <Input
+                      type="number"
+                      step="0.000001"
+                      inputMode="decimal"
+                      value={form.latitude}
+                      onChange={(e) => setForm({ ...form, latitude: Number(e.target.value) })}
+                    />
+                  </Field>
+                  <Field label="Longitude">
+                    <Input
+                      type="number"
+                      step="0.000001"
+                      inputMode="decimal"
+                      value={form.longitude}
+                      onChange={(e) => setForm({ ...form, longitude: Number(e.target.value) })}
+                    />
+                  </Field>
+                  <Field label="Sumber lokasi">
+                    <Select
+                      value={form.locationSource}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          locationSource: e.target.value as 'GPS' | 'MAP_PICKER' | 'MANUAL',
+                        })
+                      }
+                    >
+                      <option value="GPS">GPS</option>
+                      <option value="MAP_PICKER">{labelSumberLokasi('MAP_PICKER')}</option>
+                      <option value="MANUAL">{labelSumberLokasi('MANUAL')}</option>
+                    </Select>
+                  </Field>
+                </div>
+              </details>
+
+              <Button
+                size="lg"
+                className="mt-6 w-full sm:w-auto sm:min-w-56"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? 'Menyimpan...' : 'Simpan Lokasi'}
+              </Button>
+            </Card>
           </div>
-
-          <LocationPickerMap
-            latitude={form.latitude}
-            longitude={form.longitude}
-            onPick={(lat, lng) =>
-              setForm((prev) => ({
-                ...prev,
-                latitude: Number(lat.toFixed(6)),
-                longitude: Number(lng.toFixed(6)),
-                locationSource: 'MAP_PICKER',
-              }))
-            }
-          />
-
-          <div className="mt-4">
-            <Button type="button" onClick={handleSave} disabled={saving}>
-              {saving ? 'Menyimpan...' : 'Simpan Lokasi'}
-            </Button>
-          </div>
-        </Card>
+        )}
+        <Toast toast={toast} />
       </DashboardShell>
     </RoleGuard>
   );

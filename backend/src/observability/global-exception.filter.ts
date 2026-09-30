@@ -31,10 +31,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : (exceptionResponse as { message?: string | string[] }).message ||
           'Terjadi kesalahan pada server';
 
-    this.logger.error(
-      `${request.method} ${request.url} -> ${status}`,
-      exception instanceof Error ? exception.stack : JSON.stringify(exception),
-    );
+    const line = `${request.method} ${request.url} -> ${status}`;
+
+    if (status >= 500) {
+      // error server: butuh stack trace lengkap
+      this.logger.error(
+        line,
+        exception instanceof Error
+          ? exception.stack
+          : JSON.stringify(exception),
+      );
+    } else if (status === 404) {
+      // 404 mayoritas dari bot/salah ketik URL - cukup level debug
+      this.logger.debug(line);
+    } else {
+      // 4xx lain (400/401/403/409/422): satu baris, tanpa stack trace
+      this.logger.warn(line);
+    }
 
     const code =
       typeof exceptionResponse === 'object'

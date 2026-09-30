@@ -1,6 +1,7 @@
 import {
   CallHandler,
   ExecutionContext,
+  HttpException,
   Injectable,
   Logger,
   NestInterceptor,
@@ -25,10 +26,15 @@ export class RequestLoggingInterceptor implements NestInterceptor {
             `${request.method} ${request.url ?? ''} ${response.statusCode} ${Date.now() - startedAt}ms`,
           );
         },
-        error: (error: Error) => {
-          this.logger.error(
-            `${request.method} ${request.url ?? ''} ${response.statusCode} ${Date.now() - startedAt}ms`,
-            error.stack,
+        error: (error: unknown) => {
+          // status diambil dari exception, bukan response.statusCode
+          // (filter belum sempat set status saat titik ini tercapai)
+          const status =
+            error instanceof HttpException ? error.getStatus() : 500;
+          // stack trace sengaja tidak dicatat di sini -
+          // GlobalExceptionFilter yang menanganinya, agar tidak dobel
+          this.logger.warn(
+            `${request.method} ${request.url ?? ''} ${status} ${Date.now() - startedAt}ms`,
           );
         },
       }),
