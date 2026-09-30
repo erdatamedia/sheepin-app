@@ -61,7 +61,7 @@ export default function RecordingPage() {
         (item.name || '').toLowerCase().includes(q) ||
         item.breed.toLowerCase().includes(q) ||
         (item.ownerUser?.name || '').toLowerCase().includes(q) ||
-        (item.ownerUser?.loginCode || '').toLowerCase().includes(q)
+        (item.ownerUser?.groupName || '').toLowerCase().includes(q)
       );
     });
   }, [sheepOptions, search]);

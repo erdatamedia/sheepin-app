@@ -176,7 +176,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">{me.name}</p>
                   <p className="mt-1 uppercase tracking-[0.12em]">{labelPeran(me.role)}</p>
-                  {me.loginCode && <p>ID: {me.loginCode}</p>}
                 </div>
               </Link>
             )}

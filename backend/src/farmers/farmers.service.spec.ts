@@ -14,6 +14,31 @@ function setup() {
   return { service, prisma };
 }
 
+describe('FarmersService: status PIN tidak membocorkan hash', () => {
+  it('findAll dan findOne hanya mengirim hasPin, bukan pinHash', async () => {
+    const { service, prisma } = setup();
+    const row = {
+      id: 'f1',
+      name: 'Budi',
+      phone: '6281234567890',
+      pinHash: '$2b$12$abcdefghijklmnopqrstuv',
+      mustChangePin: true,
+    };
+    (prisma.user as Record<string, jest.Mock>).findMany = jest
+      .fn()
+      .mockResolvedValue([row, { ...row, id: 'f2', pinHash: null }]);
+    prisma.user.findFirst.mockResolvedValue(row);
+
+    const list = await service.findAll();
+    const one = await service.findOne('f1');
+
+    expect(list.data.map((f) => f.hasPin)).toEqual([true, false]);
+    expect(one.data.hasPin).toBe(true);
+    expect(JSON.stringify([list, one])).not.toContain('pinHash');
+    expect(JSON.stringify([list, one])).not.toContain('$2b$');
+  });
+});
+
 describe('FarmersService.create (oleh petugas)', () => {
   it('membuat PIN sementara acak, menyimpan hash-nya, dan menandai wajib ganti', async () => {
     const { service, prisma } = setup();

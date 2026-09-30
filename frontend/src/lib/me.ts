@@ -5,6 +5,7 @@ export type MeResponse = {
   name: string;
   email?: string | null;
   loginCode?: string | null;
+  mustChangePin?: boolean;
   phone?: string | null;
   address?: string | null;
   groupName?: string | null;

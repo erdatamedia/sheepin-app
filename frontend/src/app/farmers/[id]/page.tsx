@@ -4,7 +4,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Navigation, PencilLine, PawPrint, Phone } from 'lucide-react';
+import { ArrowLeft, KeyRound, MapPin, Navigation, PencilLine, PawPrint, Phone } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
@@ -16,11 +16,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { StatTile } from '@/components/ui/stat-tile';
 import { Toast, useToast } from '@/components/ui/toast';
+import { TempPinDialog } from '@/components/farmers/temp-pin-dialog';
 import { getMe } from '@/lib/me';
 import { getApiErrorMessage } from '@/lib/api';
 import { labelJenisKelamin, labelStatusTernak, labelSumberLokasi } from '@/lib/labels';
 import {
   deleteFarmer,
+  resetFarmerPin,
   getFarmerDetail,
   getFarmerSheep,
   getFarmerSummary,
@@ -51,6 +53,8 @@ export default function FarmerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [tempPin, setTempPin] = useState<{ name: string; pin: string } | null>(null);
   const { toast, notify } = useToast();
   const [farmer, setFarmer] = useState<FarmerDetail | null>(null);
   const [summary, setSummary] = useState<FarmerSummary | null>(null);
@@ -111,7 +115,7 @@ export default function FarmerDetailPage() {
       if (axios.isAxiosError(error) && error.response?.status === 403) {
         setErrorMessage('Anda tidak memiliki akses ke halaman detail peternak.');
       } else if (axios.isAxiosError(error) && error.response?.status === 404) {
-        setErrorMessage('Data peternak tidak ditemukan. Pastikan link memakai userId, bukan loginCode.');
+        setErrorMessage('Data peternak tidak ditemukan.');
       } else {
         setErrorMessage(message);
       }
@@ -151,6 +155,27 @@ export default function FarmerDetailPage() {
       notify('error', getApiErrorMessage(error, 'Gagal memperbarui peternak'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResetPin = async () => {
+    const ok = window.confirm(
+      farmer?.hasPin
+        ? 'Reset PIN peternak ini? PIN lama tidak berlaku dan semua sesi peternak akan keluar.'
+        : 'Buat PIN sementara untuk peternak ini?',
+    );
+    if (!ok) return;
+
+    try {
+      setResetting(true);
+      const result = await resetFarmerPin(id);
+      setTempPin({ name: result.data.name, pin: result.data.pin });
+      await loadAll();
+    } catch (error) {
+      console.error(error);
+      notify('error', getApiErrorMessage(error, 'Gagal mereset PIN'));
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -221,7 +246,13 @@ export default function FarmerDetailPage() {
         <h1 className="text-2xl font-bold text-ink">{farmer.name}</h1>
         <p className="mt-1 text-sm text-ink-muted">{region || 'Wilayah belum diisi'}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Badge variant="info">{farmer.loginCode || '-'}</Badge>
+          {farmer.hasPin ? (
+            <Badge variant={farmer.mustChangePin ? 'warning' : 'success'}>
+              {farmer.mustChangePin ? 'PIN sementara' : 'PIN aktif'}
+            </Badge>
+          ) : (
+            <Badge variant="danger">Belum ada PIN</Badge>
+          )}
           <Badge variant={farmer.isActive ? 'success' : 'danger'}>
             {farmer.isActive ? 'Aktif' : 'Tidak aktif'}
           </Badge>
@@ -230,6 +261,10 @@ export default function FarmerDetailPage() {
       </div>
 
       <div className="mb-5 grid gap-2 sm:grid-cols-3">
+        <Button variant={farmer.hasPin ? 'outline' : 'solid'} disabled={resetting} onClick={handleResetPin}>
+          <KeyRound size={18} aria-hidden="true" />
+          {farmer.hasPin ? 'Reset PIN' : 'Buat PIN'}
+        </Button>
         {farmer.phone && (
           <a href={`tel:${farmer.phone}`} className={buttonClassName({ className: 'w-full' })}>
             <Phone size={18} aria-hidden="true" />
@@ -390,6 +425,15 @@ export default function FarmerDetailPage() {
           </div>
         )}
       </Card>
+
+      {tempPin && (
+        <TempPinDialog
+          title="PIN sementara dibuat"
+          name={tempPin.name}
+          pin={tempPin.pin}
+          onClose={() => setTempPin(null)}
+        />
+      )}
 
       <Card>
         <div className="mb-4 flex items-center justify-between gap-3">

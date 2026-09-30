@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { KeyRound, MapPin } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card } from '@/components/ui/card';
@@ -53,6 +53,8 @@ export default function ProfilePage() {
     void load();
   }, []);
 
+  const isFarmer = me?.role === 'FARMER';
+
   const initials = useMemo(() => {
     if (!me?.name) return 'SI';
     return me.name
@@ -71,7 +73,8 @@ export default function ProfilePage() {
 
       const response = await updateMyProfile({
         name: form.name.trim(),
-        phone: form.phone.trim() || undefined,
+        // Nomor HP peternak adalah identitas login: hanya petugas yang boleh mengubahnya.
+        phone: isFarmer ? undefined : form.phone.trim() || undefined,
         groupName: form.groupName.trim() || undefined,
         address: form.address.trim() || undefined,
         photoUrl: photoUrl.trim() || undefined,
@@ -131,12 +134,16 @@ export default function ProfilePage() {
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                 </Field>
-                <Field label="Nomor telepon">
+                <Field
+                  label="Nomor HP"
+                  hint={isFarmer ? 'Dipakai untuk masuk. Untuk mengubahnya, hubungi petugas.' : undefined}
+                >
                   <Input
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel"
                     value={form.phone}
+                    disabled={isFarmer}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   />
                 </Field>
@@ -146,9 +153,11 @@ export default function ProfilePage() {
                     onChange={(e) => setForm({ ...form, groupName: e.target.value })}
                   />
                 </Field>
-                <Field label={me?.loginCode ? 'ID peternak' : 'Email'}>
-                  <Input value={me?.loginCode || me?.email || '-'} disabled />
-                </Field>
+                {!isFarmer && (
+                  <Field label="Email">
+                    <Input value={me?.email || '-'} disabled />
+                  </Field>
+                )}
                 <div className="md:col-span-2">
                   <Field label="Alamat singkat">
                     <Input
@@ -174,6 +183,15 @@ export default function ProfilePage() {
                   <MapPin size={18} aria-hidden="true" />
                   Atur Lokasi
                 </Link>
+                {isFarmer && (
+                  <Link
+                    href="/change-pin"
+                    className={buttonClassName({ variant: 'outline', size: 'lg' })}
+                  >
+                    <KeyRound size={18} aria-hidden="true" />
+                    Ganti PIN
+                  </Link>
+                )}
               </div>
             </Card>
           </div>

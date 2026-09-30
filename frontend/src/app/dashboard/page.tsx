@@ -247,7 +247,7 @@ export default function DashboardPage() {
       <DashboardShell>
         <PageHeader
           title={`Halo, ${me.name.split(' ')[0]}`}
-          description={[dateLabel, me.loginCode && `ID ${me.loginCode}`, me.groupName]
+          description={[dateLabel, me.groupName]
             .filter(Boolean)
             .join(' · ')}
         />

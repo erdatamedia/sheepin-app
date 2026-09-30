@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Segmented } from '@/components/ui/segmented';
 import { PhotoUploadField } from '@/components/ui/photo-upload-field';
-import type { FarmerOption } from '@/lib/farmers';
+import { farmerLabel, type FarmerOption } from '@/lib/farmers';
 
 export type SheepFormState = {
   sheepCode: string;
@@ -100,7 +100,7 @@ export function AddSheepForm({
               <option value="">Pilih pemilik peternak</option>
               {farmers.map((farmer) => (
                 <option key={farmer.id} value={farmer.id}>
-                  {farmer.name} {farmer.loginCode ? `- ${farmer.loginCode}` : ''}
+                  {farmerLabel(farmer)}
                 </option>
               ))}
             </Select>

@@ -22,7 +22,7 @@ import {
 } from '@/components/sheep/add-sheep-form';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { getMe, getMySheep, type MeResponse, type MySheepResponse } from '@/lib/me';
-import { getFarmers, type FarmerOption } from '@/lib/farmers';
+import { farmerLabel, getFarmers, type FarmerOption } from '@/lib/farmers';
 import {
   labelJenisKelamin,
   labelStatusKesehatan,
@@ -128,7 +128,7 @@ export default function SheepPage() {
         item.breed.toLowerCase().includes(keyword) ||
         (item.location || '').toLowerCase().includes(keyword) ||
         (item.ownerUser?.name || '').toLowerCase().includes(keyword) ||
-        (item.ownerUser?.loginCode || '').toLowerCase().includes(keyword);
+        (item.ownerUser?.groupName || '').toLowerCase().includes(keyword);
 
       const matchesGender = genderFilter === 'ALL' || item.gender === genderFilter;
       const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
@@ -449,7 +449,7 @@ export default function SheepPage() {
               <option value="ALL">Semua pemilik</option>
               {farmers.map((farmer) => (
                 <option key={farmer.id} value={farmer.id}>
-                  {farmer.name} {farmer.loginCode ? `- ${farmer.loginCode}` : ''}
+                  {farmerLabel(farmer)}
                 </option>
               ))}
             </Select>
@@ -531,7 +531,6 @@ export default function SheepPage() {
                       <dt className="w-16 shrink-0 text-ink-muted">Pemilik</dt>
                       <dd className="min-w-0 truncate">
                         {item.ownerUser?.name || '-'}
-                        {item.ownerUser?.loginCode ? ` (${item.ownerUser.loginCode})` : ''}
                       </dd>
                     </div>
                   </dl>

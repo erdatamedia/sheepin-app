@@ -98,9 +98,6 @@ export default function DistributionMap({ items, publicView = false }: Props) {
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-lg font-semibold text-ink">{selected.name}</p>
-              {!publicView && 'loginCode' in selected && (
-                <p className="text-sm text-ink-muted">{selected.loginCode || '-'}</p>
-              )}
               <p className="text-sm text-ink-muted">{selected.groupName || '-'}</p>
               <p className="text-sm text-ink-muted">{region}</p>
             </div>

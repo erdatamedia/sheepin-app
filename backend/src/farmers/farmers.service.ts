@@ -13,6 +13,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 
+/** Ubah pinHash menjadi penanda boolean; hash tidak pernah keluar dari service. */
+function withPinStatus<T extends { pinHash: string | null }>(farmer: T) {
+  const { pinHash, ...rest } = farmer;
+  return { ...rest, hasPin: !!pinHash };
+}
+
 @Injectable()
 export class FarmersService {
   private readonly logger = new Logger(FarmersService.name);
@@ -32,6 +38,9 @@ export class FarmersService {
         id: true,
         name: true,
         loginCode: true,
+        phone: true,
+        pinHash: true,
+        mustChangePin: true,
         groupName: true,
         village: true,
         district: true,
@@ -42,7 +51,7 @@ export class FarmersService {
 
     return {
       message: 'Daftar peternak berhasil diambil',
-      data: farmers,
+      data: farmers.map(withPinStatus),
     };
   }
 
@@ -57,6 +66,8 @@ export class FarmersService {
         name: true,
         loginCode: true,
         phone: true,
+        pinHash: true,
+        mustChangePin: true,
         address: true,
         groupName: true,
         province: true,
@@ -80,7 +91,7 @@ export class FarmersService {
 
     return {
       message: 'Detail peternak berhasil diambil',
-      data: farmer,
+      data: withPinStatus(farmer),
     };
   }
 

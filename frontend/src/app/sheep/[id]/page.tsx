@@ -21,7 +21,7 @@ import { api, getApiErrorMessage } from '@/lib/api';
 import { cn, sanitizeDecimal } from '@/lib/utils';
 import { getMe, type MeResponse } from '@/lib/me';
 import { getSheepEvaluation, type EvaluationDetailResponse } from '@/lib/evaluation';
-import { getFarmers, type FarmerOption } from '@/lib/farmers';
+import { farmerLabel, getFarmers, type FarmerOption } from '@/lib/farmers';
 import { EvaluationPanel } from '@/components/evaluation/evaluation-panel';
 import {
   labelJenisKelamin,
@@ -810,7 +810,7 @@ export default function SheepDetailPage() {
                     <option value="">Pilih pemilik peternak</option>
                     {farmers.map((farmer) => (
                       <option key={farmer.id} value={farmer.id}>
-                        {farmer.name} {farmer.loginCode ? `- ${farmer.loginCode}` : ''}
+                        {farmerLabel(farmer)}
                       </option>
                     ))}
                   </Select>

@@ -86,7 +86,6 @@ export default function MapPage() {
       const matchesSearch =
         !search ||
         item.name.toLowerCase().includes(search.toLowerCase()) ||
-        (item.loginCode || '').toLowerCase().includes(search.toLowerCase()) ||
         (item.groupName || '').toLowerCase().includes(search.toLowerCase()) ||
         (item.addressDetail || '').toLowerCase().includes(search.toLowerCase());
 
@@ -163,7 +162,7 @@ export default function MapPage() {
               <Input
                 className="pl-11"
                 aria-label="Cari peternak"
-                placeholder="Cari nama, ID, kelompok, atau alamat"
+                placeholder="Cari nama, kelompok, atau alamat"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -270,7 +269,7 @@ export default function MapPage() {
                     <div className="min-w-0">
                       <h3 className="truncate text-lg font-semibold text-ink">{item.name}</h3>
                       <p className="truncate text-sm text-ink-muted">
-                        {item.loginCode || '-'} • {item.groupName || '-'}
+                        {item.groupName || 'Tanpa kelompok'}
                       </p>
                     </div>
                     <Badge variant="info">{labelSumberLokasi(item.locationSource)}</Badge>

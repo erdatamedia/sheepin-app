@@ -9,12 +9,15 @@ type RoleGuardProps = {
   allowedRoles: Array<'ADMIN' | 'OFFICER' | 'FARMER'>;
   children: React.ReactNode;
   fallbackPath?: string;
+  /** Halaman ganti PIN: boleh dibuka walau PIN masih sementara. */
+  allowPendingPin?: boolean;
 };
 
 export function RoleGuard({
   allowedRoles,
   children,
   fallbackPath = '/dashboard',
+  allowPendingPin = false,
 }: RoleGuardProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -40,6 +43,11 @@ export function RoleGuard({
           return;
         }
 
+        if (me.mustChangePin && !allowPendingPin) {
+          router.replace('/change-pin?wajib=1');
+          return;
+        }
+
         setAuthorized(true);
       } catch (error) {
         console.error('Role guard error:', error);
@@ -51,7 +59,7 @@ export function RoleGuard({
     };
 
     checkAccess();
-  }, [rolesKey, fallbackPath, router]);
+  }, [rolesKey, fallbackPath, allowPendingPin, router]);
 
   if (loading) {
     return (
