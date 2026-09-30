@@ -8,6 +8,7 @@ export type RecordingSheepOptionResponse = {
     name?: string | null;
     breed: string;
     gender: string;
+    photoUrl?: string | null;
     location?: string | null;
     ownerUser?: {
       id: string;
@@ -57,9 +58,7 @@ export type RecordingHistoryResponse = {
 };
 
 export async function getRecordingSheepOptions() {
-  const response = await api.get<RecordingSheepOptionResponse>(
-    '/recording/quick/sheep-options',
-  );
+  const response = await api.get<RecordingSheepOptionResponse>('/recording/quick/sheep-options');
   return response.data;
 }
 

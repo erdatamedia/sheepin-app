@@ -28,6 +28,9 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Toast, useToast } from '@/components/ui/toast';
 import { LoadError } from '@/components/ui/load-error';
 import { Avatar } from '@/components/ui/avatar';
+import { Sheet } from '@/components/ui/sheet';
+import { PhotoViewer } from '@/components/sheep/photo-viewer';
+import { updateSheepPhoto } from '@/lib/sheep-photo';
 import { BackLink } from '@/components/ui/back-link';
 import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
 import { StatTile } from '@/components/ui/stat-tile';
@@ -175,12 +178,13 @@ export default function SheepDetailPage() {
   const [bcs, setBcs] = useState<Bcs[]>([]);
   const [health, setHealth] = useState<Health[]>([]);
   const [reproduction, setReproduction] = useState<Reproduction[]>([]);
-  const [evaluation, setEvaluation] =
-    useState<EvaluationDetailResponse['data'] | null>(null);
+  const [evaluation, setEvaluation] = useState<EvaluationDetailResponse['data'] | null>(null);
   const [farmers, setFarmers] = useState<FarmerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('weights');
   const [failed, setFailed] = useState(false);
+  const [showPhoto, setShowPhoto] = useState(false);
+  const [showPhotoEdit, setShowPhotoEdit] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const { toast, notify } = useToast();
@@ -235,8 +239,8 @@ export default function SheepDetailPage() {
   const fetchAll = useCallback(async () => {
     try {
       setFailed(false);
-      const [meRes, sheepRes, weightsRes, bcsRes, healthRes, reproRes, evalRes] =
-        await Promise.all([
+      const [meRes, sheepRes, weightsRes, bcsRes, healthRes, reproRes, evalRes] = await Promise.all(
+        [
           getMe(),
           api.get(`/sheep/${id}`),
           api.get(`/weights/sheep/${id}`),
@@ -244,7 +248,8 @@ export default function SheepDetailPage() {
           api.get(`/health/sheep/${id}`),
           api.get(`/reproduction/sheep/${id}`),
           getSheepEvaluation(id),
-        ]);
+        ],
+      );
 
       const sheepData = sheepRes.data.data as SheepDetail;
 
@@ -293,8 +298,7 @@ export default function SheepDetailPage() {
   const latestReproduction = useMemo(() => reproduction[0], [reproduction]);
 
   const canManageIdentity = me?.role === 'ADMIN' || me?.role === 'OFFICER';
-  const canRecord =
-    me?.role === 'ADMIN' || me?.role === 'OFFICER' || me?.role === 'FARMER';
+  const canRecord = me?.role === 'ADMIN' || me?.role === 'OFFICER' || me?.role === 'FARMER';
 
   const getStatusVariant = (status?: string) => {
     switch (status) {
@@ -335,11 +339,7 @@ export default function SheepDetailPage() {
     }
   };
 
-  const submit = async (
-    action: () => Promise<void>,
-    success: string,
-    failure: string,
-  ) => {
+  const submit = async (action: () => Promise<void>, success: string, failure: string) => {
     if (busy) return;
     try {
       setBusy(true);
@@ -473,9 +473,7 @@ export default function SheepDetailPage() {
           estimatedBirthDate: reproForm.estimatedBirthDate || undefined,
           lambingDate: reproForm.lambingDate || undefined,
           maleParent: reproForm.maleParent || undefined,
-          totalLambBorn: reproForm.totalLambBorn
-            ? Number(reproForm.totalLambBorn)
-            : undefined,
+          totalLambBorn: reproForm.totalLambBorn ? Number(reproForm.totalLambBorn) : undefined,
           totalLambWeaned: reproForm.totalLambWeaned
             ? Number(reproForm.totalLambWeaned)
             : undefined,
@@ -509,6 +507,18 @@ export default function SheepDetailPage() {
   const fmtDate = (value?: string | null) =>
     value ? new Date(value).toLocaleDateString('id-ID') : '-';
 
+  // Ganti atau hapus foto: peternak untuk ternaknya sendiri, petugas untuk semua.
+  const savePhoto = async (photoUrl: string) => {
+    try {
+      await updateSheepPhoto(id, photoUrl);
+      notify('success', photoUrl ? 'Foto ternak diperbarui' : 'Foto ternak dihapus');
+      await fetchAll();
+    } catch (error) {
+      console.error(error);
+      notify('error', getApiErrorMessage(error, 'Gagal menyimpan foto'));
+    }
+  };
+
   const shell = (content: React.ReactNode) => (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
       <DashboardShell>
@@ -537,10 +547,12 @@ export default function SheepDetailPage() {
     return shell(
       <>
         <BackLink href="/sheep" label="Ternak" />
-        <LoadError onRetry={() => {
-          setLoading(true);
-          void fetchAll();
-        }} />
+        <LoadError
+          onRetry={() => {
+            setLoading(true);
+            void fetchAll();
+          }}
+        />
       </>,
     );
   }
@@ -548,7 +560,10 @@ export default function SheepDetailPage() {
   if (!sheep) {
     return shell(
       <>
-        <Link href="/sheep" className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-ink-muted">
+        <Link
+          href="/sheep"
+          className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-ink-muted"
+        >
           <ArrowLeft size={16} aria-hidden="true" />
           Kembali ke daftar ternak
         </Link>
@@ -580,7 +595,18 @@ export default function SheepDetailPage() {
       <BackLink href="/sheep" label={isFarmer ? 'Ternak saya' : 'Ternak'} />
 
       <div className="flex items-center gap-4">
-        <Avatar name={sheep.name || sheep.sheepCode} photoUrl={sheep.photoUrl} size="xl" />
+        {sheep.photoUrl ? (
+          <button
+            type="button"
+            onClick={() => setShowPhoto(true)}
+            aria-label="Perbesar foto ternak"
+            className="rounded-full active:opacity-80"
+          >
+            <Avatar name={sheep.name || sheep.sheepCode} photoUrl={sheep.photoUrl} size="xl" />
+          </button>
+        ) : (
+          <Avatar name={sheep.name || sheep.sheepCode} photoUrl={sheep.photoUrl} size="xl" />
+        )}
         <div className="min-w-0">
           <h1 className="truncate text-[28px] font-bold leading-tight tracking-tight text-ink">
             {sheep.sheepCode}
@@ -589,7 +615,9 @@ export default function SheepDetailPage() {
             {[sheep.name, sheep.breed, labelJenisKelamin(sheep.gender)].filter(Boolean).join(' · ')}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant={getStatusVariant(sheep.status)}>{labelStatusTernak(sheep.status)}</Badge>
+            <Badge variant={getStatusVariant(sheep.status)}>
+              {labelStatusTernak(sheep.status)}
+            </Badge>
             {isFarmer && evaluation && (
               <Badge variant={getStatusVariant(evaluation.evaluation.breedingStatus)}>
                 {labelStatusData(evaluation.evaluation.breedingStatus)}
@@ -671,8 +699,44 @@ export default function SheepDetailPage() {
     </>
   );
 
+  const photoOverlays = (
+    <>
+      {showPhoto && (
+        <PhotoViewer
+          items={[
+            {
+              id: sheep.id,
+              code: sheep.sheepCode,
+              name: sheep.name,
+              photoUrl: sheep.photoUrl,
+              subtitle: [sheep.breed, labelJenisKelamin(sheep.gender)].filter(Boolean).join(' · '),
+            },
+          ]}
+          index={0}
+          onIndexChange={() => undefined}
+          onClose={() => setShowPhoto(false)}
+        />
+      )}
+
+      <Sheet open={showPhotoEdit} onClose={() => setShowPhotoEdit(false)} title="Foto ternak">
+        <PhotoUploadField
+          label="Foto ternak"
+          value={sheep.photoUrl || ''}
+          onChange={(value) => void savePhoto(value)}
+          helperText="Foto dari samping, dengan wajah dan badan terlihat, paling mudah dikenali di kandang."
+          emptyLabel="FOTO"
+        />
+      </Sheet>
+    </>
+  );
+
   const info = (
     <ListGroup header="Tentang ternak ini" className="mb-6">
+      <ListRow
+        title="Foto ternak"
+        value={sheep.photoUrl ? 'Ganti foto' : 'Tambah foto'}
+        onClick={() => setShowPhotoEdit(true)}
+      />
       <ListRow title="Jenis / rumpun" value={sheep.breed} />
       <ListRow title="Jenis kelamin" value={labelJenisKelamin(sheep.gender)} />
       <ListRow title="Lokasi" value={sheep.location || '-'} />
@@ -703,6 +767,7 @@ export default function SheepDetailPage() {
     return shell(
       <>
         {hero}
+        {photoOverlays}
         {recordButton}
         {summaryTiles}
         {progress}
@@ -750,6 +815,7 @@ export default function SheepDetailPage() {
   return shell(
     <>
       {hero}
+      {photoOverlays}
       {recordButton}
       {summaryTiles}
       {progress}
@@ -779,25 +845,46 @@ export default function SheepDetailPage() {
             <div className="mt-5 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Kode ternak">
-                  <Input value={editForm.sheepCode} onChange={(e) => setEditForm({ ...editForm, sheepCode: e.target.value })} />
+                  <Input
+                    value={editForm.sheepCode}
+                    onChange={(e) => setEditForm({ ...editForm, sheepCode: e.target.value })}
+                  />
                 </Field>
                 <Field label="Nama">
-                  <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  />
                 </Field>
                 <Field label="Jenis / rumpun">
-                  <Input value={editForm.breed} onChange={(e) => setEditForm({ ...editForm, breed: e.target.value })} />
+                  <Input
+                    value={editForm.breed}
+                    onChange={(e) => setEditForm({ ...editForm, breed: e.target.value })}
+                  />
                 </Field>
                 <Field label="Warna">
-                  <Input value={editForm.color} onChange={(e) => setEditForm({ ...editForm, color: e.target.value })} />
+                  <Input
+                    value={editForm.color}
+                    onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                  />
                 </Field>
                 <Field label="Lokasi">
-                  <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
+                  <Input
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                  />
                 </Field>
                 <Field label="Tanda fisik">
-                  <Input value={editForm.physicalMark} onChange={(e) => setEditForm({ ...editForm, physicalMark: e.target.value })} />
+                  <Input
+                    value={editForm.physicalMark}
+                    onChange={(e) => setEditForm({ ...editForm, physicalMark: e.target.value })}
+                  />
                 </Field>
                 <Field label="Pemilik">
-                  <Select value={editForm.ownerUserId} onChange={(e) => setEditForm({ ...editForm, ownerUserId: e.target.value })}>
+                  <Select
+                    value={editForm.ownerUserId}
+                    onChange={(e) => setEditForm({ ...editForm, ownerUserId: e.target.value })}
+                  >
                     <option value="">Pilih pemilik peternak</option>
                     {farmers.map((farmer) => (
                       <option key={farmer.id} value={farmer.id}>
@@ -807,7 +894,10 @@ export default function SheepDetailPage() {
                   </Select>
                 </Field>
                 <Field label="Status">
-                  <Select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                  <Select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  >
                     <option value="ACTIVE">Aktif</option>
                     <option value="SOLD">Terjual</option>
                     <option value="DEAD">Mati</option>
@@ -854,256 +944,363 @@ export default function SheepDetailPage() {
       <details className="glass mb-6 overflow-hidden rounded-[var(--radius-card)]">
         <summary className="flex min-h-[56px] cursor-pointer items-center justify-between px-4 text-[17px] font-semibold text-ink">
           Input manual (petugas)
-          <span className="text-[14px] font-normal text-ink-muted">Bobot, BCS, kesehatan, reproduksi</span>
+          <span className="text-[14px] font-normal text-ink-muted">
+            Bobot, BCS, kesehatan, reproduksi
+          </span>
         </summary>
         <div className="space-y-4 border-t border-line p-4">
-      <div
-        role="tablist"
-        aria-label="Riwayat rekording"
-        className="mb-4 grid grid-cols-4 gap-1 glass rounded-[var(--radius-control)] p-1"
-      >
-        {tabs.map((tab) => {
-          const active = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              id={`tab-${tab.key}`}
-              aria-selected={active}
-              aria-controls={`panel-${tab.key}`}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                'min-h-11 rounded-[10px] px-1 text-sm font-semibold transition',
-                active ? 'bg-primary text-white' : 'text-ink-muted hover:bg-primary-soft/50',
-              )}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {activeTab === 'weights' && (
-        <Card role="tabpanel" id="panel-weights" aria-labelledby="tab-weights">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Tambah bobot</h3>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Tanggal">
-              <Input type="date" value={weightForm.recordDate} onChange={(e) => setWeightForm({ ...weightForm, recordDate: e.target.value })} />
-            </Field>
-            <Field label="Bobot (kg)">
-              <Input type="text" inputMode="decimal" placeholder="0" value={weightForm.weightKg} onChange={(e) => setWeightForm({ ...weightForm, weightKg: sanitizeDecimal(e.target.value) })} />
-            </Field>
-            <Field label="Catatan (opsional)">
-              <Input value={weightForm.note} onChange={(e) => setWeightForm({ ...weightForm, note: e.target.value })} />
-            </Field>
-          </div>
-          {saveButton('Simpan Bobot', handleAddWeight)}
-
-          <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat bobot</h3>
-          <div className="space-y-2">
-            {weights.length === 0 ? (
-              <p className="text-sm text-ink-muted">Belum ada data bobot.</p>
-            ) : (
-              weights.map((item) => (
-                <HistoryItem
-                  key={item.id}
-                  title={`${item.weightKg} kg`}
-                  date={fmtDate(item.recordDate)}
-                  badge={<Badge variant="info">Bobot</Badge>}
+          <div
+            role="tablist"
+            aria-label="Riwayat rekording"
+            className="mb-4 grid grid-cols-4 gap-1 glass rounded-[var(--radius-control)] p-1"
+          >
+            {tabs.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  id={`tab-${tab.key}`}
+                  aria-selected={active}
+                  aria-controls={`panel-${tab.key}`}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    'min-h-11 rounded-[10px] px-1 text-sm font-semibold transition',
+                    active ? 'bg-primary text-white' : 'text-ink-muted hover:bg-primary-soft/50',
+                  )}
                 >
-                  {item.note && <p>{item.note}</p>}
-                </HistoryItem>
-              ))
-            )}
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-        </Card>
-      )}
 
-      {activeTab === 'bcs' && (
-        <Card role="tabpanel" id="panel-bcs" aria-labelledby="tab-bcs">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Tambah BCS</h3>
-          <div className="space-y-4">
-            <Field label="Tanggal">
-              <Input type="date" className="md:max-w-xs" value={bcsForm.recordDate} onChange={(e) => setBcsForm({ ...bcsForm, recordDate: e.target.value })} />
-            </Field>
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-ink">Kondisi tubuh (BCS)</p>
-              <Segmented
-                label="Kondisi tubuh (BCS)"
-                className="md:max-w-md"
-                value={bcsForm.bcsScore}
-                onChange={(value) => setBcsForm({ ...bcsForm, bcsScore: value })}
-                options={[
-                  { value: '1', label: '1', hint: 'Kurus' },
-                  { value: '2', label: '2' },
-                  { value: '3', label: '3', hint: 'Ideal' },
-                  { value: '4', label: '4' },
-                  { value: '5', label: '5', hint: 'Gemuk' },
-                ]}
-              />
-            </div>
-            <Field label="Catatan (opsional)">
-              <Input value={bcsForm.note} onChange={(e) => setBcsForm({ ...bcsForm, note: e.target.value })} />
-            </Field>
-          </div>
-          {saveButton('Simpan BCS', handleAddBcs)}
+          {activeTab === 'weights' && (
+            <Card role="tabpanel" id="panel-weights" aria-labelledby="tab-weights">
+              <h3 className="mb-4 text-lg font-semibold text-ink">Tambah bobot</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Field label="Tanggal">
+                  <Input
+                    type="date"
+                    value={weightForm.recordDate}
+                    onChange={(e) => setWeightForm({ ...weightForm, recordDate: e.target.value })}
+                  />
+                </Field>
+                <Field label="Bobot (kg)">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={weightForm.weightKg}
+                    onChange={(e) =>
+                      setWeightForm({ ...weightForm, weightKg: sanitizeDecimal(e.target.value) })
+                    }
+                  />
+                </Field>
+                <Field label="Catatan (opsional)">
+                  <Input
+                    value={weightForm.note}
+                    onChange={(e) => setWeightForm({ ...weightForm, note: e.target.value })}
+                  />
+                </Field>
+              </div>
+              {saveButton('Simpan Bobot', handleAddWeight)}
 
-          <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat BCS</h3>
-          <div className="space-y-2">
-            {bcs.length === 0 ? (
-              <p className="text-sm text-ink-muted">Belum ada data BCS.</p>
-            ) : (
-              bcs.map((item) => (
-                <HistoryItem
-                  key={item.id}
-                  title={`BCS ${item.bcsScore}`}
-                  date={fmtDate(item.recordDate)}
-                  badge={<Badge variant="warning">BCS</Badge>}
-                >
-                  {item.note && <p>{item.note}</p>}
-                </HistoryItem>
-              ))
-            )}
-          </div>
-        </Card>
-      )}
+              <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat bobot</h3>
+              <div className="space-y-2">
+                {weights.length === 0 ? (
+                  <p className="text-sm text-ink-muted">Belum ada data bobot.</p>
+                ) : (
+                  weights.map((item) => (
+                    <HistoryItem
+                      key={item.id}
+                      title={`${item.weightKg} kg`}
+                      date={fmtDate(item.recordDate)}
+                      badge={<Badge variant="info">Bobot</Badge>}
+                    >
+                      {item.note && <p>{item.note}</p>}
+                    </HistoryItem>
+                  ))
+                )}
+              </div>
+            </Card>
+          )}
 
-      {activeTab === 'health' && (
-        <Card role="tabpanel" id="panel-health" aria-labelledby="tab-health">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Tambah data kesehatan</h3>
-          <div className="space-y-4">
-            <Field label="Tanggal pemeriksaan">
-              <Input type="date" className="md:max-w-xs" value={healthForm.checkDate} onChange={(e) => setHealthForm({ ...healthForm, checkDate: e.target.value })} />
-            </Field>
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-ink">Kesehatan</p>
-              <Segmented
-                label="Kesehatan"
-                className="md:max-w-md"
-                value={healthForm.healthStatus}
-                onChange={(value) => setHealthForm({ ...healthForm, healthStatus: value })}
-                options={[
-                  { value: 'HEALTHY', label: 'Sehat' },
-                  { value: 'SICK', label: 'Sakit' },
-                  { value: 'RECOVERING', label: 'Pemulihan' },
-                ]}
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Penyakit (opsional)">
-                <Input value={healthForm.diseaseName} onChange={(e) => setHealthForm({ ...healthForm, diseaseName: e.target.value })} />
-              </Field>
-              <Field label="Tindakan (opsional)">
-                <Input value={healthForm.treatment} onChange={(e) => setHealthForm({ ...healthForm, treatment: e.target.value })} />
-              </Field>
-              <Field label="Obat (opsional)">
-                <Input value={healthForm.medicine} onChange={(e) => setHealthForm({ ...healthForm, medicine: e.target.value })} />
-              </Field>
-              <Field label="Catatan (opsional)">
-                <Input value={healthForm.note} onChange={(e) => setHealthForm({ ...healthForm, note: e.target.value })} />
-              </Field>
-            </div>
-          </div>
-          {saveButton('Simpan Kesehatan', handleAddHealth)}
+          {activeTab === 'bcs' && (
+            <Card role="tabpanel" id="panel-bcs" aria-labelledby="tab-bcs">
+              <h3 className="mb-4 text-lg font-semibold text-ink">Tambah BCS</h3>
+              <div className="space-y-4">
+                <Field label="Tanggal">
+                  <Input
+                    type="date"
+                    className="md:max-w-xs"
+                    value={bcsForm.recordDate}
+                    onChange={(e) => setBcsForm({ ...bcsForm, recordDate: e.target.value })}
+                  />
+                </Field>
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-ink">Kondisi tubuh (BCS)</p>
+                  <Segmented
+                    label="Kondisi tubuh (BCS)"
+                    className="md:max-w-md"
+                    value={bcsForm.bcsScore}
+                    onChange={(value) => setBcsForm({ ...bcsForm, bcsScore: value })}
+                    options={[
+                      { value: '1', label: '1', hint: 'Kurus' },
+                      { value: '2', label: '2' },
+                      { value: '3', label: '3', hint: 'Ideal' },
+                      { value: '4', label: '4' },
+                      { value: '5', label: '5', hint: 'Gemuk' },
+                    ]}
+                  />
+                </div>
+                <Field label="Catatan (opsional)">
+                  <Input
+                    value={bcsForm.note}
+                    onChange={(e) => setBcsForm({ ...bcsForm, note: e.target.value })}
+                  />
+                </Field>
+              </div>
+              {saveButton('Simpan BCS', handleAddBcs)}
 
-          <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat kesehatan</h3>
-          <div className="space-y-2">
-            {health.length === 0 ? (
-              <p className="text-sm text-ink-muted">Belum ada data kesehatan.</p>
-            ) : (
-              health.map((item) => (
-                <HistoryItem
-                  key={item.id}
-                  title={item.diseaseName || 'Kondisi umum'}
-                  date={fmtDate(item.checkDate)}
-                  badge={
-                    <Badge variant={getStatusVariant(item.healthStatus)}>
-                      {labelStatusKesehatan(item.healthStatus)}
-                    </Badge>
-                  }
-                >
-                  <p>Tindakan: {item.treatment || '-'}</p>
-                  <p>Obat: {item.medicine || '-'}</p>
-                  <p>Catatan: {item.note || '-'}</p>
-                </HistoryItem>
-              ))
-            )}
-          </div>
-        </Card>
-      )}
+              <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat BCS</h3>
+              <div className="space-y-2">
+                {bcs.length === 0 ? (
+                  <p className="text-sm text-ink-muted">Belum ada data BCS.</p>
+                ) : (
+                  bcs.map((item) => (
+                    <HistoryItem
+                      key={item.id}
+                      title={`BCS ${item.bcsScore}`}
+                      date={fmtDate(item.recordDate)}
+                      badge={<Badge variant="warning">BCS</Badge>}
+                    >
+                      {item.note && <p>{item.note}</p>}
+                    </HistoryItem>
+                  ))
+                )}
+              </div>
+            </Card>
+          )}
 
-      {activeTab === 'reproduction' && (
-        <Card role="tabpanel" id="panel-reproduction" aria-labelledby="tab-reproduction">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Tambah data reproduksi</h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Status">
-              <Select value={reproForm.status} onChange={(e) => setReproForm({ ...reproForm, status: e.target.value })}>
-                <option value="OPEN">Siap kawin</option>
-                <option value="MATED">Sudah kawin</option>
-                <option value="PREGNANT">Bunting</option>
-                <option value="LAMBED">Sudah beranak</option>
-              </Select>
-            </Field>
-            <Field label="Pejantan (opsional)">
-              <Input value={reproForm.maleParent} onChange={(e) => setReproForm({ ...reproForm, maleParent: e.target.value })} />
-            </Field>
-            <Field label="Tanggal kawin">
-              <Input type="date" value={reproForm.matingDate} onChange={(e) => setReproForm({ ...reproForm, matingDate: e.target.value })} />
-            </Field>
-            <Field label="Perkiraan beranak">
-              <Input type="date" value={reproForm.estimatedBirthDate} onChange={(e) => setReproForm({ ...reproForm, estimatedBirthDate: e.target.value })} />
-            </Field>
-            <Field label="Tanggal beranak">
-              <Input type="date" value={reproForm.lambingDate} onChange={(e) => setReproForm({ ...reproForm, lambingDate: e.target.value })} />
-            </Field>
-            <Field label="Jumlah anak lahir">
-              <Input type="text" inputMode="numeric" value={reproForm.totalLambBorn} onChange={(e) => setReproForm({ ...reproForm, totalLambBorn: e.target.value.replace(/\D/g, '') })} />
-            </Field>
-            <Field label="Jumlah anak disapih">
-              <Input type="text" inputMode="numeric" value={reproForm.totalLambWeaned} onChange={(e) => setReproForm({ ...reproForm, totalLambWeaned: e.target.value.replace(/\D/g, '') })} />
-            </Field>
-            <Field label="Total bobot lahir (kg)">
-              <Input type="text" inputMode="decimal" value={reproForm.totalBirthWeight} onChange={(e) => setReproForm({ ...reproForm, totalBirthWeight: sanitizeDecimal(e.target.value) })} />
-            </Field>
-            <Field label="Total bobot sapih (kg)">
-              <Input type="text" inputMode="decimal" value={reproForm.totalWeaningWeight} onChange={(e) => setReproForm({ ...reproForm, totalWeaningWeight: sanitizeDecimal(e.target.value) })} />
-            </Field>
-            <Field label="Catatan (opsional)">
-              <Input value={reproForm.note} onChange={(e) => setReproForm({ ...reproForm, note: e.target.value })} />
-            </Field>
-          </div>
-          {saveButton('Simpan Reproduksi', handleAddReproduction)}
+          {activeTab === 'health' && (
+            <Card role="tabpanel" id="panel-health" aria-labelledby="tab-health">
+              <h3 className="mb-4 text-lg font-semibold text-ink">Tambah data kesehatan</h3>
+              <div className="space-y-4">
+                <Field label="Tanggal pemeriksaan">
+                  <Input
+                    type="date"
+                    className="md:max-w-xs"
+                    value={healthForm.checkDate}
+                    onChange={(e) => setHealthForm({ ...healthForm, checkDate: e.target.value })}
+                  />
+                </Field>
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-ink">Kesehatan</p>
+                  <Segmented
+                    label="Kesehatan"
+                    className="md:max-w-md"
+                    value={healthForm.healthStatus}
+                    onChange={(value) => setHealthForm({ ...healthForm, healthStatus: value })}
+                    options={[
+                      { value: 'HEALTHY', label: 'Sehat' },
+                      { value: 'SICK', label: 'Sakit' },
+                      { value: 'RECOVERING', label: 'Pemulihan' },
+                    ]}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Penyakit (opsional)">
+                    <Input
+                      value={healthForm.diseaseName}
+                      onChange={(e) =>
+                        setHealthForm({ ...healthForm, diseaseName: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Tindakan (opsional)">
+                    <Input
+                      value={healthForm.treatment}
+                      onChange={(e) => setHealthForm({ ...healthForm, treatment: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Obat (opsional)">
+                    <Input
+                      value={healthForm.medicine}
+                      onChange={(e) => setHealthForm({ ...healthForm, medicine: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Catatan (opsional)">
+                    <Input
+                      value={healthForm.note}
+                      onChange={(e) => setHealthForm({ ...healthForm, note: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+              {saveButton('Simpan Kesehatan', handleAddHealth)}
 
-          <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat reproduksi</h3>
-          <div className="space-y-2">
-            {reproduction.length === 0 ? (
-              <p className="text-sm text-ink-muted">Belum ada data reproduksi.</p>
-            ) : (
-              reproduction.map((item) => (
-                <HistoryItem
-                  key={item.id}
-                  title={item.maleParent || 'Data reproduksi'}
-                  date={fmtDate(item.matingDate)}
-                  badge={
-                    <Badge variant={getStatusVariant(item.status)}>
-                      {labelStatusReproduksi(item.status)}
-                    </Badge>
-                  }
-                >
-                  <p>Perkiraan beranak: {fmtDate(item.estimatedBirthDate)}</p>
-                  <p>Tanggal beranak: {fmtDate(item.lambingDate)}</p>
-                  <p>Anak lahir: {item.totalLambBorn ?? '-'}</p>
-                  <p>Anak disapih: {item.totalLambWeaned ?? '-'}</p>
-                  <p>Total bobot lahir: {item.totalBirthWeight ?? '-'}</p>
-                  <p>Total bobot sapih: {item.totalWeaningWeight ?? '-'}</p>
-                  <p>Catatan: {item.note || '-'}</p>
-                </HistoryItem>
-              ))
-            )}
-          </div>
-        </Card>
-      )}
+              <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat kesehatan</h3>
+              <div className="space-y-2">
+                {health.length === 0 ? (
+                  <p className="text-sm text-ink-muted">Belum ada data kesehatan.</p>
+                ) : (
+                  health.map((item) => (
+                    <HistoryItem
+                      key={item.id}
+                      title={item.diseaseName || 'Kondisi umum'}
+                      date={fmtDate(item.checkDate)}
+                      badge={
+                        <Badge variant={getStatusVariant(item.healthStatus)}>
+                          {labelStatusKesehatan(item.healthStatus)}
+                        </Badge>
+                      }
+                    >
+                      <p>Tindakan: {item.treatment || '-'}</p>
+                      <p>Obat: {item.medicine || '-'}</p>
+                      <p>Catatan: {item.note || '-'}</p>
+                    </HistoryItem>
+                  ))
+                )}
+              </div>
+            </Card>
+          )}
+
+          {activeTab === 'reproduction' && (
+            <Card role="tabpanel" id="panel-reproduction" aria-labelledby="tab-reproduction">
+              <h3 className="mb-4 text-lg font-semibold text-ink">Tambah data reproduksi</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Status">
+                  <Select
+                    value={reproForm.status}
+                    onChange={(e) => setReproForm({ ...reproForm, status: e.target.value })}
+                  >
+                    <option value="OPEN">Siap kawin</option>
+                    <option value="MATED">Sudah kawin</option>
+                    <option value="PREGNANT">Bunting</option>
+                    <option value="LAMBED">Sudah beranak</option>
+                  </Select>
+                </Field>
+                <Field label="Pejantan (opsional)">
+                  <Input
+                    value={reproForm.maleParent}
+                    onChange={(e) => setReproForm({ ...reproForm, maleParent: e.target.value })}
+                  />
+                </Field>
+                <Field label="Tanggal kawin">
+                  <Input
+                    type="date"
+                    value={reproForm.matingDate}
+                    onChange={(e) => setReproForm({ ...reproForm, matingDate: e.target.value })}
+                  />
+                </Field>
+                <Field label="Perkiraan beranak">
+                  <Input
+                    type="date"
+                    value={reproForm.estimatedBirthDate}
+                    onChange={(e) =>
+                      setReproForm({ ...reproForm, estimatedBirthDate: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Tanggal beranak">
+                  <Input
+                    type="date"
+                    value={reproForm.lambingDate}
+                    onChange={(e) => setReproForm({ ...reproForm, lambingDate: e.target.value })}
+                  />
+                </Field>
+                <Field label="Jumlah anak lahir">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={reproForm.totalLambBorn}
+                    onChange={(e) =>
+                      setReproForm({
+                        ...reproForm,
+                        totalLambBorn: e.target.value.replace(/\D/g, ''),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Jumlah anak disapih">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={reproForm.totalLambWeaned}
+                    onChange={(e) =>
+                      setReproForm({
+                        ...reproForm,
+                        totalLambWeaned: e.target.value.replace(/\D/g, ''),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Total bobot lahir (kg)">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={reproForm.totalBirthWeight}
+                    onChange={(e) =>
+                      setReproForm({
+                        ...reproForm,
+                        totalBirthWeight: sanitizeDecimal(e.target.value),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Total bobot sapih (kg)">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={reproForm.totalWeaningWeight}
+                    onChange={(e) =>
+                      setReproForm({
+                        ...reproForm,
+                        totalWeaningWeight: sanitizeDecimal(e.target.value),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Catatan (opsional)">
+                  <Input
+                    value={reproForm.note}
+                    onChange={(e) => setReproForm({ ...reproForm, note: e.target.value })}
+                  />
+                </Field>
+              </div>
+              {saveButton('Simpan Reproduksi', handleAddReproduction)}
+
+              <h3 className="mb-3 mt-8 text-lg font-semibold text-ink">Riwayat reproduksi</h3>
+              <div className="space-y-2">
+                {reproduction.length === 0 ? (
+                  <p className="text-sm text-ink-muted">Belum ada data reproduksi.</p>
+                ) : (
+                  reproduction.map((item) => (
+                    <HistoryItem
+                      key={item.id}
+                      title={item.maleParent || 'Data reproduksi'}
+                      date={fmtDate(item.matingDate)}
+                      badge={
+                        <Badge variant={getStatusVariant(item.status)}>
+                          {labelStatusReproduksi(item.status)}
+                        </Badge>
+                      }
+                    >
+                      <p>Perkiraan beranak: {fmtDate(item.estimatedBirthDate)}</p>
+                      <p>Tanggal beranak: {fmtDate(item.lambingDate)}</p>
+                      <p>Anak lahir: {item.totalLambBorn ?? '-'}</p>
+                      <p>Anak disapih: {item.totalLambWeaned ?? '-'}</p>
+                      <p>Total bobot lahir: {item.totalBirthWeight ?? '-'}</p>
+                      <p>Total bobot sapih: {item.totalWeaningWeight ?? '-'}</p>
+                      <p>Catatan: {item.note || '-'}</p>
+                    </HistoryItem>
+                  ))
+                )}
+              </div>
+            </Card>
+          )}
         </div>
       </details>
     </>,

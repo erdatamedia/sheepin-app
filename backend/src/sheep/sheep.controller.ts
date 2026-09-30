@@ -17,6 +17,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateSheepDto } from './dto/create-sheep.dto';
 import { RecordStatusEventDto } from './dto/record-status-event.dto';
 import { UpdateSheepDto } from './dto/update-sheep.dto';
+import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
 import { SheepService } from './sheep.service';
 
 @Controller('sheep')
@@ -60,6 +61,17 @@ export class SheepController {
     @CurrentUser() user: { id: string; role: UserRole },
   ) {
     return this.sheepService.findOne(id, user);
+  }
+
+  // Peternak boleh mengganti foto ternaknya sendiri (dicek di service).
+  @Patch(':id/photo')
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  updatePhoto(
+    @Param('id') id: string,
+    @Body() dto: UpdateSheepPhotoDto,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.updatePhoto(id, dto, user);
   }
 
   @Patch(':id')

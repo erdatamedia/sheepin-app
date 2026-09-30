@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSheepDto } from './dto/create-sheep.dto';
 import { RecordStatusEventDto } from './dto/record-status-event.dto';
 import { UpdateSheepDto } from './dto/update-sheep.dto';
+import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
 
 @Injectable()
 export class SheepService {
@@ -213,6 +214,39 @@ export class SheepService {
       message: 'Detail ternak berhasil diambil',
       data: sheep,
     };
+  }
+
+  /**
+   * Ganti atau hapus foto ternak. Peternak hanya boleh untuk ternaknya sendiri;
+   * admin dan petugas untuk semua ternak.
+   */
+  async updatePhoto(
+    id: string,
+    dto: UpdateSheepPhotoDto,
+    user: { id: string; role: UserRole },
+  ) {
+    const sheep = await this.prisma.sheep.findUnique({
+      where: { id },
+      select: { id: true, ownerUserId: true },
+    });
+
+    if (!sheep) {
+      throw new NotFoundException('Data ternak tidak ditemukan');
+    }
+
+    if (user.role === UserRole.FARMER && sheep.ownerUserId !== user.id) {
+      throw new ForbiddenException(
+        'Anda hanya dapat mengubah foto ternak milik Anda sendiri',
+      );
+    }
+
+    const updated = await this.prisma.sheep.update({
+      where: { id },
+      data: { photoUrl: dto.photoUrl || null },
+      select: { id: true, photoUrl: true },
+    });
+
+    return { message: 'Foto ternak berhasil diperbarui', data: updated };
   }
 
   async update(id: string, dto: UpdateSheepDto, userId: string) {

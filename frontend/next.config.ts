@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
       { source: "/uploads/:path*", destination: `${backendUrl}/uploads/:path*` },
     ];
   },
+  images: {
+    // Foto ternak diperkecil dan diubah ke WebP sesuai ukuran layar, lalu disimpan di cache,
+    // sehingga miniatur tidak perlu mengunduh foto HP berukuran beberapa MB.
+    localPatterns: [{ pathname: "/uploads/**", search: "" }],
+    qualities: [60, 75],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
 };
 
 export default nextConfig;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { formatKg, labelTimeAgo } from '@/lib/format';
 import { PawPrint, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
@@ -14,6 +15,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SheepStatusRow } from '@/components/sheep/sheep-status-row';
+import { PhotoGrid, type GalleryItem } from '@/components/sheep/photo-gallery';
+import { PhotoViewer } from '@/components/sheep/photo-viewer';
 import { Avatar } from '@/components/ui/avatar';
 import { ListGroup, ListRow } from '@/components/ui/list-group';
 import { Sheet } from '@/components/ui/sheet';
@@ -86,6 +89,9 @@ export default function SheepPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [ownerFilter, setOwnerFilter] = useState('ALL');
   const [showFilters, setShowFilters] = useState(false);
+  // Tampilan daftar atau foto; diingat di perangkat agar tidak perlu memilih ulang di kandang.
+  const [view, setView] = useState<'LIST' | 'PHOTO'>('LIST');
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
   const [statusView, setStatusView] = useState<'ACTIVE' | 'ALL'>('ACTIVE');
 
@@ -113,6 +119,24 @@ export default function SheepPage() {
       setFailed(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sheepin:sheep-view');
+      if (saved === 'PHOTO' || saved === 'LIST') setView(saved);
+    } catch {
+      // penyimpanan tidak tersedia: tetap pakai tampilan daftar
+    }
+  }, []);
+
+  const changeView = (next: 'LIST' | 'PHOTO') => {
+    setView(next);
+    try {
+      localStorage.setItem('sheepin:sheep-view', next);
+    } catch {
+      // abaikan
     }
   };
 
@@ -258,6 +282,25 @@ export default function SheepPage() {
         ? filteredMySheep.filter((item) => item.status === 'ACTIVE')
         : filteredMySheep;
 
+    const farmerGallery: GalleryItem[] = shownMySheep.map((item) => ({
+      id: item.id,
+      code: item.sheepCode,
+      name: item.name,
+      photoUrl: item.photoUrl,
+      subtitle: [
+        item.latestWeight ? formatKg(item.latestWeight.weightKg) : null,
+        `dicatat ${labelTimeAgo(item.lastRecordedAt)}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      alert:
+        item.status !== 'ACTIVE'
+          ? labelStatusTernak(item.status)
+          : item.latestHealth?.healthStatus === 'SICK'
+            ? 'Sakit'
+            : undefined,
+    }));
+
     return (
       <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
         <DashboardShell>
@@ -273,15 +316,26 @@ export default function SheepPage() {
 
           <div className="mb-4 space-y-3">
             <div className="flex gap-2">{searchField('Cari kode, nama, atau jenis')}</div>
-            <Segmented
-              label="Tampilkan"
-              value={statusView}
-              onChange={(value) => setStatusView(value as 'ACTIVE' | 'ALL')}
-              options={[
-                { value: 'ACTIVE', label: 'Aktif' },
-                { value: 'ALL', label: 'Semua' },
-              ]}
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <Segmented
+                label="Tampilkan"
+                value={statusView}
+                onChange={(value) => setStatusView(value as 'ACTIVE' | 'ALL')}
+                options={[
+                  { value: 'ACTIVE', label: 'Aktif' },
+                  { value: 'ALL', label: 'Semua' },
+                ]}
+              />
+              <Segmented
+                label="Tampilan"
+                value={view}
+                onChange={(value) => changeView(value as 'LIST' | 'PHOTO')}
+                options={[
+                  { value: 'LIST', label: 'Daftar' },
+                  { value: 'PHOTO', label: 'Foto' },
+                ]}
+              />
+            </div>
           </div>
 
           {loading ? (
@@ -316,6 +370,8 @@ export default function SheepPage() {
                 </Button>
               }
             />
+          ) : view === 'PHOTO' ? (
+            <PhotoGrid items={farmerGallery} onOpen={setViewerIndex} />
           ) : (
             <ListGroup className="lg:max-w-3xl">
               {shownMySheep.map((item) => (
@@ -323,10 +379,28 @@ export default function SheepPage() {
               ))}
             </ListGroup>
           )}
+
+          {viewerIndex !== null && (
+            <PhotoViewer
+              items={farmerGallery}
+              index={Math.min(viewerIndex, farmerGallery.length - 1)}
+              onIndexChange={setViewerIndex}
+              onClose={() => setViewerIndex(null)}
+            />
+          )}
         </DashboardShell>
       </RoleGuard>
     );
   }
+
+  const staffGallery: GalleryItem[] = filteredData.map((item) => ({
+    id: item.id,
+    code: item.sheepCode,
+    name: item.name,
+    photoUrl: item.photoUrl,
+    subtitle: [item.breed, item.ownerUser?.name].filter(Boolean).join(' · '),
+    alert: item.status !== 'ACTIVE' ? labelStatusTernak(item.status) : undefined,
+  }));
 
   return (
     <RoleGuard allowedRoles={['ADMIN', 'OFFICER', 'FARMER']}>
@@ -339,7 +413,7 @@ export default function SheepPage() {
 
         {createForm}
 
-        <div className="mb-4 flex gap-2">
+        <div className="mb-3 flex gap-2">
           {searchField('Cari kode, nama, jenis, atau pemilik')}
           <Button
             variant={activeFilterCount ? 'solid' : 'tinted'}
@@ -349,6 +423,18 @@ export default function SheepPage() {
             <SlidersHorizontal size={18} aria-hidden="true" />
             Filter{activeFilterCount ? ` (${activeFilterCount})` : ''}
           </Button>
+        </div>
+
+        <div className="mb-4 max-w-xs">
+          <Segmented
+            label="Tampilan"
+            value={view}
+            onChange={(value) => changeView(value as 'LIST' | 'PHOTO')}
+            options={[
+              { value: 'LIST', label: 'Daftar' },
+              { value: 'PHOTO', label: 'Foto' },
+            ]}
+          />
         </div>
 
         <Sheet open={showFilters} onClose={() => setShowFilters(false)} title="Filter ternak">
@@ -431,27 +517,44 @@ export default function SheepPage() {
             <p className="mb-2 px-1 text-[13px] text-ink-muted">
               Menampilkan {filteredData.length} dari {data.length} ternak
             </p>
-            <ListGroup>
-              {filteredData.map((item) => (
-                <ListRow
-                  key={item.id}
-                  href={`/sheep/${item.id}`}
-                  leading={
-                    <Avatar name={item.name || item.sheepCode} photoUrl={item.photoUrl} size="md" />
-                  }
-                  title={item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode}
-                  subtitle={[item.breed, labelJenisKelamin(item.gender), item.ownerUser?.name]
-                    .filter(Boolean)
-                    .join(' · ')}
-                  trailing={
-                    <Badge variant={getStatusVariant(item.status)}>
-                      {labelStatusTernak(item.status)}
-                    </Badge>
-                  }
-                />
-              ))}
-            </ListGroup>
+            {view === 'PHOTO' ? (
+              <PhotoGrid items={staffGallery} onOpen={setViewerIndex} />
+            ) : (
+              <ListGroup>
+                {filteredData.map((item) => (
+                  <ListRow
+                    key={item.id}
+                    href={`/sheep/${item.id}`}
+                    leading={
+                      <Avatar
+                        name={item.name || item.sheepCode}
+                        photoUrl={item.photoUrl}
+                        size="md"
+                      />
+                    }
+                    title={item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode}
+                    subtitle={[item.breed, labelJenisKelamin(item.gender), item.ownerUser?.name]
+                      .filter(Boolean)
+                      .join(' · ')}
+                    trailing={
+                      <Badge variant={getStatusVariant(item.status)}>
+                        {labelStatusTernak(item.status)}
+                      </Badge>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            )}
           </>
+        )}
+
+        {viewerIndex !== null && (
+          <PhotoViewer
+            items={staffGallery}
+            index={Math.min(viewerIndex, staffGallery.length - 1)}
+            onIndexChange={setViewerIndex}
+            onClose={() => setViewerIndex(null)}
+          />
         )}
       </DashboardShell>
     </RoleGuard>

@@ -1,5 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
-import { mediaUrl } from '@/lib/media';
+import { SheepPhoto } from '@/components/sheep/sheep-photo';
 import { cn } from '@/lib/utils';
 
 type AvatarProps = {
@@ -16,6 +15,8 @@ const sizes = {
   xl: 'h-20 w-20 text-[28px]',
 };
 
+const photoSizes = { sm: '36px', md: '44px', lg: '64px', xl: '80px' };
+
 function initials(name: string) {
   return name
     .split(' ')
@@ -26,14 +27,18 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-/** Foto profil bulat; bila tidak ada, inisial di atas warna pastel. */
+/** Foto profil bulat (miniatur teroptimasi); bila tidak ada, inisial di atas warna pastel. */
 export function Avatar({ name, photoUrl, size = 'md', className }: AvatarProps) {
   return photoUrl ? (
-    <img
-      src={mediaUrl(photoUrl)}
-      alt={name}
-      className={cn('shrink-0 rounded-full border border-line object-cover', sizes[size], className)}
-    />
+    <span
+      className={cn(
+        'relative block shrink-0 overflow-hidden rounded-full border border-line',
+        sizes[size],
+        className,
+      )}
+    >
+      <SheepPhoto photoUrl={photoUrl} alt={name} sizes={photoSizes[size]} />
+    </span>
   ) : (
     <div
       aria-hidden="true"

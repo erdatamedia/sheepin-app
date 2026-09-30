@@ -52,3 +52,16 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Tombol utama bergradien coklat dengan garis terang di tepi atas; teks putih terbaca di atas maupun di bawah.
 - [ ] Gulir panjang (daftar ternak, linimasa) tetap mulus di HP Anda. Bila tersendat, catat tipe HP-nya.
 - [ ] Pengaturan "kurangi transparansi" aktif: panel berubah solid, tetap terbaca.
+
+## Foto ternak dan form (perbaikan dari uji lapangan)
+- [ ] **Keyboard tetap muncul** saat mengetik di form *Tambah ternak*, *Daftarkan peternak*, dan *Ubah data peternak*: bisa mengetik beberapa huruf berturut-turut tanpa mengetuk kolom lagi.
+- [ ] Halaman **Ternak**: tombol **Daftar / Foto**. Pilihan diingat setelah halaman ditutup dan dibuka lagi.
+- [ ] Tampilan **Foto**: kisi 3 kolom; kode ternak besar di atas foto; penanda **Sakit** merah; ternak tanpa foto menampilkan inisial dan ikon kamera.
+- [ ] Mengetuk foto membuka **layar penuh**: geser kiri-kanan (atau panah) pindah ke ternak berikutnya, angka "3 / 24" berubah, perpindahan terasa instan.
+- [ ] Di layar penuh: tombol **Catat** membuka catatan ternak itu, **Detail** membuka halaman ternak, **X** menutup.
+- [ ] Pencarian kode tetap bekerja di tampilan Foto (ketik "014" lalu foto yang cocok saja yang tersisa).
+- [ ] Foto pertama kali dibuka mungkin sedikit lambat (dibuat miniaturnya); pembukaan berikutnya cepat.
+- [ ] Detail ternak: ketuk foto bulat memperbesarnya; baris **Foto ternak → Tambah/Ganti foto** membuka kamera atau galeri.
+- [ ] **Peternak** dapat menambah atau mengganti foto ternaknya sendiri (sebelumnya hanya petugas).
+- [ ] Unggah foto dari kamera HP terasa cepat (foto diperkecil dulu sebelum dikirim).
+- [ ] Halaman **Catat → pilih ternak** menampilkan foto kecil di samping tiap ternak.

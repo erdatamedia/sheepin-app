@@ -432,7 +432,13 @@ export default function RecordingPage() {
                     {filteredSheep.map((item) => (
                       <ListRow
                         key={item.id}
-                        leading={<Avatar name={item.name || item.sheepCode} size="md" />}
+                        leading={
+                          <Avatar
+                            name={item.name || item.sheepCode}
+                            photoUrl={item.photoUrl}
+                            size="md"
+                          />
+                        }
                         title={sheepTitle(item)}
                         subtitle={[item.breed, item.ownerUser?.name].filter(Boolean).join(' · ')}
                         onClick={() => {
