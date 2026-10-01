@@ -97,16 +97,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Sidebar desktop */}
         <aside className="print:hidden hidden w-[17rem] shrink-0 glass-bar-right p-5 xl:w-[19rem] xl:p-6 md:flex md:flex-col">
           <div className="mb-6">
-            <div className="glass inline-flex rounded-[var(--radius-card)] px-3 py-2">
+            <Link href="/dashboard" className="flex items-center gap-2.5" aria-label="Sheep-In, beranda">
               <Image
-                src="/sheepin-logo.png"
-                alt="Sheep-In"
-                width={180}
-                height={54}
+                src="/icons/icon-192.png"
+                alt=""
+                width={44}
+                height={44}
+                unoptimized
                 priority
-                className="h-9 w-auto object-contain"
+                className="h-11 w-11 rounded-[12px] shadow-[var(--shadow-accent)]"
               />
-            </div>
+              <span className="text-2xl font-semibold tracking-tight text-ink">Sheep-In</span>
+            </Link>
 
             {me && (
               <Link
