@@ -155,7 +155,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <main className="min-w-0 flex-1 px-4 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] md:p-8 lg:px-12 lg:py-10">
-          <div className="mx-auto max-w-[90rem]">{children}</div>
+          <div key={pathname} className="page-enter mx-auto max-w-[90rem]">
+            {children}
+          </div>
         </main>
       </div>
 

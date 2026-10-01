@@ -252,3 +252,21 @@ body::before {
     font-size: 18px;
   }
 }
+
+/*
+ * Transisi antar halaman: isi halaman muncul dengan pudar. Bilah navigasi tetap diam.
+ * Sengaja tanpa transform: elemen ber-transform menjadi acuan elemen fixed (bilah simpan, lembar)
+ * sehingga posisinya akan melompat selama animasi.
+ */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility page-enter {
+  animation: pageIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
