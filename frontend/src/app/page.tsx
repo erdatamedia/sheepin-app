@@ -166,13 +166,13 @@ export default function HomePage() {
 
           {/* Komposisi domba */}
           <div aria-hidden="true" className="relative mx-auto h-[19rem] w-full max-w-xl sm:h-[26rem] lg:h-[34rem] lg:max-w-none">
-            <LineSheep className="parallax absolute right-0 top-[8%] w-[92%] opacity-[0.55]" style={{ '--d': 26, '--r': '-3deg' } as React.CSSProperties} />
+            <LineSheep className="parallax absolute right-0 top-[8%] w-[92%] opacity-[0.42]" style={{ '--d': 26, '--r': '-3deg' } as React.CSSProperties} />
             <NoteCard
               className="parallax absolute bottom-[6%] left-0 sm:left-[4%]"
               style={{ '--d': 46, '--r': '-2deg' } as React.CSSProperties}
             />
             <WoolSheep
-              className="parallax absolute right-[4%] top-0 w-24 text-primary/25 sm:w-32"
+              className="parallax absolute -top-2 left-[6%] w-20 text-primary/20 sm:w-28"
               style={{ '--d': 38, '--r': '4deg' } as React.CSSProperties}
             />
           </div>
