@@ -17,6 +17,7 @@ import { RecordStatusEventDto } from './dto/record-status-event.dto';
 import { UpdateSheepDto } from './dto/update-sheep.dto';
 import { SetSheepPhotoDto } from './dto/set-sheep-photo.dto';
 import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
+import { UpdateSheepAboutDto } from './dto/update-sheep-about.dto';
 import { UpdateSheepTraitsDto } from './dto/update-sheep-traits.dto';
 
 /** Urutan sudut di pelihat: wajah dan hidung selalu pertama (pratinjau utama). */
@@ -381,6 +382,62 @@ export class SheepService {
     });
 
     return { message: 'Ciri ternak berhasil diperbarui', data: updated };
+  }
+
+  /** Data "tentang ternak" (opsional); peternak hanya untuk ternak miliknya. */
+  async updateAbout(
+    id: string,
+    dto: UpdateSheepAboutDto,
+    user: { id: string; role: UserRole },
+  ) {
+    await this.loadForPhotoEdit(id, user);
+
+    const text = (value: string | undefined) =>
+      value === undefined ? undefined : value || null;
+
+    if (dto.breed !== undefined && !dto.breed) {
+      throw new BadRequestException('Jenis / rumpun tidak boleh kosong');
+    }
+
+    const updated = await this.prisma.sheep.update({
+      where: { id },
+      data: {
+        name: text(dto.name),
+        breed: dto.breed,
+        birthDate:
+          dto.birthDate === undefined
+            ? undefined
+            : dto.birthDate
+              ? new Date(dto.birthDate)
+              : null,
+        color: text(dto.color),
+        location: text(dto.location),
+        sireId: text(dto.sireId),
+        damId: text(dto.damId),
+      },
+      select: {
+        id: true,
+        sheepCode: true,
+        name: true,
+        breed: true,
+        birthDate: true,
+        color: true,
+        location: true,
+        sireId: true,
+        damId: true,
+      },
+    });
+
+    await this.prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        sheepId: id,
+        action: 'UPDATE_SHEEP',
+        description: `Memperbarui keterangan ternak ${updated.sheepCode}`,
+      },
+    });
+
+    return { message: 'Keterangan ternak berhasil diperbarui', data: updated };
   }
 
   /**

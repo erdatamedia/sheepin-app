@@ -24,6 +24,7 @@ import { Sheet } from '@/components/ui/sheet';
 import {
   AddSheepForm,
   emptySheepForm,
+  sheepPayload,
   type SheepFormState,
 } from '@/components/sheep/add-sheep-form';
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -222,9 +223,8 @@ export default function SheepPage() {
       setFormError('');
 
       await api.post('/sheep', {
-        ...form,
+        ...sheepPayload(form),
         status: 'ACTIVE',
-        photoUrl: form.photoUrl || undefined,
         ownerUserId:
           me?.role === 'ADMIN' || me?.role === 'OFFICER'
             ? form.ownerUserId || undefined

@@ -26,6 +26,7 @@ import { RecordStatusEventDto } from './dto/record-status-event.dto';
 import { UpdateSheepDto } from './dto/update-sheep.dto';
 import { SetSheepPhotoDto } from './dto/set-sheep-photo.dto';
 import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
+import { UpdateSheepAboutDto } from './dto/update-sheep-about.dto';
 import { UpdateSheepTraitsDto } from './dto/update-sheep-traits.dto';
 import { SheepService } from './sheep.service';
 
@@ -121,6 +122,16 @@ export class SheepController {
     @CurrentUser() user: { id: string; role: UserRole },
   ) {
     return this.sheepService.updatePhoto(id, dto, user);
+  }
+
+  @Patch(':id/about')
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  updateAbout(
+    @Param('id') id: string,
+    @Body() dto: UpdateSheepAboutDto,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.updateAbout(id, dto, user);
   }
 
   @Patch(':id')

@@ -1,9 +1,14 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SheepPhotoAngle, UserRole } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { SetSheepPhotoDto } from './dto/set-sheep-photo.dto';
 import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
+import { UpdateSheepAboutDto } from './dto/update-sheep-about.dto';
 import { UpdateSheepTraitsDto } from './dto/update-sheep-traits.dto';
 import { SheepService } from './sheep.service';
 
@@ -283,6 +288,90 @@ describe('SheepService.updateTraits', () => {
     expect(state.sheep?.physicalMark).toBeNull();
     expect(state.sheep?.tailBody).toBe('ekor gemuk'); // tidak dikirim -> tetap
     expect(result.data.faceNose).toBe('hidung cembung');
+  });
+});
+
+describe('SheepService.updateAbout', () => {
+  const build = (ownerUserId = 'f1') => {
+    const row: Record<string, unknown> = {
+      id: 's1',
+      sheepCode: 'DMB-1',
+      ownerUserId,
+      photoUrl: null,
+      name: 'Lama',
+      breed: 'Garut',
+      birthDate: new Date('2026-01-01'),
+      color: 'putih',
+      location: 'kandang A',
+      sireId: null,
+      damId: null,
+    };
+    const prisma = {
+      sheep: {
+        findUnique: jest.fn(() => Promise.resolve({ ...row })),
+        update: jest.fn((args: { data: Record<string, unknown> }) => {
+          for (const [k, v] of Object.entries(args.data)) {
+            if (v !== undefined) row[k] = v;
+          }
+          return Promise.resolve({ ...row });
+        }),
+      },
+      activityLog: { create: jest.fn(() => Promise.resolve({})) },
+    };
+    return { service: new SheepService(prisma as never), prisma, row };
+  };
+
+  it('peternak mengisi keterangan ternaknya; kosong menghapus; tidak dikirim tidak berubah', async () => {
+    const { service, row, prisma } = build();
+    await service.updateAbout(
+      's1',
+      {
+        birthDate: '2026-03-15',
+        sireId: 'DMB-009',
+        damId: 'Si Betina',
+        color: '',
+      },
+      farmer,
+    );
+    expect(row.birthDate).toEqual(new Date('2026-03-15'));
+    expect(row.sireId).toBe('DMB-009');
+    expect(row.damId).toBe('Si Betina');
+    expect(row.color).toBeNull();
+    expect(row.location).toBe('kandang A');
+    expect(prisma.activityLog.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('tanggal lahir kosong menghapus', async () => {
+    const { service, row } = build();
+    await service.updateAbout('s1', { birthDate: '' }, farmer);
+    expect(row.birthDate).toBeNull();
+  });
+
+  it('peternak tidak boleh mengubah ternak orang lain', async () => {
+    const { service, prisma } = build('f2');
+    await expect(
+      service.updateAbout('s1', { color: 'hitam' }, farmer),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.sheep.update).not.toHaveBeenCalled();
+  });
+
+  it('petugas boleh; jenis tidak boleh dikosongkan', async () => {
+    const { service } = build('f2');
+    await expect(
+      service.updateAbout('s1', { color: 'hitam' }, officer),
+    ).resolves.toBeDefined();
+    await expect(
+      service.updateAbout('s1', { breed: '' }, officer),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('DTO menolak tanggal lahir tidak valid dan menerima kosong', async () => {
+    const bad = plainToInstance(UpdateSheepAboutDto, {
+      birthDate: '15/03/2026',
+    });
+    expect(await validate(bad)).not.toHaveLength(0);
+    const empty = plainToInstance(UpdateSheepAboutDto, { birthDate: '' });
+    expect(await validate(empty)).toHaveLength(0);
   });
 });
 

@@ -98,3 +98,11 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Ubah periode (tanggal atau 30 hari/90 hari/1 tahun) memperbarui angka dan lencana.
 - [ ] **Bagikan rapor** menghasilkan kartu peternak; periksa tidak ada nomor HP, alamat lengkap, atau koordinat pada kartu.
 - [ ] Catat satu timbangan hari ini lalu buka Prestasi: runtun bertambah. Tidak mengisi hari ini tidak memutus runtun sampai besok.
+
+## Tentang ternak (opsional) saat tambah dan oleh peternak
+
+- [ ] Tambah ternak: bagian **Tentang ternak ini** tertutup secara bawaan; membuka menampilkan tanggal lahir, warna, lokasi/kandang, pejantan, dan induk. Simpan tanpa mengisinya tetap berhasil.
+- [ ] Isi sebagian lalu simpan: data tampil di detail ternak; kolom yang dikosongkan tidak menimbulkan galat (tidak ada "birthDate must be a valid ISO 8601").
+- [ ] Peternak: detail ternak → baris **Tentang ternak ini** bisa diketuk, lembar terbuka; ubah tanggal lahir, warna, lokasi, pejantan, induk lalu simpan; muncul toast "tersimpan".
+- [ ] Mengosongkan isian lalu simpan menghapus nilainya (baris kembali "Belum diisi"). Mengosongkan Jenis / rumpun ditolak.
+- [ ] Peternak tidak bisa mengubah ternak milik peternak lain (API 403).

@@ -39,6 +39,7 @@ import { StatTile } from '@/components/ui/stat-tile';
 import { ProgressTimeline } from '@/components/sheep/progress-timeline';
 import { WeightChart } from '@/components/sheep/weight-chart';
 import { averageDailyGainGrams, bcsLabel } from '@/lib/progress';
+import { AboutSheet } from '@/components/sheep/about-sheet';
 import { ShareSheet } from '@/components/share/share-sheet';
 import { renderSheepCard, type SheepCardData } from '@/lib/share-card';
 import { formatDiff, formatKg, labelTimeAgo } from '@/lib/format';
@@ -193,6 +194,7 @@ export default function SheepDetailPage() {
   const [viewSlide, setViewSlide] = useState(0);
   const [showTraits, setShowTraits] = useState(false);
   const [showCard, setShowCard] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [cardRange, setCardRange] = useState<'30' | '90' | 'all'>('90');
   const [cardFarmer, setCardFarmer] = useState(true);
   const [photos, setPhotos] = useState<SheepPhotoSlide[]>([]);
@@ -824,6 +826,16 @@ export default function SheepDetailPage() {
         />
       )}
 
+      {showAbout && (
+        <AboutSheet
+          sheepId={sheep.id}
+          initial={sheep}
+          onClose={() => setShowAbout(false)}
+          onSaved={fetchAll}
+          notify={notify}
+        />
+      )}
+
       {showTraits && (
         <TraitsSheet
           sheepId={sheep.id}
@@ -883,18 +895,27 @@ export default function SheepDetailPage() {
   );
 
   const info = (
-    <ListGroup header="Tentang ternak ini" className="mb-6">
-      <ListRow title="Jenis / rumpun" value={sheep.breed} />
+    <ListGroup
+      header="Tentang ternak ini"
+      footer="Ketuk baris untuk mengisi atau mengubah. Semuanya opsional."
+      className="mb-6"
+    >
+      <ListRow title="Nama" value={sheep.name || 'Belum diisi'} onClick={() => setShowAbout(true)} />
+      <ListRow title="Jenis / rumpun" value={sheep.breed} onClick={() => setShowAbout(true)} />
       <ListRow title="Jenis kelamin" value={labelJenisKelamin(sheep.gender)} />
-      <ListRow title="Lokasi" value={sheep.location || '-'} />
-      <ListRow title="Warna" value={sheep.color || '-'} />
-      <ListRow title="Tanggal lahir" value={fmtDate(sheep.birthDate)} />
+      <ListRow
+        title="Tanggal lahir"
+        value={sheep.birthDate ? fmtDate(sheep.birthDate) : 'Belum diisi'}
+        onClick={() => setShowAbout(true)}
+      />
+      <ListRow title="Warna" value={sheep.color || 'Belum diisi'} onClick={() => setShowAbout(true)} />
+      <ListRow title="Lokasi / kandang" value={sheep.location || 'Belum diisi'} onClick={() => setShowAbout(true)} />
+      <ListRow title="Pejantan / ayah" value={sheep.sireId || 'Belum diisi'} onClick={() => setShowAbout(true)} />
+      <ListRow title="Induk / ibu" value={sheep.damId || 'Belum diisi'} onClick={() => setShowAbout(true)} />
       {!isFarmer && (
         <>
           <ListRow title="Pemilik" value={sheep.ownerUser?.name || '-'} />
           <ListRow title="Dibuat oleh" value={sheep.createdBy?.name || '-'} />
-          <ListRow title="Sire ID" value={sheep.sireId || '-'} />
-          <ListRow title="Dam ID" value={sheep.damId || '-'} />
         </>
       )}
     </ListGroup>

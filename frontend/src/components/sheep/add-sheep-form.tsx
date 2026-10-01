@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +17,12 @@ export type SheepFormState = {
   gender: string;
   photoUrl: string;
   ownerUserId: string;
+  // Tentang ternak (semua opsional)
+  birthDate: string;
+  color: string;
+  location: string;
+  sireId: string;
+  damId: string;
 };
 
 export const emptySheepForm: SheepFormState = {
@@ -22,7 +32,19 @@ export const emptySheepForm: SheepFormState = {
   gender: 'MALE',
   photoUrl: '',
   ownerUserId: '',
+  birthDate: '',
+  color: '',
+  location: '',
+  sireId: '',
+  damId: '',
 };
+
+/** Isian opsional yang kosong dibuang agar tidak ditolak validasi server. */
+export function sheepPayload(form: SheepFormState) {
+  return Object.fromEntries(
+    Object.entries(form).filter(([, value]) => typeof value !== 'string' || value.trim() !== ''),
+  );
+}
 
 type AddSheepFormProps = {
   form: SheepFormState;
@@ -55,6 +77,8 @@ export function AddSheepForm({
   description,
   farmers,
 }: AddSheepFormProps) {
+  const [showAbout, setShowAbout] = useState(false);
+
   return (
     <Sheet open onClose={onCancel} title="Tambah ternak baru">
       <div className="space-y-5">
@@ -112,6 +136,66 @@ export function AddSheepForm({
               { value: 'FEMALE', label: 'Betina' },
             ]}
           />
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowAbout((v) => !v)}
+            aria-expanded={showAbout}
+            className="glass flex min-h-12 w-full items-center justify-between rounded-[var(--radius-control)] px-4 text-left"
+          >
+            <span>
+              <span className="block text-[15px] font-semibold text-ink">Tentang ternak ini</span>
+              <span className="block text-[13px] text-ink-muted">Opsional, boleh dilengkapi nanti</span>
+            </span>
+            <ChevronDown
+              size={20}
+              aria-hidden="true"
+              className={showAbout ? 'rotate-180 text-ink-muted transition' : 'text-ink-muted transition'}
+            />
+          </button>
+
+          {showAbout && (
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <Field label="Tanggal lahir">
+                <Input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) => onChange({ ...form, birthDate: e.target.value })}
+                />
+              </Field>
+              <Field label="Warna">
+                <Input
+                  placeholder="Contoh: putih, cokelat bercak"
+                  value={form.color}
+                  onChange={(e) => onChange({ ...form, color: e.target.value })}
+                />
+              </Field>
+              <Field label="Lokasi / kandang">
+                <Input
+                  placeholder="Contoh: Kandang B"
+                  value={form.location}
+                  onChange={(e) => onChange({ ...form, location: e.target.value })}
+                />
+              </Field>
+              <div className="hidden md:block" />
+              <Field label="Pejantan / ayah">
+                <Input
+                  placeholder="Kode atau nama ternak"
+                  value={form.sireId}
+                  onChange={(e) => onChange({ ...form, sireId: e.target.value })}
+                />
+              </Field>
+              <Field label="Induk / ibu">
+                <Input
+                  placeholder="Kode atau nama ternak"
+                  value={form.damId}
+                  onChange={(e) => onChange({ ...form, damId: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
         </div>
 
         <PhotoUploadField
