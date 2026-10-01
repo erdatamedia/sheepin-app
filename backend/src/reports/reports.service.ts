@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportQueryDto } from './dto/report-query.dto';
+import { buildBadges, currentStreak } from './achievements';
 import {
   ageInMonths,
   averageDailyGainGrams,
@@ -317,6 +318,101 @@ export class ReportsService {
       growth: { summary: growthSummary, rows: growth },
       health: healthReport,
       reproduction,
+    };
+  }
+
+  /** Apresiasi untuk satu peternak: jumlah catatan, hari aktif, runtun hari, lencana, ternak terbaik. */
+  async achievements(farmerId: string, query: ReportQueryDto) {
+    const overview = await this.overview({ ...query, farmerId });
+    const from = new Date(`${overview.period.from}T00:00:00.000Z`);
+    const toExclusive = new Date(
+      new Date(`${overview.period.to}T00:00:00.000Z`).getTime() + DAY_MS,
+    );
+    const sheepWhere = { ownerUserId: farmerId };
+
+    const [farmer, weights, bcs, health] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: farmerId },
+        select: { name: true, groupName: true, regency: true, village: true },
+      }),
+      this.prisma.sheepWeight.findMany({
+        where: { sheep: sheepWhere },
+        select: { sheepId: true, recordDate: true },
+      }),
+      this.prisma.sheepBCS.findMany({
+        where: { sheep: sheepWhere },
+        select: { sheepId: true, recordDate: true },
+      }),
+      this.prisma.sheepHealth.findMany({
+        where: { sheep: sheepWhere },
+        select: { sheepId: true, checkDate: true },
+      }),
+    ]);
+
+    const day = (d: Date) => d.toISOString().slice(0, 10);
+    const allDays = new Set<string>();
+    const periodDays = new Set<string>();
+    const recordedSheep = new Set<string>();
+    const note = (sheepId: string, d: Date) => {
+      const key = day(d);
+      allDays.add(key);
+      if (d >= from && d < toExclusive) {
+        periodDays.add(key);
+        recordedSheep.add(sheepId);
+      }
+    };
+    weights.forEach((r) => note(r.sheepId, r.recordDate));
+    bcs.forEach((r) => note(r.sheepId, r.recordDate));
+    health.forEach((r) => note(r.sheepId, r.checkDate));
+
+    // "Hari ini" menurut WIB (UTC+7), karena peternak mengisi data dengan tanggal lokal.
+    const todayWib = day(new Date(Date.now() + 7 * 60 * 60 * 1000));
+    const streakDays = currentStreak(allDays, todayWib);
+    const lastRecordDate = [...allDays].sort().pop() ?? null;
+
+    const activeSheep =
+      overview.population.byStatus.find((x) => x.label === 'ACTIVE')?.total ??
+      0;
+    const totals = overview.activity.totals;
+    const totalRecords = totals.weights + totals.bcs + totals.health;
+
+    const badges = buildBadges({
+      totalRecords,
+      weighings: totals.weights,
+      streakDays,
+      activeDays: periodDays.size,
+      healthChecks: overview.health.checks,
+      sickNow: overview.health.sickNow.length,
+      averageAdgGrams: overview.growth.summary.averageAdgGrams,
+      activeSheep,
+      sheepRecordedInPeriod: recordedSheep.size,
+    });
+
+    return {
+      period: overview.period,
+      farmer: farmer ?? null,
+      sheep: {
+        total: overview.population.total,
+        active: activeSheep,
+        recordedInPeriod: recordedSheep.size,
+      },
+      records: { ...totals, total: totalRecords },
+      activeDays: periodDays.size,
+      streakDays,
+      lastRecordDate,
+      growth: overview.growth.summary,
+      topGrowers: overview.growth.rows
+        .filter((r) => r.adgGrams !== null)
+        .slice(0, 3)
+        .map((r) => ({
+          sheepCode: r.sheepCode,
+          name: r.name,
+          adgGrams: r.adgGrams,
+          lastWeightKg: r.lastWeightKg,
+        })),
+      sickNow: overview.health.sickNow.length,
+      badges,
+      earnedBadges: badges.filter((b) => b.earned).length,
     };
   }
 }

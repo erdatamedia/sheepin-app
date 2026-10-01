@@ -9,6 +9,7 @@ import {
   CircleX,
   CirclePlus,
   Heart,
+  Share2,
   PencilLine,
   PawPrint,
   Sparkles,
@@ -37,7 +38,9 @@ import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
 import { StatTile } from '@/components/ui/stat-tile';
 import { ProgressTimeline } from '@/components/sheep/progress-timeline';
 import { WeightChart } from '@/components/sheep/weight-chart';
-import { bcsLabel } from '@/lib/progress';
+import { averageDailyGainGrams, bcsLabel } from '@/lib/progress';
+import { ShareSheet } from '@/components/share/share-sheet';
+import { renderSheepCard, type SheepCardData } from '@/lib/share-card';
 import { formatDiff, formatKg, labelTimeAgo } from '@/lib/format';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { cn, sanitizeDecimal } from '@/lib/utils';
@@ -189,6 +192,9 @@ export default function SheepDetailPage() {
   const [showPhoto, setShowPhoto] = useState(false);
   const [viewSlide, setViewSlide] = useState(0);
   const [showTraits, setShowTraits] = useState(false);
+  const [showCard, setShowCard] = useState(false);
+  const [cardRange, setCardRange] = useState<'30' | '90' | 'all'>('90');
+  const [cardFarmer, setCardFarmer] = useState(true);
   const [photos, setPhotos] = useState<SheepPhotoSlide[]>([]);
   const [showEdit, setShowEdit] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -300,6 +306,50 @@ export default function SheepDetailPage() {
   const latestWeight = useMemo(() => weights[0], [weights]);
   const latestBcs = useMemo(() => bcs[0], [bcs]);
   const latestHealth = useMemo(() => health[0], [health]);
+
+  // Data kartu digital: periode dipilih pengguna, nilai dihitung dari catatan yang sudah dimuat.
+  const cardData = useMemo<SheepCardData | null>(() => {
+    if (!sheep) return null;
+    const sorted = [...weights]
+      .map((w) => ({ date: w.recordDate.slice(0, 10), weightKg: w.weightKg }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const lastDate = sorted.length ? new Date(sorted[sorted.length - 1].date) : new Date();
+    const days = cardRange === 'all' ? null : Number(cardRange);
+    const series = days
+      ? sorted.filter((w) => new Date(w.date).getTime() >= lastDate.getTime() - days * 86400000)
+      : sorted;
+    const months = sheep.birthDate
+      ? Math.max(
+          0,
+          Math.floor((Date.now() - new Date(sheep.birthDate).getTime()) / (30.44 * 86400000)),
+        )
+      : null;
+    const farmerName = sheep.ownerUser?.name;
+    return {
+      code: sheep.sheepCode,
+      name: sheep.name,
+      breed: sheep.breed,
+      genderLabel: labelJenisKelamin(sheep.gender),
+      ageLabel: months === null ? null : months >= 12 ? `${Math.floor(months / 12)} th ${months % 12} bln` : `${months} bln`,
+      statusLabel: labelStatusTernak(sheep.status),
+      photoUrl: sheep.photoUrl,
+      farmerLine:
+        cardFarmer && farmerName
+          ? `Peternak: ${farmerName}${sheep.ownerUser?.groupName ? ` · ${sheep.ownerUser.groupName}` : ''}`
+          : null,
+      periodLabel: cardRange === 'all' ? 'Semua waktu' : `${cardRange} hari terakhir`,
+      latestWeightKg: sorted.length ? sorted[sorted.length - 1].weightKg : null,
+      adgGrams: averageDailyGainGrams(series),
+      gainKg:
+        series.length >= 2
+          ? Math.round((series[series.length - 1].weightKg - series[0].weightKg) * 10) / 10
+          : null,
+      bcs: latestBcs?.bcsScore ?? null,
+      bcsLabel: latestBcs ? bcsLabel(latestBcs.bcsScore) : null,
+      healthLabel: latestHealth ? labelStatusKesehatan(latestHealth.healthStatus) : null,
+      series,
+    };
+  }, [sheep, weights, cardRange, cardFarmer, latestBcs, latestHealth]);
   const latestReproduction = useMemo(() => reproduction[0], [reproduction]);
 
   const canManageIdentity = me?.role === 'ADMIN' || me?.role === 'OFFICER';
@@ -619,6 +669,13 @@ export default function SheepDetailPage() {
               </Badge>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => setShowCard(true)}
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/60 bg-primary-soft/80 px-4 text-[15px] font-semibold text-primary-strong active:brightness-95"
+          >
+            <Share2 size={18} aria-hidden="true" /> Kartu digital
+          </button>
         </div>
       </div>
     </div>
@@ -713,6 +770,57 @@ export default function SheepDetailPage() {
           initialSlide={viewSlide}
           onIndexChange={() => undefined}
           onClose={() => setShowPhoto(false)}
+        />
+      )}
+
+      {cardData && (
+        <ShareSheet
+          open={showCard}
+          onClose={() => setShowCard(false)}
+          title={`Kartu ${sheep.sheepCode}`}
+          filename={`kartu-${sheep.sheepCode}.png`}
+          message={`Kartu digital ${sheep.sheepCode} dari Sheep-In`}
+          render={() => renderSheepCard(cardData)}
+          renderKey={`${cardRange}|${cardFarmer}|${sheep.updatedAt}|${weights.length}|${sheep.photoUrl ?? ''}`}
+          options={
+            <div className="grid gap-3">
+              <div role="radiogroup" aria-label="Periode kartu" className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ['30', '30 hari'],
+                    ['90', '90 hari'],
+                    ['all', 'Semua'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={cardRange === value}
+                    onClick={() => setCardRange(value)}
+                    className={
+                      cardRange === value
+                        ? 'min-h-11 rounded-full bg-primary px-4 text-[15px] font-semibold text-white'
+                        : 'glass min-h-11 rounded-full px-4 text-[15px] font-medium text-ink-soft'
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {sheep.ownerUser && (
+                <label className="flex min-h-11 items-center gap-3 text-[15px] text-ink">
+                  <input
+                    type="checkbox"
+                    checked={cardFarmer}
+                    onChange={(e) => setCardFarmer(e.target.checked)}
+                    className="h-5 w-5 accent-[var(--accent)]"
+                  />
+                  Tampilkan nama peternak
+                </label>
+              )}
+            </div>
+          }
         />
       )}
 

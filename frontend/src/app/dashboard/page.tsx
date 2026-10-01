@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { CirclePlus, PawPrint, RefreshCw } from 'lucide-react';
+import { Award, ChevronRight, CirclePlus, PawPrint, RefreshCw } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -235,6 +235,20 @@ export default function DashboardPage() {
         >
           <CirclePlus size={22} aria-hidden="true" />
           Catat perkembangan hari ini
+        </Link>
+
+        <Link
+          href="/achievements"
+          className="glass mb-5 flex items-center gap-3 rounded-[var(--radius-card)] p-4 transition active:brightness-95"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-strong">
+            <Award size={22} aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold text-ink">Prestasi saya</span>
+            <span className="block text-[13px] text-ink-muted">Lencana, runtun, dan kartu untuk dibagikan</span>
+          </span>
+          <ChevronRight size={20} className="text-ink-muted" aria-hidden="true" />
         </Link>
 
         <div className="mb-6 grid grid-cols-3 gap-3">

@@ -88,3 +88,13 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] **iPhone (Safari):** ketuk **Pasang** menampilkan langkah Bagikan → Tambah ke Layar Utama; setelah ditambahkan, ikon domba tampil dan app terbuka layar penuh ke Beranda.
 - [ ] Ajakan tidak tampil di desktop maupun saat dibuka dari layar utama; tombol ✕ menyembunyikannya 14 hari.
 - [ ] Akun → **Pasang di layar utama** membuka panduan yang sama; baris hilang bila sudah terpasang.
+
+## Apresiasi: kartu digital dan prestasi
+
+- [ ] Detail ternak → **Kartu digital**: pratinjau muncul; ganti periode (30/90/Semua) memperbarui PBBH, selisih bobot, dan grafik; centang "Tampilkan nama peternak" menambah/menghapus baris peternak.
+- [ ] Ternak tanpa foto memakai domba garis; foto wajah dipakai bila ada. Ternak dengan <2 timbangan menampilkan "butuh 2 timbangan".
+- [ ] **Bagikan** membuka lembar bagikan HP (WhatsApp, dll.) dengan gambar; di laptop tombol berganti **Unduh gambar**.
+- [ ] Peternak: Beranda atau Akun → **Prestasi saya**: runtun, ubin ringkasan, 8 lencana dengan kemajuan, pertumbuhan terbaik.
+- [ ] Ubah periode (tanggal atau 30 hari/90 hari/1 tahun) memperbarui angka dan lencana.
+- [ ] **Bagikan rapor** menghasilkan kartu peternak; periksa tidak ada nomor HP, alamat lengkap, atau koordinat pada kartu.
+- [ ] Catat satu timbangan hari ini lalu buka Prestasi: runtun bertambah. Tidak mengisi hari ini tidak memutus runtun sampai besok.

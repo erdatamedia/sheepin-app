@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, FileBarChart, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
+import { Award, Download, FileBarChart, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
 import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
@@ -97,6 +97,15 @@ export default function AccountPage() {
                 subtitle="Titik untuk peta sebaran"
                 href="/location"
               />
+              {isFarmer && (
+                <ListRow
+                  leading={<RowIcon icon={Award} />}
+                  leadingSize="icon"
+                  title="Prestasi saya"
+                  subtitle="Lencana, runtun, kartu untuk dibagikan"
+                  href="/achievements"
+                />
+              )}
               {isFarmer && (
                 <ListRow
                   leading={<RowIcon icon={KeyRound} />}
