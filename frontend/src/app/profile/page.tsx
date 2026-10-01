@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
+import { Download, FileBarChart, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
 import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
@@ -116,6 +116,13 @@ export default function AccountPage() {
                   title="Peternak"
                   subtitle="Daftar, buat PIN, atur data"
                   href="/farmers"
+                />
+                <ListRow
+                  leading={<RowIcon icon={FileBarChart} />}
+                  leadingSize="icon"
+                  title="Laporan"
+                  subtitle="Populasi, pertumbuhan, kesehatan"
+                  href="/reports"
                 />
                 <ListRow
                   leading={<RowIcon icon={History} />}

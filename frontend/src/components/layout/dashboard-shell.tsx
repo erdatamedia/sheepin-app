@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   CirclePlus,
   History,
+  FileBarChart,
   House,
   LogOut,
   Map,
@@ -70,6 +71,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     { href: '/history', label: 'Riwayat', icon: History, roles: ALL_ROLES },
     { href: '/farmers', label: 'Peternak', icon: Users, roles: STAFF_ROLES },
     { href: '/map', label: 'Peta', icon: Map, roles: STAFF_ROLES },
+    { href: '/reports', label: 'Laporan', icon: FileBarChart, roles: STAFF_ROLES },
     { href: '/location', label: 'Lokasi', icon: MapPin, roles: ALL_ROLES },
     { href: '/profile', label: 'Akun', icon: UserRound, roles: ALL_ROLES },
   ];
@@ -85,7 +87,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     { href: '/profile', label: 'Akun', icon: UserRound, roles: ALL_ROLES },
   ];
 
-  const accountPaths = ['/profile', '/location', '/change-pin', '/farmers', ...(isStaff ? ['/history'] : [])];
+  const accountPaths = ['/profile', '/location', '/change-pin', '/farmers', '/reports', ...(isStaff ? ['/history'] : [])];
   const tabActive = (href: string) =>
     href === '/profile' ? accountPaths.some(isActive) : isActive(href);
 
@@ -93,7 +95,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen text-ink">
       <div className="flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="hidden w-[17rem] shrink-0 glass-bar-right p-5 xl:w-[19rem] xl:p-6 md:flex md:flex-col">
+        <aside className="print:hidden hidden w-[17rem] shrink-0 glass-bar-right p-5 xl:w-[19rem] xl:p-6 md:flex md:flex-col">
           <div className="mb-6">
             <div className="glass inline-flex rounded-[var(--radius-card)] px-3 py-2">
               <Image
@@ -164,7 +166,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Bilah tab mobile: kapsul kaca mengambang, tombol Catat di tengah lebih besar dan menonjol */}
       <nav
         aria-label="Menu utama"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden"
+        className="print:hidden pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden"
       >
         <div className="glass-strong pointer-events-auto mx-auto grid h-16 max-w-md grid-cols-5 items-center rounded-[28px] border shadow-[var(--shadow-sheet)]">
           {tabs.filter(visible).map((item) => {
