@@ -267,8 +267,13 @@ body::before {
   }
 }
 
+/*
+ * Isi "backwards", bukan "both": setelah selesai tidak ada animasi yang tersisa. Animasi opacity yang
+ * masih "berlaku" (fill forwards) membuat pembungkus menjadi stacking context sehingga lembar,
+ * pelihat foto, dan bilah simpan (position: fixed di dalamnya) terjebak di bawah bilah navigasi.
+ */
 @utility page-enter {
-  animation: pageIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* ---------- Landing: dekorasi domba, reaksi kursor, kemunculan ---------- */
