@@ -49,7 +49,7 @@ export function LandingDistributionSection() {
   ];
 
   return (
-    <section className="py-10 md:py-14 lg:py-20">
+    <section>
       <div className="max-w-3xl">
         <h2 className="text-3xl font-semibold tracking-tight text-ink md:text-4xl lg:text-5xl">
           Peternak yang sudah tercatat

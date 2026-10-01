@@ -6,7 +6,9 @@ import { LandingDistributionSection } from '@/components/map/landing-distributio
 import { CursorField } from '@/components/landing/cursor-field';
 import { LineSheep, WoolSheep } from '@/components/landing/decor';
 import { Magnetic } from '@/components/landing/magnetic';
-import { Reveal } from '@/components/landing/reveal';
+import { LoginQr } from '@/components/landing/login-qr';
+import { TabCarousel, type CarouselTab } from '@/components/landing/tab-carousel';
+import { LOGIN_URL } from '@/lib/site';
 import { SpotlightCard } from '@/components/landing/spotlight-card';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +32,115 @@ const situasi = [
     tanya: 'Petugas ingin tahu kondisi satu kelompok.',
     jawab:
       'Laporan per peternak dan peta sebaran sudah tersedia, dan bisa diunduh ke Excel untuk dilampirkan.',
+  },
+];
+
+const tabs: CarouselTab[] = [
+  {
+    id: 'masalah',
+    label: 'Kenapa dicatat',
+    content: (
+      <div className="relative grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+        <div>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
+            Pertanyaan yang sering muncul di kandang
+          </h2>
+          <p className="mt-4 max-w-md text-base leading-7 text-ink-muted lg:text-lg">
+            Sheep-In dibuat untuk menjawabnya tanpa membuka buku tulis.
+          </p>
+          <LineSheep className="mt-8 hidden w-56 opacity-[0.16] lg:block" />
+        </div>
+        <ul>
+          {situasi.map((s) => (
+            <li key={s.tanya} className="border-t border-line py-6 first:border-t-0 first:pt-0 lg:py-8">
+              <h3 className="text-xl font-semibold leading-snug text-ink lg:text-2xl">{s.tanya}</h3>
+              <p className="mt-2.5 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg lg:leading-8">{s.jawab}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ),
+  },
+  {
+    id: 'cara-kerja',
+    label: 'Cara kerja',
+    content: (
+      <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+        <div className="relative order-2 lg:order-1">
+          <WoolSheep className="absolute -bottom-6 -left-4 w-24 text-primary/[0.14] sm:w-32" />
+          <PhoneMock />
+        </div>
+        <div className="order-1 lg:order-2">
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
+            Satu layar untuk satu domba
+          </h2>
+          <ol className="mt-8 space-y-6 text-lg leading-8 text-ink-muted">
+            <li>
+              <span className="font-semibold text-ink">Pilih dombanya</span>, dari daftar atau dengan mengetuk
+              fotonya.
+            </li>
+            <li>
+              <span className="font-semibold text-ink">Isi angkanya.</span> Bobot, kondisi tubuh, dan kesehatan
+              hari ini ada di layar yang sama, dengan tombol besar yang mudah ditekan sambil memegang domba.
+            </li>
+            <li>
+              <span className="font-semibold text-ink">Simpan</span>, lalu lanjut ke domba berikutnya. Riwayat dan
+              grafiknya terbentuk sendiri.
+            </li>
+          </ol>
+          <Magnetic className="mt-9">
+            <Link href="/register-farmer" className={buttonClassName({ variant: 'outline', size: 'lg' })}>
+              Coba sebagai peternak
+            </Link>
+          </Magnetic>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'sebaran',
+    label: 'Sebaran peternak',
+    content: <LandingDistributionSection />,
+  },
+  {
+    id: 'pasang',
+    label: 'Pasang & masuk',
+    content: (
+      <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <SpotlightCard className="flex flex-col items-center p-6 text-center lg:p-8">
+          <LoginQr url={LOGIN_URL} className="w-48 lg:w-60" />
+          <p className="mt-5 text-xl font-semibold text-ink">Pindai untuk masuk</p>
+          <p className="mt-1 text-[15px] text-ink-muted">{LOGIN_URL.replace(/^https?:\/\//, '')}</p>
+          <Link href="/qr" className="mt-4 text-[15px] font-medium text-primary-strong underline underline-offset-4">
+            Tampilkan layar penuh
+          </Link>
+        </SpotlightCard>
+        <div>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
+            Tidak perlu unduh dari toko aplikasi
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg">
+            Pasang langsung dari browser. Ikon domba muncul di layar utama dan Sheep-In terbuka layar penuh.
+          </p>
+          <div className="mt-7 grid gap-4 md:grid-cols-2">
+            <SpotlightCard className="p-6">
+              <h3 className="text-xl font-semibold text-ink">Android (Chrome)</h3>
+              <p className="mt-3 text-base leading-7 text-ink-muted">
+                Buka sheep-in.com, ketuk tombol menu ⋮ di pojok kanan atas, lalu pilih{' '}
+                <b className="text-ink">Instal aplikasi</b>.
+              </p>
+            </SpotlightCard>
+            <SpotlightCard className="p-6">
+              <h3 className="text-xl font-semibold text-ink">iPhone (Safari)</h3>
+              <p className="mt-3 text-base leading-7 text-ink-muted">
+                Buka sheep-in.com di Safari, ketuk <b className="text-ink">Bagikan</b>, lalu pilih{' '}
+                <b className="text-ink">Tambah ke Layar Utama</b>.
+              </p>
+            </SpotlightCard>
+          </div>
+        </div>
+      </div>
+    ),
   },
 ];
 
@@ -116,7 +227,7 @@ export default function HomePage() {
             <a href="#masalah" className="hover:text-primary">Kenapa dicatat</a>
             <a href="#cara-kerja" className="hover:text-primary">Cara kerja</a>
             <a href="#sebaran" className="hover:text-primary">Sebaran</a>
-            <a href="#pasang" className="hover:text-primary">Pasang di HP</a>
+            <a href="#pasang" className="hover:text-primary">Pasang &amp; masuk</a>
           </nav>
           <div className="flex items-center gap-2 md:gap-3">
             <Link href="/login" className={buttonClassName({ variant: 'outline' })}>
@@ -161,6 +272,12 @@ export default function HomePage() {
               >
                 Belum punya akun? Daftar peternak
               </Link>
+              <Link
+                href="/qr"
+                className="text-[15px] font-medium text-ink-muted underline decoration-primary/30 underline-offset-[6px] transition hover:text-ink hover:decoration-primary"
+              >
+                Tampilkan QR masuk
+              </Link>
             </div>
           </div>
 
@@ -185,109 +302,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Kenapa dicatat */}
-        <section id="masalah" className="relative scroll-mt-24 py-14 lg:py-24">
-          <LineSheep
-            className="parallax pointer-events-none absolute -left-10 top-6 hidden w-64 opacity-[0.13] lg:block"
-            style={{ '--d': 18, '--r': '-10deg' } as React.CSSProperties}
-          />
-          <div className="relative grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
-            <Reveal>
-              <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:sticky lg:top-28 lg:text-5xl">
-                Pertanyaan yang sering muncul di kandang
-              </h2>
-              <p className="mt-4 max-w-md text-base leading-7 text-ink-muted lg:text-lg">
-                Sheep-In dibuat untuk menjawabnya tanpa membuka buku tulis.
-              </p>
-            </Reveal>
-            <ul>
-              {situasi.map((s, i) => (
-                <Reveal as="li" key={s.tanya} delay={i * 60} className="border-t border-line py-7 first:border-t-0 first:pt-0 lg:py-9">
-                  <h3 className="text-xl font-semibold leading-snug text-ink lg:text-2xl">{s.tanya}</h3>
-                  <p className="mt-2.5 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg lg:leading-8">{s.jawab}</p>
-                </Reveal>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Cara kerja */}
-        <section id="cara-kerja" className="relative scroll-mt-24 py-14 lg:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
-            <Reveal className="relative order-2 lg:order-1">
-              <WoolSheep
-                className="parallax absolute -bottom-6 -left-4 w-24 text-primary/[0.14] sm:w-32"
-                style={{ '--d': 30, '--r': '-4deg' } as React.CSSProperties}
-              />
-              <div className="parallax" style={{ '--d': 10 } as React.CSSProperties}>
-                <PhoneMock />
-              </div>
-            </Reveal>
-            <Reveal className="order-1 lg:order-2">
-              <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
-                Satu layar untuk satu domba
-              </h2>
-              <ol className="mt-8 space-y-6 text-lg leading-8 text-ink-muted">
-                <li>
-                  <span className="font-semibold text-ink">Pilih dombanya</span>, dari daftar atau dengan
-                  mengetuk fotonya.
-                </li>
-                <li>
-                  <span className="font-semibold text-ink">Isi angkanya.</span> Bobot, kondisi tubuh, dan
-                  kesehatan hari ini ada di layar yang sama, dengan tombol besar yang mudah ditekan
-                  sambil memegang domba.
-                </li>
-                <li>
-                  <span className="font-semibold text-ink">Simpan</span>, lalu lanjut ke domba berikutnya.
-                  Riwayat dan grafiknya terbentuk sendiri.
-                </li>
-              </ol>
-              <Magnetic className="mt-9">
-                <Link href="/register-farmer" className={buttonClassName({ variant: 'outline', size: 'lg' })}>
-                  Coba sebagai peternak
-                </Link>
-              </Magnetic>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Sebaran */}
-        <div id="sebaran" className="relative scroll-mt-24">
-          <WoolSheep
-            className="parallax pointer-events-none absolute -right-2 top-4 hidden w-28 text-primary/[0.14] lg:block"
-            style={{ '--d': 24, '--r': '5deg' } as React.CSSProperties}
-          />
-          <LandingDistributionSection />
-        </div>
-
-        {/* Pasang */}
-        <section id="pasang" className="scroll-mt-24 py-14 lg:py-24">
-          <Reveal>
-            <h2 className="max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
-              Tidak perlu unduh dari toko aplikasi
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg">
-              Pasang langsung dari browser. Ikon domba muncul di layar utama dan Sheep-In terbuka layar penuh.
-            </p>
-          </Reveal>
-          <div className="mt-9 grid gap-4 md:grid-cols-2 lg:gap-6">
-            <Reveal>
-              <SpotlightCard className="p-6 lg:p-8">
-                <h3 className="text-xl font-semibold text-ink">Android (Chrome)</h3>
-                <p className="mt-3 text-base leading-7 text-ink-muted">
-                  Buka sheep-in.com, ketuk tombol menu ⋮ di pojok kanan atas, lalu pilih <b className="text-ink">Instal aplikasi</b>.
-                </p>
-              </SpotlightCard>
-            </Reveal>
-            <Reveal delay={80}>
-              <SpotlightCard className="p-6 lg:p-8">
-                <h3 className="text-xl font-semibold text-ink">iPhone (Safari)</h3>
-                <p className="mt-3 text-base leading-7 text-ink-muted">
-                  Buka sheep-in.com di Safari, ketuk <b className="text-ink">Bagikan</b>, lalu pilih <b className="text-ink">Tambah ke Layar Utama</b>.
-                </p>
-              </SpotlightCard>
-            </Reveal>
-          </div>
+        {/* Isi bergantian: tab dengan panel carousel */}
+        <section className="py-14 lg:py-24">
+          <TabCarousel tabs={tabs} />
         </section>
       </main>
 
