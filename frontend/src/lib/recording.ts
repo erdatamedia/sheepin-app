@@ -8,6 +8,7 @@ export type RecordingSheepOptionResponse = {
     name?: string | null;
     breed: string;
     gender: string;
+    birthDate?: string | null;
     photoUrl?: string | null;
     faceNose?: string | null;
     earsHorns?: string | null;
@@ -26,6 +27,8 @@ export type QuickRecordingPayload = {
   sheepId: string;
   recordDate: string;
   weightKg?: number;
+  /** Umur dalam bulan; dipakai server hanya bila ternak belum punya tanggal lahir. */
+  ageMonths?: number;
   bcsScore?: number;
   healthStatus?: 'HEALTHY' | 'SICK' | 'RECOVERING';
   diseaseName?: string;

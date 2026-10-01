@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { estimateBirthDate } from './age';
 import { QuickRecordingDto } from './dto/quick-recording.dto';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class RecordingService {
         sheepCode: true,
         ownerUserId: true,
         status: true,
+        birthDate: true,
       },
     });
 
@@ -49,6 +51,15 @@ export class RecordingService {
     const results: Record<string, any> = {};
 
     await this.prisma.$transaction(async (tx) => {
+      if (dto.ageMonths !== undefined && !sheep.birthDate) {
+        await tx.sheep.update({
+          where: { id: dto.sheepId },
+          data: { birthDate: estimateBirthDate(dto.recordDate, dto.ageMonths) },
+          select: { id: true },
+        });
+        results.birthDateEstimated = true;
+      }
+
       if (dto.weightKg !== undefined) {
         results.weight = await tx.sheepWeight.create({
           data: {
@@ -107,6 +118,7 @@ export class RecordingService {
           weight: !!results.weight,
           bcs: !!results.bcs,
           health: !!results.health,
+          birthDateEstimated: !!results.birthDateEstimated,
         },
         results,
       },
@@ -132,6 +144,7 @@ export class RecordingService {
         name: true,
         breed: true,
         gender: true,
+        birthDate: true,
         photoUrl: true,
         faceNose: true,
         earsHorns: true,

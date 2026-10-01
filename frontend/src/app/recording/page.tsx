@@ -107,6 +107,7 @@ const emptyForm = (sheepId = '') => ({
   sheepId,
   recordDate: todayLocal(),
   weightKg: '',
+  ageMonths: '',
   bcsScore: '',
   healthStatus: '',
   diseaseName: '',
@@ -229,9 +230,17 @@ export default function RecordingPage() {
     weightValue !== undefined &&
     (!Number.isFinite(weightValue) || weightValue <= 0 || weightValue > MAX_WEIGHT_KG);
 
+  // Umur (bulan) hanya dikirim bila ternak belum punya tanggal lahir; bila sudah, umur dihitung dari tanggal lahir.
+  const knownAgeMonths = selectedSheep?.birthDate
+    ? Math.max(0, Math.floor((Date.now() - new Date(selectedSheep.birthDate).getTime()) / (30.44 * 86400000)))
+    : null;
+  const ageNumber = form.ageMonths ? Number(form.ageMonths) : undefined;
+  const ageInvalid = ageNumber !== undefined && (!Number.isInteger(ageNumber) || ageNumber > 240);
+  const ageToSend = knownAgeMonths === null && !ageInvalid ? ageNumber : undefined;
+
   const hasRoutineValue = !!(form.weightKg || form.bcsScore || form.healthStatus);
   const canContinue =
-    !!form.sheepId && (mode === 'ROUTINE' ? hasRoutineValue && !weightInvalid : !!eventType);
+    !!form.sheepId && (mode === 'ROUTINE' ? hasRoutineValue && !weightInvalid && !ageInvalid : !!eventType);
 
   const sheepTitle = (item: SheepOption) =>
     item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode;
@@ -265,6 +274,7 @@ export default function RecordingPage() {
           sheepId: form.sheepId,
           recordDate: form.recordDate,
           weightKg: weightValue,
+          ageMonths: ageToSend,
           bcsScore: form.bcsScore ? Number(form.bcsScore) : undefined,
           healthStatus: form.healthStatus
             ? (form.healthStatus as 'HEALTHY' | 'SICK' | 'RECOVERING')
@@ -365,6 +375,9 @@ export default function RecordingPage() {
       'Bobot',
       weightValue !== undefined && !weightInvalid ? formatKg(weightValue) : 'Tidak diisi',
     ]);
+    if (knownAgeMonths !== null || ageToSend !== undefined) {
+      summaryRows.push(['Umur', `${knownAgeMonths ?? ageToSend} bulan`]);
+    }
     summaryRows.push([
       'Kondisi tubuh',
       form.bcsScore ? `${form.bcsScore} · ${bcsLabel(Number(form.bcsScore))}` : 'Tidak diisi',
@@ -565,6 +578,39 @@ export default function RecordingPage() {
                     {weightInvalid && (
                       <p role="alert" className="mt-2 text-[14px] font-medium text-danger">
                         Bobot tidak wajar. Isi angka antara 0 dan {MAX_WEIGHT_KG} kg.
+                      </p>
+                    )}
+                  </Card>
+
+                  <Card>
+                    <Field label="Umur (opsional)">
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="0"
+                          className="h-14 pr-20 text-[24px] font-bold"
+                          disabled={knownAgeMonths !== null}
+                          value={knownAgeMonths !== null ? String(knownAgeMonths) : form.ageMonths}
+                          aria-invalid={ageInvalid}
+                          onChange={(e) =>
+                            setForm({ ...form, ageMonths: e.target.value.replace(/\D/g, '').slice(0, 3) })
+                          }
+                        />
+                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[17px] font-medium text-ink-muted">
+                          bulan
+                        </span>
+                      </div>
+                    </Field>
+                    <p className="mt-2 text-[13px] text-ink-muted">
+                      {knownAgeMonths !== null
+                        ? 'Dihitung dari tanggal lahir yang sudah tercatat.'
+                        : 'Boleh perkiraan. Tanggal lahir ternak ikut diperkirakan dari umur ini.'}
+                    </p>
+                    {ageInvalid && (
+                      <p role="alert" className="mt-1 text-[14px] font-medium text-danger">
+                        Umur tidak wajar. Isi bilangan bulat 0 sampai 240 bulan.
                       </p>
                     )}
                   </Card>

@@ -114,3 +114,10 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Peta publik di landing: ketuk titik → **Lihat Katalog Ternak** → `/katalog/<id>` tanpa login: hanya ternak aktif, tanpa nomor HP, ciri, atau catatan kesehatan; kartu tidak bisa diketuk ke detail.
 - [ ] `/katalog/<id>` dengan id yang tidak ada (atau peternak tanpa titik peta) menampilkan "Katalog tidak ditemukan".
 - [ ] Kisi 2 kolom di HP, 3 di tablet, 4-5 di laptop; tidak ada overflow horizontal.
+
+## Umur opsional di Catat
+
+- [ ] Catat → Perkembangan: urutan kartu Bobot, **Umur (opsional)**, Kondisi tubuh, Kesehatan.
+- [ ] Ternak tanpa tanggal lahir: kolom umur bisa diisi (bulan). Simpan hanya umur + bobot berhasil; detail ternak kini menampilkan tanggal lahir perkiraan (tanggal catat dikurangi umur).
+- [ ] Ternak yang sudah punya tanggal lahir: kolom umur terkunci dan menampilkan umur dari tanggal lahir, dengan keterangan; tanggal lahir lama tidak tertimpa.
+- [ ] Mengosongkan umur tidak mengubah apa pun. Angka di atas 240 atau desimal ditolak dengan pesan; ringkasan sebelum simpan menampilkan baris Umur bila ada.

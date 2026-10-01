@@ -1,6 +1,7 @@
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -21,6 +22,16 @@ export class QuickRecordingDto {
   @IsNumber()
   @Min(0)
   weightKg?: number;
+
+  /**
+   * Umur ternak dalam bulan (opsional). Hanya dipakai bila ternak belum punya tanggal lahir:
+   * tanggal lahir diperkirakan dari umur ini.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(240)
+  ageMonths?: number;
 
   @IsOptional()
   @IsNumber()
