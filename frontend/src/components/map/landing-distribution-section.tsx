@@ -51,12 +51,11 @@ export function LandingDistributionSection() {
   return (
     <section className="py-10 md:py-14 lg:py-20">
       <div className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Sebaran peternak</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink md:text-4xl lg:text-5xl">
-          Peternak yang sudah tercatat di Sheep-In
+        <h2 className="text-3xl font-semibold tracking-tight text-ink md:text-4xl lg:text-5xl">
+          Peternak yang sudah tercatat
         </h2>
         <p className="mt-3 text-base leading-7 text-ink-muted lg:text-lg">
-          Gambaran cepat persebaran peternak dan populasi ternak yang sudah masuk ke sistem.
+          Titik di peta adalah peternak yang sudah memasukkan lokasinya.
         </p>
       </div>
 

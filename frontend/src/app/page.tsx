@@ -1,47 +1,36 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  ArrowRight,
-  Camera,
-  ChartNoAxesCombined,
-  ClipboardPen,
-  Download,
-  MapPinned,
-  Smartphone,
-  UsersRound,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { buttonClassName } from '@/components/ui/button';
 import { LandingDistributionSection } from '@/components/map/landing-distribution-section';
+import { CursorField } from '@/components/landing/cursor-field';
+import { LineSheep, WoolSheep } from '@/components/landing/decor';
+import { Magnetic } from '@/components/landing/magnetic';
+import { Reveal } from '@/components/landing/reveal';
+import { SpotlightCard } from '@/components/landing/spotlight-card';
 import { cn } from '@/lib/utils';
 
-const fitur = [
+const situasi = [
   {
-    icon: ClipboardPen,
-    judul: 'Catat cepat di kandang',
-    isi: 'Bobot, kondisi tubuh, kesehatan, dan reproduksi tersimpan sekaligus dalam satu layar.',
+    tanya: 'Dombanya putih semua. Yang tadi ditimbang yang mana?',
+    jawab:
+      'Tiap domba punya foto wajah, samping, dan belakang, ditambah ciri khusus seperti bentuk telinga atau tanda di ekor. Cari lewat foto, tidak perlu hafalan.',
   },
   {
-    icon: Camera,
-    judul: 'Kenali ternak dari foto',
-    isi: 'Foto wajah, samping, dan sudut lain, plus ciri pembeda, agar domba yang mirip tetap mudah dibedakan.',
+    tanya: 'Bobotnya naik atau malah turun?',
+    jawab:
+      'Setiap timbangan tersimpan bersama tanggalnya. Pertambahan bobot per hari dihitung sendiri, jadi kelihatan domba mana yang tumbuh dan mana yang tertinggal.',
   },
   {
-    icon: ChartNoAxesCombined,
-    judul: 'Evaluasi bibit',
-    isi: 'Pertumbuhan dan skor kelayakan bibit terbaca jelas, lengkap dengan riwayat tiap ternak.',
+    tanya: 'Siapa yang sakit minggu ini?',
+    jawab:
+      'Catat gejala dan obatnya sekali, lalu domba yang pemeriksaan terakhirnya sakit muncul di daftar tersendiri sampai dinyatakan pulih.',
   },
   {
-    icon: MapPinned,
-    judul: 'Sebaran peternak',
-    isi: 'Petugas memantau lokasi dan populasi ternak di peta tanpa berkeliling satu per satu.',
+    tanya: 'Petugas ingin tahu kondisi satu kelompok.',
+    jawab:
+      'Laporan per peternak dan peta sebaran sudah tersedia, dan bisa diunduh ke Excel untuk dilampirkan.',
   },
-];
-
-const langkah = [
-  { judul: 'Pilih ternak', isi: 'Cari dari daftar atau ketuk fotonya.' },
-  { judul: 'Isi catatan', isi: 'Bobot, kondisi tubuh, dan kesehatan hari ini.' },
-  { judul: 'Simpan', isi: 'Satu ketukan, lanjut ke ternak berikutnya.' },
-  { judul: 'Lihat perkembangan', isi: 'Riwayat dan evaluasi muncul otomatis.' },
 ];
 
 function Brand({ className }: { className?: string }) {
@@ -49,10 +38,10 @@ function Brand({ className }: { className?: string }) {
     <Link href="/" className={cn('flex items-center gap-2.5', className)} aria-label="Sheep-In, beranda">
       <Image
         src="/icons/icon-192.png"
-        unoptimized
         alt=""
         width={44}
         height={44}
+        unoptimized
         priority
         className="h-10 w-10 rounded-[12px] shadow-[var(--shadow-accent)] lg:h-11 lg:w-11"
       />
@@ -61,22 +50,32 @@ function Brand({ className }: { className?: string }) {
   );
 }
 
-/** Tiruan layar Catat cepat untuk hero; hanya hiasan. */
+/** Contoh catatan untuk hero; hanya hiasan. */
+function NoteCard({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <div aria-hidden="true" className={cn('glass-strong w-52 rounded-[var(--radius-card)] p-4', className)} style={style}>
+      <p className="text-[12px] text-ink-muted">Domba 014 · hari ini</p>
+      <p className="mt-0.5 text-3xl font-semibold tabular-nums text-ink">
+        32,5<span className="ml-1 text-base font-medium text-ink-muted">kg</span>
+      </p>
+      <p className="mt-1 text-[13px] text-ink-soft">Naik 0,4 kg dari minggu lalu</p>
+    </div>
+  );
+}
+
 function PhoneMock() {
   return (
-    <div aria-hidden="true" className="relative mx-auto w-full max-w-[19rem] lg:max-w-[22rem]">
-      <div className="glass-strong rounded-[2.5rem] p-3 shadow-[0_30px_60px_rgba(94,70,50,0.28)]">
+    <div aria-hidden="true" className="mx-auto w-full max-w-[19rem] lg:max-w-[21rem]">
+      <div className="glass-strong rounded-[2.5rem] p-3 shadow-[0_30px_60px_rgba(94,70,50,0.25)]">
         <div className="rounded-[2rem] bg-[var(--background)] px-4 pb-4 pt-5">
           <p className="text-[13px] font-medium text-ink-muted">Catat cepat</p>
           <p className="text-2xl font-semibold tracking-tight text-ink">Domba 014</p>
-
           <div className="glass mt-4 rounded-[var(--radius-card)] px-4 py-3 text-center">
             <p className="text-[12px] text-ink-muted">Bobot hari ini</p>
             <p className="text-5xl font-semibold tabular-nums text-ink">
               32,5<span className="ml-1 text-lg font-medium text-ink-muted">kg</span>
             </p>
           </div>
-
           <p className="mb-1.5 mt-4 text-[12px] font-medium text-ink-muted">Kondisi tubuh (BCS)</p>
           <div className="glass grid grid-cols-5 gap-1 rounded-full p-1 text-center text-sm font-medium">
             {['1', '2', '3', '4', '5'].map((n) => (
@@ -84,23 +83,19 @@ function PhoneMock() {
                 key={n}
                 className={cn(
                   'rounded-full py-1.5',
-                  n === '3'
-                    ? 'bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-white'
-                    : 'text-ink-soft',
+                  n === '3' ? 'bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-white' : 'text-ink-soft',
                 )}
               >
                 {n}
               </span>
             ))}
           </div>
-
           <p className="mb-1.5 mt-4 text-[12px] font-medium text-ink-muted">Kesehatan</p>
           <div className="flex gap-2 text-[13px] font-medium">
             <span className="rounded-full bg-success-soft px-3 py-1.5 text-success">Sehat</span>
             <span className="glass rounded-full px-3 py-1.5 text-ink-soft">Sakit</span>
             <span className="glass rounded-full px-3 py-1.5 text-ink-soft">Obat</span>
           </div>
-
           <div className="mt-5 flex h-12 items-center justify-center rounded-[14px] bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-base font-semibold text-white shadow-[var(--shadow-accent)]">
             Simpan
           </div>
@@ -112,16 +107,16 @@ function PhoneMock() {
 
 export default function HomePage() {
   return (
-    <main className="relative overflow-x-clip">
+    <CursorField className="page-enter overflow-x-clip">
       {/* Bilah atas */}
-      <header className="sticky top-0 z-30 glass-bar-top border-t-0 border-b border-b-white/70 pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-30 glass-bar-top border-b border-b-white/70 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-16 w-full max-w-[90rem] items-center justify-between gap-4 px-4 md:px-8 lg:h-[4.5rem] lg:px-12">
           <Brand />
           <nav aria-label="Bagian halaman" className="hidden items-center gap-8 text-[15px] font-medium text-ink-soft lg:flex">
-            <a href="#fitur" className="hover:text-primary">Fitur</a>
+            <a href="#masalah" className="hover:text-primary">Kenapa dicatat</a>
             <a href="#cara-kerja" className="hover:text-primary">Cara kerja</a>
             <a href="#sebaran" className="hover:text-primary">Sebaran</a>
-            <a href="#pasang" className="hover:text-primary">Pasang</a>
+            <a href="#pasang" className="hover:text-primary">Pasang di HP</a>
           </nav>
           <div className="flex items-center gap-2 md:gap-3">
             <Link href="/login" className={buttonClassName({ variant: 'outline' })}>
@@ -134,125 +129,182 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[90rem] px-4 md:px-8 lg:px-12">
+      <main className="relative z-10 mx-auto w-full max-w-[90rem] px-4 md:px-8 lg:px-12">
         {/* Hero */}
-        <section className="grid items-center gap-10 py-10 md:py-14 lg:grid-cols-[1.2fr_0.8fr] lg:gap-16 lg:py-24">
-          <div>
-            <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-medium text-primary-strong">
-              <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-              Rekording domba untuk peternak dan petugas
-            </span>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl xl:text-7xl">
-              Catat ternak di kandang, <span className="text-primary">cukup satu layar.</span>
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-ink-muted lg:text-xl lg:leading-9">
-              Bobot, kondisi tubuh, kesehatan, dan foto tiap domba tersimpan rapi. Buka dari HP, catat
-              dalam hitungan detik, lalu lanjut ke ternak berikutnya.
+        <section className="relative grid items-center gap-8 pb-16 pt-10 md:pt-14 lg:min-h-[calc(100svh-4.5rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pb-24">
+          <div className="relative z-10">
+            <p className="rise text-[15px] font-medium text-primary-strong" style={{ '--delay': '0ms' } as React.CSSProperties}>
+              Sheep-In · pencatatan domba
             </p>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/login" className={buttonClassName({ size: 'lg' })}>
-                Masuk ke Sheep-In <ArrowRight size={20} aria-hidden="true" className="ml-2" />
-              </Link>
-              <Link href="/register-farmer" className={buttonClassName({ variant: 'outline', size: 'lg' })}>
-                Daftar sebagai peternak
+            <h1
+              className="rise mt-4 text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-6xl lg:text-7xl xl:text-[5.25rem]"
+              style={{ '--delay': '90ms' } as React.CSSProperties}
+            >
+              Buku catatan kandang, di saku Anda.
+            </h1>
+            <p
+              className="rise mt-6 max-w-xl text-lg leading-8 text-ink-muted lg:text-xl lg:leading-9"
+              style={{ '--delay': '200ms' } as React.CSSProperties}
+            >
+              Timbang, foto, catat kesehatannya. Semua tersimpan per domba, jadi bulan depan Anda tidak
+              perlu mengingat-ingat lagi.
+            </p>
+            <div className="rise mt-9 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ '--delay': '320ms' } as React.CSSProperties}>
+              <Magnetic>
+                <Link href="/login" className={buttonClassName({ size: 'lg' })}>
+                  Masuk <ArrowRight size={20} aria-hidden="true" className="ml-2" />
+                </Link>
+              </Magnetic>
+              <Link
+                href="/register-farmer"
+                className="text-[17px] font-medium text-ink underline decoration-primary/40 underline-offset-[6px] transition hover:decoration-primary"
+              >
+                Belum punya akun? Daftar peternak
               </Link>
             </div>
-
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-ink-soft">
-              <li className="flex items-center gap-2"><Smartphone size={18} className="text-primary" aria-hidden="true" /> Ramah HP</li>
-              <li className="flex items-center gap-2"><Camera size={18} className="text-primary" aria-hidden="true" /> Foto langsung dari kamera</li>
-              <li className="flex items-center gap-2"><UsersRound size={18} className="text-primary" aria-hidden="true" /> Peternak, petugas, admin</li>
-            </ul>
           </div>
 
-          <PhoneMock />
+          {/* Komposisi domba */}
+          <div aria-hidden="true" className="relative mx-auto h-[19rem] w-full max-w-xl sm:h-[26rem] lg:h-[34rem] lg:max-w-none">
+            <LineSheep className="parallax absolute right-0 top-[8%] w-[92%] opacity-[0.55]" style={{ '--d': 26, '--r': '-3deg' } as React.CSSProperties} />
+            <NoteCard
+              className="parallax absolute bottom-[6%] left-0 sm:left-[4%]"
+              style={{ '--d': 46, '--r': '-2deg' } as React.CSSProperties}
+            />
+            <WoolSheep
+              className="parallax absolute right-[4%] top-0 w-24 text-primary/25 sm:w-32"
+              style={{ '--d': 38, '--r': '4deg' } as React.CSSProperties}
+            />
+          </div>
+
+          {/* Kawanan di dasar hero */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-24 overflow-hidden">
+            <WoolSheep className="absolute bottom-0 w-20 text-primary/[0.12] [animation:wander_90s_linear_infinite]" />
+            <WoolSheep className="absolute bottom-0 w-14 text-primary/[0.09] [animation:wander_120s_linear_infinite_-40s]" />
+            <WoolSheep className="absolute bottom-0 w-24 text-primary/[0.10] [animation:wander_105s_linear_infinite_-75s]" />
+          </div>
         </section>
 
-        {/* Fitur */}
-        <section id="fitur" className="scroll-mt-24 py-10 md:py-14 lg:py-20">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Fitur</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink md:text-4xl lg:text-5xl">
-              Dibuat untuk pekerjaan harian di kandang
-            </h2>
-          </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:mt-12 lg:grid-cols-4 lg:gap-6">
-            {fitur.map(({ icon: Icon, judul, isi }) => (
-              <div key={judul} className="glass rounded-[var(--radius-card)] p-5 lg:p-7">
-                <span className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-primary-soft text-primary-strong">
-                  <Icon size={26} aria-hidden="true" />
-                </span>
-                <h3 className="mt-4 text-lg font-semibold text-ink lg:text-xl">{judul}</h3>
-                <p className="mt-2 text-[15px] leading-7 text-ink-muted lg:text-base">{isi}</p>
-              </div>
-            ))}
+        {/* Kenapa dicatat */}
+        <section id="masalah" className="relative scroll-mt-24 py-14 lg:py-24">
+          <LineSheep
+            className="parallax pointer-events-none absolute -left-10 top-6 hidden w-64 opacity-[0.13] lg:block"
+            style={{ '--d': 18, '--r': '-10deg' } as React.CSSProperties}
+          />
+          <div className="relative grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+            <Reveal>
+              <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:sticky lg:top-28 lg:text-5xl">
+                Pertanyaan yang sering muncul di kandang
+              </h2>
+              <p className="mt-4 max-w-md text-base leading-7 text-ink-muted lg:text-lg">
+                Sheep-In dibuat untuk menjawabnya tanpa membuka buku tulis.
+              </p>
+            </Reveal>
+            <ul>
+              {situasi.map((s, i) => (
+                <Reveal as="li" key={s.tanya} delay={i * 60} className="border-t border-line py-7 first:border-t-0 first:pt-0 lg:py-9">
+                  <h3 className="text-xl font-semibold leading-snug text-ink lg:text-2xl">{s.tanya}</h3>
+                  <p className="mt-2.5 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg lg:leading-8">{s.jawab}</p>
+                </Reveal>
+              ))}
+            </ul>
           </div>
         </section>
 
         {/* Cara kerja */}
-        <section id="cara-kerja" className="scroll-mt-24 py-10 md:py-14 lg:py-20">
-          <div className="glass-strong rounded-[var(--radius-sheet)] p-6 md:p-10 lg:p-14">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Cara kerja</p>
-            <h2 className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight text-ink md:text-4xl lg:text-5xl">
-              Empat langkah, tanpa alur yang rumit
-            </h2>
-            <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:mt-12 lg:grid-cols-4 lg:gap-8">
-              {langkah.map((item, i) => (
-                <li key={item.judul} className="flex gap-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,var(--btn-top),var(--btn-bottom))] text-lg font-semibold text-white shadow-[var(--shadow-accent)]">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-semibold text-ink">{item.judul}</h3>
-                    <p className="mt-1 text-[15px] leading-7 text-ink-muted">{item.isi}</p>
-                  </div>
+        <section id="cara-kerja" className="relative scroll-mt-24 py-14 lg:py-24">
+          <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+            <Reveal className="relative order-2 lg:order-1">
+              <WoolSheep
+                className="parallax absolute -bottom-6 -left-4 w-24 text-primary/[0.14] sm:w-32"
+                style={{ '--d': 30, '--r': '-4deg' } as React.CSSProperties}
+              />
+              <div className="parallax" style={{ '--d': 10 } as React.CSSProperties}>
+                <PhoneMock />
+              </div>
+            </Reveal>
+            <Reveal className="order-1 lg:order-2">
+              <h2 className="text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
+                Satu layar untuk satu domba
+              </h2>
+              <ol className="mt-8 space-y-6 text-lg leading-8 text-ink-muted">
+                <li>
+                  <span className="font-semibold text-ink">Pilih dombanya</span>, dari daftar atau dengan
+                  mengetuk fotonya.
                 </li>
-              ))}
-            </ol>
+                <li>
+                  <span className="font-semibold text-ink">Isi angkanya.</span> Bobot, kondisi tubuh, dan
+                  kesehatan hari ini ada di layar yang sama, dengan tombol besar yang mudah ditekan
+                  sambil memegang domba.
+                </li>
+                <li>
+                  <span className="font-semibold text-ink">Simpan</span>, lalu lanjut ke domba berikutnya.
+                  Riwayat dan grafiknya terbentuk sendiri.
+                </li>
+              </ol>
+              <Magnetic className="mt-9">
+                <Link href="/register-farmer" className={buttonClassName({ variant: 'outline', size: 'lg' })}>
+                  Coba sebagai peternak
+                </Link>
+              </Magnetic>
+            </Reveal>
           </div>
         </section>
 
         {/* Sebaran */}
-        <div id="sebaran" className="scroll-mt-24">
+        <div id="sebaran" className="relative scroll-mt-24">
+          <WoolSheep
+            className="parallax pointer-events-none absolute -right-2 top-4 hidden w-28 text-primary/[0.14] lg:block"
+            style={{ '--d': 24, '--r': '5deg' } as React.CSSProperties}
+          />
           <LandingDistributionSection />
         </div>
 
         {/* Pasang */}
-        <section id="pasang" className="scroll-mt-24 py-10 md:py-14 lg:py-20">
-          <div className="glass flex flex-col gap-6 rounded-[var(--radius-sheet)] p-6 md:flex-row md:items-center md:justify-between md:p-10 lg:p-14">
-            <div className="flex items-start gap-4 md:gap-6">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-primary-soft text-primary-strong lg:h-16 lg:w-16">
-                <Download size={30} aria-hidden="true" />
-              </span>
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-ink md:text-3xl lg:text-4xl">
-                  Pasang di layar utama HP
-                </h2>
-                <p className="mt-2 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg">
-                  Android (Chrome): menu ⋮ lalu Instal aplikasi. iPhone (Safari): ketuk Bagikan lalu Tambah ke Layar
-                  Utama. Sheep-In terbuka layar penuh seperti aplikasi biasa.
+        <section id="pasang" className="scroll-mt-24 py-14 lg:py-24">
+          <Reveal>
+            <h2 className="max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-ink md:text-4xl lg:text-5xl">
+              Tidak perlu unduh dari toko aplikasi
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted lg:text-lg">
+              Pasang langsung dari browser. Ikon domba muncul di layar utama dan Sheep-In terbuka layar penuh.
+            </p>
+          </Reveal>
+          <div className="mt-9 grid gap-4 md:grid-cols-2 lg:gap-6">
+            <Reveal>
+              <SpotlightCard className="p-6 lg:p-8">
+                <h3 className="text-xl font-semibold text-ink">Android (Chrome)</h3>
+                <p className="mt-3 text-base leading-7 text-ink-muted">
+                  Buka sheep-in.com, ketuk tombol menu ⋮ di pojok kanan atas, lalu pilih <b className="text-ink">Instal aplikasi</b>.
                 </p>
-              </div>
-            </div>
-            <Link href="/login" className={buttonClassName({ size: 'lg', className: 'shrink-0' })}>
-              Mulai sekarang
-            </Link>
+              </SpotlightCard>
+            </Reveal>
+            <Reveal delay={80}>
+              <SpotlightCard className="p-6 lg:p-8">
+                <h3 className="text-xl font-semibold text-ink">iPhone (Safari)</h3>
+                <p className="mt-3 text-base leading-7 text-ink-muted">
+                  Buka sheep-in.com di Safari, ketuk <b className="text-ink">Bagikan</b>, lalu pilih <b className="text-ink">Tambah ke Layar Utama</b>.
+                </p>
+              </SpotlightCard>
+            </Reveal>
           </div>
         </section>
-      </div>
+      </main>
 
       {/* Kaki */}
-      <footer className="glass-bar-top mt-6 border-t">
+      <footer className="relative z-10 border-t border-line">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-10 h-10 overflow-hidden">
+          <WoolSheep className="absolute bottom-0 w-14 text-primary/[0.16] [animation:wander_70s_linear_infinite_-20s]" />
+        </div>
         <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-4 px-4 py-8 text-[15px] text-ink-muted md:flex-row md:items-center md:justify-between md:px-8 lg:px-12">
           <Brand />
-          <p className="max-w-xl">Aplikasi rekording dan evaluasi ternak domba untuk peternak dan tim lapangan.</p>
-          <div className="flex gap-5 font-medium text-primary">
+          <p>Aplikasi pencatatan dan evaluasi ternak domba.</p>
+          <div className="flex gap-5 font-medium text-primary-strong">
             <Link href="/login">Masuk</Link>
             <Link href="/register-farmer">Daftar peternak</Link>
           </div>
         </div>
       </footer>
-    </main>
+    </CursorField>
   );
 }

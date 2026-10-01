@@ -270,3 +270,125 @@ body::before {
 @utility page-enter {
   animation: pageIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* ---------- Landing: dekorasi domba, reaksi kursor, kemunculan ---------- */
+
+/* Domba garis dari berkas SVG; warna lewat background-color. */
+.sheep-line {
+  -webkit-mask: url('/decor/sheep-line.svg') center / contain no-repeat;
+  mask: url('/decor/sheep-line.svg') center / contain no-repeat;
+  background-color: var(--accent);
+  aspect-ratio: 339 / 247;
+}
+
+/* Paralaks: tiap dekorasi memberi --d (kedalaman, px) lewat style. */
+.parallax {
+  transform: translate3d(calc(var(--mx, 0) * var(--d, 12) * 1px), calc(var(--my, 0) * var(--d, 12) * 0.7px), 0)
+    rotate(var(--r, 0deg));
+  transition: transform 0.2s linear;
+  will-change: transform;
+}
+
+.cursor-glow {
+  background: radial-gradient(
+    380px circle at var(--gx, 50%) var(--gy, 20%),
+    rgba(255, 244, 228, 0.75),
+    rgba(255, 244, 228, 0) 70%
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.cursor-field[data-cursor='on'] .cursor-glow {
+  opacity: 1;
+}
+
+/* Cincin kursor: hanya perangkat dengan penunjuk halus. */
+@media (pointer: fine) {
+  .cursor-field[data-cursor='on'] .cursor-ring {
+    display: block;
+  }
+  .cursor-ring span {
+    display: block;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border: 1.5px solid var(--accent);
+    border-radius: 9999px;
+    background: rgba(128, 90, 61, 0.06);
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s, opacity 0.25s;
+    opacity: 0.75;
+  }
+  .cursor-field[data-hot='on'] .cursor-ring span {
+    transform: scale(1.7);
+    background: rgba(128, 90, 61, 0.14);
+    opacity: 1;
+  }
+}
+
+/* Kartu bercahaya mengikuti kursor */
+.spotlight {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.spotlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(260px circle at var(--sx, 50%) var(--sy, 0%), rgba(255, 255, 255, 0.85), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .spotlight:hover {
+    transform: translateY(-3px);
+  }
+  .spotlight:hover::before {
+    opacity: 1;
+  }
+}
+.spotlight > * {
+  position: relative;
+}
+
+/* Muncul saat digulir */
+.reveal {
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal[data-reveal='hidden'] {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+/* Masuk bertahap di bagian atas halaman */
+@utility rise {
+  animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* Domba bergerak pelan di dasar halaman */
+@keyframes wander {
+  from {
+    transform: translateX(-12vw);
+  }
+  to {
+    transform: translateX(112vw);
+  }
+}
+@keyframes bob {
+  0%, 100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  svg[class*='wander'] {
+    animation: none !important;
+  }
+}
