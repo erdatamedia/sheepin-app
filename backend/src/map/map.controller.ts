@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,5 +19,17 @@ export class MapController {
   @Get('distribution-public')
   distributionPublic() {
     return this.mapService.distributionPublic();
+  }
+
+  @Get('catalog/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OFFICER)
+  catalog(@Param('userId') userId: string) {
+    return this.mapService.catalog(userId, false);
+  }
+
+  @Get('distribution-public/:userId/catalog')
+  publicCatalog(@Param('userId') userId: string) {
+    return this.mapService.catalog(userId, true);
   }
 }

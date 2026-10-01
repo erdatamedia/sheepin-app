@@ -94,3 +94,43 @@ export async function getPublicMapDistribution() {
   );
   return response.data;
 }
+
+export type CatalogResponse = {
+  message: string;
+  data: {
+    farmer: {
+      id: string;
+      name: string;
+      groupName?: string | null;
+      regency?: string | null;
+      district?: string | null;
+      village?: string | null;
+    };
+    sheep: Array<{
+      id: string;
+      sheepCode: string;
+      name?: string | null;
+      breed: string;
+      gender: string;
+      status: string;
+      photoUrl?: string | null;
+      birthDate?: string | null;
+      latestWeightKg?: number | null;
+      latestWeightDate?: string | null;
+    }>;
+  };
+};
+
+/** Katalog ternak satu titik peternak (petugas dan admin). */
+export async function getCatalog(userId: string) {
+  const response = await api.get<CatalogResponse>(`/map/catalog/${userId}`);
+  return response.data;
+}
+
+/** Katalog publik: hanya ternak aktif dan tanpa data kontak. */
+export async function getPublicCatalog(userId: string) {
+  const response = await api.get<CatalogResponse>(
+    `/map/distribution-public/${userId}/catalog`,
+  );
+  return response.data;
+}

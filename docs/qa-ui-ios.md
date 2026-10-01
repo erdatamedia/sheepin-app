@@ -106,3 +106,11 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Peternak: detail ternak → baris **Tentang ternak ini** bisa diketuk, lembar terbuka; ubah tanggal lahir, warna, lokasi, pejantan, induk lalu simpan; muncul toast "tersimpan".
 - [ ] Mengosongkan isian lalu simpan menghapus nilainya (baris kembali "Belum diisi"). Mengosongkan Jenis / rumpun ditolak.
 - [ ] Peternak tidak bisa mengubah ternak milik peternak lain (API 403).
+
+## Katalog ternak dari peta
+
+- [ ] Peta (petugas/admin): ketuk titik → panel punya **Lihat Katalog Ternak** → halaman `/catalog/<id>` menampilkan kisi foto ternak peternak itu; ketuk kartu membuka detail ternak. Tombol kembali ke Peta.
+- [ ] Filter katalog: pencarian (kode/nama/jenis), Jantan/Betina, dan status (Aktif/Terjual/Mati/Afkir) bekerja; ternak tanpa foto menampilkan ikon domba.
+- [ ] Peta publik di landing: ketuk titik → **Lihat Katalog Ternak** → `/katalog/<id>` tanpa login: hanya ternak aktif, tanpa nomor HP, ciri, atau catatan kesehatan; kartu tidak bisa diketuk ke detail.
+- [ ] `/katalog/<id>` dengan id yang tidak ada (atau peternak tanpa titik peta) menampilkan "Katalog tidak ditemukan".
+- [ ] Kisi 2 kolom di HP, 3 di tablet, 4-5 di laptop; tidak ada overflow horizontal.

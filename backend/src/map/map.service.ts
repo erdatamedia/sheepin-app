@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { EvaluationService } from '../evaluation/evaluation.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -136,6 +136,70 @@ export class MapService {
         totalSheep: item.totalSheep,
         activeSheep: item.activeSheep,
       })),
+    };
+  }
+
+  /**
+   * Katalog ternak satu titik peternak di peta. Versi publik hanya memuat peternak yang tampil di peta
+   * publik dan ternak berstatus aktif, tanpa data kontak, ciri, maupun catatan kesehatan.
+   */
+  async catalog(userId: string, publicView: boolean) {
+    const farmer = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        role: UserRole.FARMER,
+        isActive: true,
+        ...(publicView
+          ? { latitude: { not: null }, longitude: { not: null } }
+          : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        groupName: true,
+        regency: true,
+        district: true,
+        village: true,
+      },
+    });
+
+    if (!farmer) {
+      throw new NotFoundException('Peternak tidak ditemukan');
+    }
+
+    const sheep = await this.prisma.sheep.findMany({
+      where: {
+        ownerUserId: userId,
+        ...(publicView ? { status: 'ACTIVE' } : {}),
+      },
+      select: {
+        id: true,
+        sheepCode: true,
+        name: true,
+        breed: true,
+        gender: true,
+        status: true,
+        photoUrl: true,
+        birthDate: true,
+        weights: {
+          orderBy: { recordDate: 'desc' },
+          take: 1,
+          select: { weightKg: true, recordDate: true },
+        },
+      },
+      orderBy: [{ status: 'asc' }, { sheepCode: 'asc' }],
+    });
+
+    return {
+      message: 'Katalog ternak berhasil diambil',
+      data: {
+        farmer,
+        sheep: sheep.map(({ weights, ...item }) => ({
+          ...item,
+          latestWeightKg: weights[0]?.weightKg ?? null,
+          latestWeightDate: weights[0]?.recordDate ?? null,
+        })),
+      },
     };
   }
 }

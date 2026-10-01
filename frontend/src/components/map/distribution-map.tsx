@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { CSSProperties, ComponentType, ReactNode } from 'react';
 import { MapContainer, Marker, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
-import { Navigation, X } from 'lucide-react';
+import { Navigation, PawPrint, X } from 'lucide-react';
 import { buttonClassName } from '@/components/ui/button';
 import type { MapDistributionResponse, PublicMapDistributionResponse } from '@/lib/location';
 
@@ -124,21 +124,20 @@ export default function DistributionMap({ items, publicView = false }: Props) {
 
           <div className="grid gap-2">
             {!publicView && (
-              <>
-                <Link
-                  href={`/farmers/${selected.userId}`}
-                  className={buttonClassName({ className: 'w-full' })}
-                >
-                  Lihat Detail Peternak
-                </Link>
-                <Link
-                  href="/sheep"
-                  className={buttonClassName({ variant: 'tinted', className: 'w-full' })}
-                >
-                  Lihat Data Ternak
-                </Link>
-              </>
+              <Link
+                href={`/farmers/${selected.userId}`}
+                className={buttonClassName({ variant: 'tinted', className: 'w-full' })}
+              >
+                Lihat Detail Peternak
+              </Link>
             )}
+            <Link
+              href={publicView ? `/katalog/${selected.userId}` : `/catalog/${selected.userId}`}
+              className={buttonClassName({ className: 'w-full' })}
+            >
+              <PawPrint size={18} aria-hidden="true" />
+              Lihat Katalog Ternak
+            </Link>
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`}
               target="_blank"
