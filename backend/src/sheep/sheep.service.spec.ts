@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -288,6 +289,46 @@ describe('SheepService.updateTraits', () => {
     expect(state.sheep?.physicalMark).toBeNull();
     expect(state.sheep?.tailBody).toBe('ekor gemuk'); // tidak dikirim -> tetap
     expect(result.data.faceNose).toBe('hidung cembung');
+  });
+});
+
+describe('SheepService kode ternak ganda', () => {
+  const dto = { sheepCode: 'DMB-1', breed: 'Garut', gender: 'MALE' } as never;
+
+  it('create: kode sudah dipakai -> 409, bukan 500', async () => {
+    const prisma = {
+      sheep: {
+        create: jest.fn(() =>
+          Promise.reject(Object.assign(new Error('unique'), { code: 'P2002' })),
+        ),
+      },
+    };
+    const service = new SheepService(prisma as never);
+    await expect(service.create(dto, officer)).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('create: galat lain tetap diteruskan', async () => {
+    const boom = new Error('db mati');
+    const prisma = { sheep: { create: jest.fn(() => Promise.reject(boom)) } };
+    const service = new SheepService(prisma as never);
+    await expect(service.create(dto, officer)).rejects.toBe(boom);
+  });
+
+  it('update: kode sudah dipakai -> 409', async () => {
+    const prisma = {
+      sheep: {
+        findUnique: jest.fn(() => Promise.resolve({ id: 's1' })),
+        update: jest.fn(() =>
+          Promise.reject(Object.assign(new Error('unique'), { code: 'P2002' })),
+        ),
+      },
+    };
+    const service = new SheepService(prisma as never);
+    await expect(
+      service.update('s1', { sheepCode: 'DMB-1' }, 'staf'),
+    ).rejects.toThrow(ConflictException);
   });
 });
 

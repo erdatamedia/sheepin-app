@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -33,6 +34,16 @@ export const ANGLE_ORDER: SheepPhotoAngle[] = [
 export class SheepService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Kode ternak unik; pelanggarannya dijadikan pesan 409 yang jelas, bukan galat server 500. */
+  private translateWriteError(error: unknown): never {
+    if ((error as { code?: string })?.code === 'P2002') {
+      throw new ConflictException(
+        'Kode ternak sudah dipakai. Gunakan kode lain, misalnya tambahkan nomor urut.',
+      );
+    }
+    throw error;
+  }
+
   async create(dto: CreateSheepDto, user: { id: string; role: UserRole }) {
     const ownerUserId =
       user.role === UserRole.FARMER ? user.id : dto.ownerUserId;
@@ -41,43 +52,45 @@ export class SheepService {
       await this.ensureFarmerExists(ownerUserId);
     }
 
-    const sheep = await this.prisma.sheep.create({
-      data: {
-        sheepCode: dto.sheepCode,
-        name: dto.name,
-        breed: dto.breed,
-        gender: dto.gender,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        color: dto.color,
-        physicalMark: dto.physicalMark,
-        sireId: dto.sireId,
-        damId: dto.damId,
-        location: dto.location,
-        status: dto.status ?? 'ACTIVE',
-        photoUrl: dto.photoUrl,
-        createdById: user.id,
-        ownerUserId,
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            loginCode: true,
-            role: true,
+    const sheep = await this.prisma.sheep
+      .create({
+        data: {
+          sheepCode: dto.sheepCode,
+          name: dto.name,
+          breed: dto.breed,
+          gender: dto.gender,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+          color: dto.color,
+          physicalMark: dto.physicalMark,
+          sireId: dto.sireId,
+          damId: dto.damId,
+          location: dto.location,
+          status: dto.status ?? 'ACTIVE',
+          photoUrl: dto.photoUrl,
+          createdById: user.id,
+          ownerUserId,
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              loginCode: true,
+              role: true,
+            },
+          },
+          ownerUser: {
+            select: {
+              id: true,
+              name: true,
+              loginCode: true,
+              groupName: true,
+            },
           },
         },
-        ownerUser: {
-          select: {
-            id: true,
-            name: true,
-            loginCode: true,
-            groupName: true,
-          },
-        },
-      },
-    });
+      })
+      .catch((error) => this.translateWriteError(error));
 
     return {
       message: 'Data ternak berhasil ditambahkan',
@@ -482,43 +495,45 @@ export class SheepService {
       await this.ensureFarmerExists(dto.ownerUserId);
     }
 
-    const sheep = await this.prisma.sheep.update({
-      where: { id },
-      data: {
-        sheepCode: dto.sheepCode,
-        name: dto.name,
-        breed: dto.breed,
-        gender: dto.gender,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        color: dto.color,
-        physicalMark: dto.physicalMark,
-        sireId: dto.sireId,
-        damId: dto.damId,
-        location: dto.location,
-        status: dto.status,
-        photoUrl: dto.photoUrl,
-        ownerUserId: dto.ownerUserId,
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            loginCode: true,
-            role: true,
+    const sheep = await this.prisma.sheep
+      .update({
+        where: { id },
+        data: {
+          sheepCode: dto.sheepCode,
+          name: dto.name,
+          breed: dto.breed,
+          gender: dto.gender,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+          color: dto.color,
+          physicalMark: dto.physicalMark,
+          sireId: dto.sireId,
+          damId: dto.damId,
+          location: dto.location,
+          status: dto.status,
+          photoUrl: dto.photoUrl,
+          ownerUserId: dto.ownerUserId,
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              loginCode: true,
+              role: true,
+            },
+          },
+          ownerUser: {
+            select: {
+              id: true,
+              name: true,
+              loginCode: true,
+              groupName: true,
+            },
           },
         },
-        ownerUser: {
-          select: {
-            id: true,
-            name: true,
-            loginCode: true,
-            groupName: true,
-          },
-        },
-      },
-    });
+      })
+      .catch((error) => this.translateWriteError(error));
 
     await this.prisma.activityLog.create({
       data: {
