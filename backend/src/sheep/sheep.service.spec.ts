@@ -7,6 +7,7 @@ import {
 import { SheepPhotoAngle, UserRole } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { CreateSheepDto } from './dto/create-sheep.dto';
 import { SetSheepPhotoDto } from './dto/set-sheep-photo.dto';
 import { UpdateSheepPhotoDto } from './dto/update-sheep-photo.dto';
 import { UpdateSheepAboutDto } from './dto/update-sheep-about.dto';
@@ -289,6 +290,25 @@ describe('SheepService.updateTraits', () => {
     expect(state.sheep?.physicalMark).toBeNull();
     expect(state.sheep?.tailBody).toBe('ekor gemuk'); // tidak dikirim -> tetap
     expect(result.data.faceNose).toBe('hidung cembung');
+  });
+});
+
+describe('CreateSheepDto kode ternak', () => {
+  it('membuang spasi di ujung dan menolak kode kosong', async () => {
+    const ok = plainToInstance(CreateSheepDto, {
+      sheepCode: '  Jm  ',
+      breed: 'Garut',
+      gender: 'MALE',
+    });
+    expect(await validate(ok)).toHaveLength(0);
+    expect(ok.sheepCode).toBe('Jm');
+
+    const blank = plainToInstance(CreateSheepDto, {
+      sheepCode: '   ',
+      breed: 'Garut',
+      gender: 'MALE',
+    });
+    expect(await validate(blank)).not.toHaveLength(0);
   });
 });
 
