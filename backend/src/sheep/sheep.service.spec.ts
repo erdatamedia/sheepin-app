@@ -312,43 +312,131 @@ describe('CreateSheepDto kode ternak', () => {
   });
 });
 
-describe('SheepService kode ternak ganda', () => {
-  const dto = { sheepCode: 'DMB-1', breed: 'Garut', gender: 'MALE' } as never;
+describe('SheepService kode ternak unik per pemilik', () => {
+  const dto = { sheepCode: 'Jm', breed: 'Garut', gender: 'MALE' } as never;
+  const userOk = { findFirst: jest.fn(() => Promise.resolve({ id: 'f1' })) };
+  const unique = () =>
+    Promise.reject(Object.assign(new Error('unique'), { code: 'P2002' }));
 
-  it('create: kode sudah dipakai -> 409, bukan 500', async () => {
+  it('create: pemilik sudah punya kode itu -> 409 dan tidak menulis', async () => {
+    const prisma = {
+      user: userOk,
+      sheep: {
+        findFirst: jest.fn(() => Promise.resolve({ id: 'lain' })),
+        create: jest.fn(),
+      },
+    };
+    const service = new SheepService(prisma as never);
+    await expect(service.create(dto, farmer)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(prisma.sheep.create).not.toHaveBeenCalled();
+  });
+
+  it('create: pemeriksaan hanya pada pemilik yang sama, tanpa membedakan huruf', async () => {
+    const prisma = {
+      user: userOk,
+      sheep: {
+        findFirst: jest.fn(() => Promise.resolve(null)),
+        create: jest.fn(() => Promise.resolve({ id: 'baru', sheepCode: 'Jm' })),
+      },
+      activityLog: { create: jest.fn(() => Promise.resolve({})) },
+    };
+    const service = new SheepService(prisma as never);
+    await service.create(dto, farmer).catch(() => undefined);
+    expect(prisma.sheep.findFirst).toHaveBeenCalledWith({
+      where: {
+        ownerUserId: 'f1',
+        sheepCode: { equals: 'Jm', mode: 'insensitive' },
+      },
+      select: { id: true },
+    });
+  });
+
+  it('create: ternak tanpa pemilik juga diperiksa (NULL tidak tercakup indeks)', async () => {
     const prisma = {
       sheep: {
-        create: jest.fn(() =>
-          Promise.reject(Object.assign(new Error('unique'), { code: 'P2002' })),
-        ),
+        findFirst: jest.fn(() => Promise.resolve({ id: 'x' })),
+        create: jest.fn(),
       },
     };
     const service = new SheepService(prisma as never);
     await expect(service.create(dto, officer)).rejects.toThrow(
       ConflictException,
     );
+    expect(prisma.sheep.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ ownerUserId: null }) as unknown,
+      }),
+    );
+  });
+
+  it('create: indeks unik database tetap menjadi cadangan -> 409', async () => {
+    const prisma = {
+      user: userOk,
+      sheep: {
+        findFirst: jest.fn(() => Promise.resolve(null)),
+        create: jest.fn(unique),
+      },
+    };
+    const service = new SheepService(prisma as never);
+    await expect(service.create(dto, farmer)).rejects.toThrow(
+      ConflictException,
+    );
   });
 
   it('create: galat lain tetap diteruskan', async () => {
     const boom = new Error('db mati');
-    const prisma = { sheep: { create: jest.fn(() => Promise.reject(boom)) } };
+    const prisma = {
+      user: userOk,
+      sheep: {
+        findFirst: jest.fn(() => Promise.resolve(null)),
+        create: jest.fn(() => Promise.reject(boom)),
+      },
+    };
     const service = new SheepService(prisma as never);
-    await expect(service.create(dto, officer)).rejects.toBe(boom);
+    await expect(service.create(dto, farmer)).rejects.toBe(boom);
   });
 
-  it('update: kode sudah dipakai -> 409', async () => {
+  it('update: mengganti kode ke kode yang dipakai ternak lain milik pemilik sama -> 409', async () => {
     const prisma = {
       sheep: {
-        findUnique: jest.fn(() => Promise.resolve({ id: 's1' })),
-        update: jest.fn(() =>
-          Promise.reject(Object.assign(new Error('unique'), { code: 'P2002' })),
+        findUnique: jest.fn(() =>
+          Promise.resolve({ id: 's1', sheepCode: 'A', ownerUserId: 'f1' }),
         ),
+        findFirst: jest.fn(() => Promise.resolve({ id: 'lain' })),
+        update: jest.fn(),
       },
     };
     const service = new SheepService(prisma as never);
     await expect(
-      service.update('s1', { sheepCode: 'DMB-1' }, 'staf'),
+      service.update('s1', { sheepCode: 'B' }, 'staf'),
     ).rejects.toThrow(ConflictException);
+    expect(prisma.sheep.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          ownerUserId: 'f1',
+          id: { not: 's1' },
+        }) as unknown,
+      }),
+    );
+    expect(prisma.sheep.update).not.toHaveBeenCalled();
+  });
+
+  it('update tanpa mengubah kode atau pemilik tidak memeriksa kode', async () => {
+    const prisma = {
+      sheep: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({ id: 's1', sheepCode: 'A', ownerUserId: 'f1' }),
+        ),
+        findFirst: jest.fn(),
+        update: jest.fn(() => Promise.resolve({ sheepCode: 'A' })),
+      },
+      activityLog: { create: jest.fn(() => Promise.resolve({})) },
+    };
+    const service = new SheepService(prisma as never);
+    await service.update('s1', { name: 'Baru' }, 'staf').catch(() => undefined);
+    expect(prisma.sheep.findFirst).not.toHaveBeenCalled();
   });
 });
 

@@ -97,7 +97,8 @@ model User {
 
 model Sheep {
   id           String      @id @default(cuid())
-  sheepCode    String      @unique
+  // Unik per pemilik (lihat @@unique di bawah); peternak berbeda boleh memakai kode yang sama.
+  sheepCode    String
   name         String?
   breed        String
   gender       SheepGender
@@ -127,6 +128,7 @@ model Sheep {
   activityLogs  ActivityLog[]
   photos        SheepPhoto[]
 
+  @@unique([ownerUserId, sheepCode])
   @@index([ownerUserId, status])
   @@index([createdById, createdAt])
 }

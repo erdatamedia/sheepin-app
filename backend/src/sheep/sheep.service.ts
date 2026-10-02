@@ -34,11 +34,31 @@ export const ANGLE_ORDER: SheepPhotoAngle[] = [
 export class SheepService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Kode ternak unik; pelanggarannya dijadikan pesan 409 yang jelas, bukan galat server 500. */
+  /**
+   * Kode ternak unik per pemilik (tanpa membedakan huruf besar/kecil). Pemeriksaan di aplikasi juga
+   * menutup ternak tanpa pemilik, yang tidak tercakup indeks unik karena NULL dianggap berbeda.
+   */
+  private async ensureCodeAvailable(
+    ownerUserId: string | null | undefined,
+    sheepCode: string,
+    excludeId?: string,
+  ) {
+    const clash = await this.prisma.sheep.findFirst({
+      where: {
+        ownerUserId: ownerUserId ?? null,
+        sheepCode: { equals: sheepCode.trim(), mode: 'insensitive' },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (clash) this.translateWriteError({ code: 'P2002' });
+  }
+
+  /** Kode ternak unik per pemilik; pelanggarannya dijadikan pesan 409 yang jelas, bukan galat server 500. */
   private translateWriteError(error: unknown): never {
     if ((error as { code?: string })?.code === 'P2002') {
       throw new ConflictException(
-        'Kode ternak sudah dipakai. Gunakan kode lain, misalnya tambahkan nomor urut.',
+        'Anda sudah punya ternak dengan kode itu. Gunakan kode lain, misalnya tambahkan nomor urut.',
       );
     }
     throw error;
@@ -51,6 +71,7 @@ export class SheepService {
     if (ownerUserId) {
       await this.ensureFarmerExists(ownerUserId);
     }
+    await this.ensureCodeAvailable(ownerUserId, dto.sheepCode);
 
     const sheep = await this.prisma.sheep
       .create({
@@ -484,7 +505,7 @@ export class SheepService {
   async update(id: string, dto: UpdateSheepDto, userId: string) {
     const existing = await this.prisma.sheep.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, sheepCode: true, ownerUserId: true },
     });
 
     if (!existing) {
@@ -493,6 +514,14 @@ export class SheepService {
 
     if (dto.ownerUserId) {
       await this.ensureFarmerExists(dto.ownerUserId);
+    }
+
+    if (dto.sheepCode !== undefined || dto.ownerUserId !== undefined) {
+      await this.ensureCodeAvailable(
+        dto.ownerUserId ?? existing.ownerUserId,
+        dto.sheepCode ?? existing.sheepCode,
+        id,
+      );
     }
 
     const sheep = await this.prisma.sheep

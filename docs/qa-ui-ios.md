@@ -121,3 +121,13 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Ternak tanpa tanggal lahir: kolom umur bisa diisi (bulan). Simpan hanya umur + bobot berhasil; detail ternak kini menampilkan tanggal lahir perkiraan (tanggal catat dikurangi umur).
 - [ ] Ternak yang sudah punya tanggal lahir: kolom umur terkunci dan menampilkan umur dari tanggal lahir, dengan keterangan; tanggal lahir lama tidak tertimpa.
 - [ ] Mengosongkan umur tidak mengubah apa pun. Angka di atas 240 atau desimal ditolak dengan pesan; ringkasan sebelum simpan menampilkan baris Umur bila ada.
+
+## Kode ternak unik per peternak
+
+- [ ] Dua peternak berbeda boleh memberi kode yang sama (mis. "001") pada ternaknya masing-masing; tidak ada galat.
+- [ ] Peternak yang sama memakai kode yang sudah ada (termasuk beda huruf besar/kecil, mis. "jm" vs "Jm") ditolak dengan pesan "Anda sudah punya ternak dengan kode itu...", bukan "terjadi kesalahan pada server".
+- [ ] Spasi di awal/akhir kode dibuang; kode hanya spasi ditolak.
+- [ ] Mengubah kode ternak (Ubah) ke kode yang sudah dipakai ternak lain milik pemilik sama ditolak; mengubah kolom lain tidak memeriksa kode.
+- [ ] Staf melihat nama pemilik di daftar dan detail sehingga kode kembar antar-peternak tetap bisa dibedakan.
+
+Catatan deploy: ada migrasi `20261002090000_sheep_code_unique_per_owner` (hapus indeks unik global, tambah unik pemilik+kode). Aman pada data yang ada karena kode yang sebelumnya unik global otomatis unik per pemilik. Diuji pada database cadangan berisi kode kembar antar-pemilik.
