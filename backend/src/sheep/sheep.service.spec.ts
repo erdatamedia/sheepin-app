@@ -440,6 +440,87 @@ describe('SheepService kode ternak unik per pemilik', () => {
   });
 });
 
+describe('SheepService.remove', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const build = (opts: {
+    owner?: string;
+    ageDays?: number;
+    records?: number;
+  }) => {
+    const prisma = {
+      sheep: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            id: 's1',
+            sheepCode: 'DMB-1',
+            ownerUserId: opts.owner ?? 'f1',
+            createdAt: new Date(Date.now() - (opts.ageDays ?? 0) * DAY),
+            _count: {
+              weights: opts.records ?? 0,
+              bcsRecords: 0,
+              healthRecords: 0,
+              reproductions: 0,
+            },
+          }),
+        ),
+        delete: jest.fn(() => Promise.resolve({ id: 's1' })),
+      },
+      activityLog: { create: jest.fn(() => Promise.resolve({ id: 'l1' })) },
+      $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+    };
+    return { service: new SheepService(prisma as never), prisma };
+  };
+
+  it('log aktivitas tidak menunjuk ternak yang dihapus (bug 500 kunci asing)', async () => {
+    const { service, prisma } = build({});
+    await service.remove('s1', officer);
+    const log = (
+      prisma.activityLog.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >
+    )[0][0];
+    expect(log.data).not.toHaveProperty('sheepId');
+    expect(log.data.description).toContain('DMB-1');
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('petugas boleh menghapus ternak berriwayat lama', async () => {
+    const { service, prisma } = build({
+      ageDays: 400,
+      records: 30,
+      owner: 'f2',
+    });
+    await expect(service.remove('s1', officer)).resolves.toBeDefined();
+    expect(prisma.sheep.delete).toHaveBeenCalled();
+  });
+
+  it('peternak boleh menghapus ternak baru yang salah input, walau sudah ada catatan', async () => {
+    const { service } = build({ ageDays: 2, records: 3 });
+    await expect(service.remove('s1', farmer)).resolves.toBeDefined();
+  });
+
+  it('peternak boleh menghapus ternak lama yang belum punya catatan', async () => {
+    const { service } = build({ ageDays: 60, records: 0 });
+    await expect(service.remove('s1', farmer)).resolves.toBeDefined();
+  });
+
+  it('peternak tidak boleh menghapus ternak lama yang sudah berriwayat', async () => {
+    const { service, prisma } = build({ ageDays: 60, records: 5 });
+    await expect(service.remove('s1', farmer)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(prisma.sheep.delete).not.toHaveBeenCalled();
+  });
+
+  it('peternak tidak boleh menghapus ternak orang lain', async () => {
+    const { service, prisma } = build({ owner: 'f2' });
+    await expect(service.remove('s1', farmer)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(prisma.sheep.delete).not.toHaveBeenCalled();
+  });
+});
+
 describe('SheepService.updateAbout', () => {
   const build = (ownerUserId = 'f1') => {
     const row: Record<string, unknown> = {
@@ -488,6 +569,43 @@ describe('SheepService.updateAbout', () => {
     expect(row.color).toBeNull();
     expect(row.location).toBe('kandang A');
     expect(prisma.activityLog.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('peternak memperbaiki kode dan jenis kelamin; kode dicek per pemilik', async () => {
+    const { service, row, prisma } = build();
+    (prisma.sheep as unknown as { findFirst: jest.Mock }).findFirst = jest.fn(
+      () => Promise.resolve(null),
+    );
+    await service.updateAbout(
+      's1',
+      { sheepCode: 'DMB-9', gender: 'FEMALE' },
+      farmer,
+    );
+    expect(row.sheepCode).toBe('DMB-9');
+    expect(row.gender).toBe('FEMALE');
+    expect(
+      (prisma.sheep as unknown as { findFirst: jest.Mock }).findFirst,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          ownerUserId: 'f1',
+          id: { not: 's1' },
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('kode bentrok pada pemilik yang sama -> 409; kode kosong -> 400', async () => {
+    const { service, prisma } = build();
+    (prisma.sheep as unknown as { findFirst: jest.Mock }).findFirst = jest.fn(
+      () => Promise.resolve({ id: 'lain' }),
+    );
+    await expect(
+      service.updateAbout('s1', { sheepCode: 'X' }, farmer),
+    ).rejects.toThrow(ConflictException);
+    await expect(
+      service.updateAbout('s1', { sheepCode: '' }, farmer),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('tanggal lahir kosong menghapus', async () => {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Segmented } from '@/components/ui/segmented';
 import { Sheet } from '@/components/ui/sheet';
 import { getApiErrorMessage } from '@/lib/api';
 import { updateSheepAbout, type SheepAbout } from '@/lib/sheep-about';
@@ -19,6 +20,8 @@ type AboutSheetProps = {
 /** Keterangan ternak yang bisa diisi peternak sendiri. Semua opsional kecuali jenis / rumpun yang tidak boleh kosong. */
 export function AboutSheet({ sheepId, initial, onClose, onSaved, notify }: AboutSheetProps) {
   const [values, setValues] = useState({
+    sheepCode: initial.sheepCode ?? '',
+    gender: initial.gender ?? 'MALE',
     name: initial.name ?? '',
     breed: initial.breed ?? '',
     birthDate: (initial.birthDate ?? '').slice(0, 10),
@@ -31,6 +34,10 @@ export function AboutSheet({ sheepId, initial, onClose, onSaved, notify }: About
   const set = (key: keyof typeof values, value: string) => setValues((v) => ({ ...v, [key]: value }));
 
   const save = async () => {
+    if (!values.sheepCode.trim()) {
+      notify('error', 'Kode ternak tidak boleh kosong');
+      return;
+    }
     if (!values.breed.trim()) {
       notify('error', 'Jenis / rumpun tidak boleh kosong');
       return;
@@ -50,11 +57,27 @@ export function AboutSheet({ sheepId, initial, onClose, onSaved, notify }: About
   };
 
   return (
-    <Sheet open onClose={onClose} title="Tentang ternak ini">
+    <Sheet open onClose={onClose} title="Ubah data ternak">
       <div className="space-y-4">
         <p className="-mt-1 text-[15px] text-ink-muted">
-          Isi yang Anda ketahui saja. Boleh dikosongkan dan bisa dilengkapi kapan saja.
+          Salah input? Perbaiki di sini. Selain kode, jenis, dan jenis kelamin, semua isian boleh dikosongkan.
         </p>
+        <Field label="Kode ternak">
+          <Input value={values.sheepCode} maxLength={50} autoComplete="off" onChange={(e) => set('sheepCode', e.target.value)} />
+        </Field>
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-ink">Jenis kelamin</p>
+          <Segmented
+            label="Jenis kelamin"
+            className="md:max-w-sm"
+            value={values.gender}
+            onChange={(value) => set('gender', value)}
+            options={[
+              { value: 'MALE', label: 'Jantan' },
+              { value: 'FEMALE', label: 'Betina' },
+            ]}
+          />
+        </div>
         <Field label="Nama (opsional)">
           <Input value={values.name} maxLength={100} onChange={(e) => set('name', e.target.value)} />
         </Field>

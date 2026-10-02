@@ -30,6 +30,9 @@ export const ANGLE_ORDER: SheepPhotoAngle[] = [
   SheepPhotoAngle.TAIL,
 ];
 
+/** Peternak boleh menghapus ternak yang sudah punya catatan hanya selama ini sejak dibuat (hari). */
+export const FARMER_DELETE_GRACE_DAYS = 7;
+
 @Injectable()
 export class SheepService {
   constructor(private readonly prisma: PrismaService) {}
@@ -424,7 +427,7 @@ export class SheepService {
     dto: UpdateSheepAboutDto,
     user: { id: string; role: UserRole },
   ) {
-    await this.loadForPhotoEdit(id, user);
+    const sheep = await this.loadForPhotoEdit(id, user);
 
     const text = (value: string | undefined) =>
       value === undefined ? undefined : value || null;
@@ -432,35 +435,45 @@ export class SheepService {
     if (dto.breed !== undefined && !dto.breed) {
       throw new BadRequestException('Jenis / rumpun tidak boleh kosong');
     }
+    if (dto.sheepCode !== undefined && !dto.sheepCode) {
+      throw new BadRequestException('Kode ternak tidak boleh kosong');
+    }
+    if (dto.sheepCode !== undefined) {
+      await this.ensureCodeAvailable(sheep.ownerUserId, dto.sheepCode, id);
+    }
 
-    const updated = await this.prisma.sheep.update({
-      where: { id },
-      data: {
-        name: text(dto.name),
-        breed: dto.breed,
-        birthDate:
-          dto.birthDate === undefined
-            ? undefined
-            : dto.birthDate
-              ? new Date(dto.birthDate)
-              : null,
-        color: text(dto.color),
-        location: text(dto.location),
-        sireId: text(dto.sireId),
-        damId: text(dto.damId),
-      },
-      select: {
-        id: true,
-        sheepCode: true,
-        name: true,
-        breed: true,
-        birthDate: true,
-        color: true,
-        location: true,
-        sireId: true,
-        damId: true,
-      },
-    });
+    const updated = await this.prisma.sheep
+      .update({
+        where: { id },
+        data: {
+          sheepCode: dto.sheepCode,
+          gender: dto.gender,
+          name: text(dto.name),
+          breed: dto.breed,
+          birthDate:
+            dto.birthDate === undefined
+              ? undefined
+              : dto.birthDate
+                ? new Date(dto.birthDate)
+                : null,
+          color: text(dto.color),
+          location: text(dto.location),
+          sireId: text(dto.sireId),
+          damId: text(dto.damId),
+        },
+        select: {
+          id: true,
+          sheepCode: true,
+          name: true,
+          breed: true,
+          birthDate: true,
+          color: true,
+          location: true,
+          sireId: true,
+          damId: true,
+        },
+      })
+      .catch((error) => this.translateWriteError(error));
 
     await this.prisma.activityLog.create({
       data: {
@@ -666,28 +679,68 @@ export class SheepService {
     };
   }
 
-  async remove(id: string, userId: string) {
+  /**
+   * Hapus ternak. Admin/petugas boleh kapan saja. Peternak hanya untuk ternaknya sendiri dan hanya
+   * untuk memperbaiki salah input: ternak yang belum punya catatan, atau baru dibuat dalam
+   * FARMER_DELETE_GRACE_DAYS hari. Ternak yang sudah punya riwayat cukup ditandai terjual/mati/afkir
+   * agar data bernilai tidak hilang.
+   */
+  async remove(id: string, user: { id: string; role: UserRole }) {
     const existing = await this.prisma.sheep.findUnique({
       where: { id },
-      select: { id: true, sheepCode: true },
+      select: {
+        id: true,
+        sheepCode: true,
+        ownerUserId: true,
+        createdAt: true,
+        _count: {
+          select: {
+            weights: true,
+            bcsRecords: true,
+            healthRecords: true,
+            reproductions: true,
+          },
+        },
+      },
     });
 
     if (!existing) {
       throw new NotFoundException('Data ternak tidak ditemukan');
     }
 
-    await this.prisma.sheep.delete({
-      where: { id },
-    });
+    if (user.role === UserRole.FARMER) {
+      if (existing.ownerUserId !== user.id) {
+        throw new ForbiddenException(
+          'Anda hanya dapat menghapus ternak milik Anda sendiri',
+        );
+      }
 
-    await this.prisma.activityLog.create({
-      data: {
-        userId,
-        sheepId: id,
-        action: 'DELETE_SHEEP',
-        description: `Menghapus data ternak ${existing.sheepCode}`,
-      },
-    });
+      const records = Object.values(existing._count).reduce(
+        (sum, n) => sum + n,
+        0,
+      );
+      const ageDays =
+        (Date.now() - existing.createdAt.getTime()) / (24 * 60 * 60 * 1000);
+
+      if (records > 0 && ageDays > FARMER_DELETE_GRACE_DAYS) {
+        throw new ForbiddenException(
+          'Ternak ini sudah punya riwayat catatan. Tandai sebagai terjual, mati, atau afkir agar riwayatnya tetap tersimpan, atau minta petugas menghapusnya.',
+        );
+      }
+    }
+
+    // Log tidak boleh menunjuk ternak yang baru dihapus (kunci asing), jadi sheepId dikosongkan.
+    await this.prisma.$transaction([
+      this.prisma.sheep.delete({ where: { id }, select: { id: true } }),
+      this.prisma.activityLog.create({
+        data: {
+          userId: user.id,
+          action: 'DELETE_SHEEP',
+          description: `Menghapus data ternak ${existing.sheepCode}`,
+        },
+        select: { id: true },
+      }),
+    ]);
 
     return {
       message: 'Data ternak berhasil dihapus',

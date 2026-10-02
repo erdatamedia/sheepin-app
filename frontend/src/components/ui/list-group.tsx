@@ -62,6 +62,8 @@ type ListRowProps = {
   chevron?: boolean;
   tone?: 'default' | 'danger' | 'accent';
   className?: string;
+  /** Tombol tambahan di ujung kanan baris (di luar tautan), mis. menu aksi ⋯. */
+  actions?: React.ReactNode;
 };
 
 const rowBase =
@@ -80,6 +82,7 @@ export function ListRow({
   chevron,
   tone = 'default',
   className,
+  actions,
 }: ListRowProps) {
   const interactive = !!href || !!onClick;
   const showChevron = chevron ?? interactive;
@@ -116,7 +119,12 @@ export function ListRow({
     </>
   );
 
-  const classes = cn(rowBase, interactive && 'active:bg-primary-soft/50', className);
+  const classes = cn(
+    rowBase,
+    interactive && 'active:bg-primary-soft/50',
+    actions && 'pr-14',
+    className,
+  );
 
   return (
     <li className="group relative">
@@ -140,6 +148,7 @@ export function ListRow({
       ) : (
         <div className={classes}>{content}</div>
       )}
+      {actions && <span className="absolute inset-y-0 right-1.5 flex items-center">{actions}</span>}
       <span
         aria-hidden="true"
         className={cn(

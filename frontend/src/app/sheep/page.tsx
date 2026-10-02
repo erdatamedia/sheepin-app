@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SheepStatusRow } from '@/components/sheep/sheep-status-row';
 import { PhotoGrid, type GalleryItem } from '@/components/sheep/photo-gallery';
+import { SheepActionSheet } from '@/components/sheep/sheep-action-sheet';
 import { PhotoViewer } from '@/components/sheep/photo-viewer';
 import { Avatar } from '@/components/ui/avatar';
 import { ListGroup, ListRow } from '@/components/ui/list-group';
@@ -102,6 +103,7 @@ export default function SheepPage() {
   const [statusView, setStatusView] = useState<'ACTIVE' | 'ALL'>('ACTIVE');
 
   const [form, setForm] = useState<SheepFormState>(emptySheepForm);
+  const [menuFor, setMenuFor] = useState<{ id: string; code: string; name?: string | null } | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -379,14 +381,27 @@ export default function SheepPage() {
               }
             />
           ) : view === 'PHOTO' ? (
-            <PhotoGrid items={farmerGallery} onOpen={setViewerIndex} />
+            <PhotoGrid
+              items={farmerGallery}
+              onOpen={setViewerIndex}
+              onMenu={(index) => {
+                const target = farmerGallery[index];
+                if (target) setMenuFor({ id: target.id, code: target.code, name: target.name });
+              }}
+            />
           ) : (
             <ListGroup className="lg:max-w-3xl">
               {shownMySheep.map((item) => (
-                <SheepStatusRow key={item.id} item={item} />
+                <SheepStatusRow
+                  key={item.id}
+                  item={item}
+                  onMenu={(row) => setMenuFor({ id: row.id, code: row.sheepCode, name: row.name })}
+                />
               ))}
             </ListGroup>
           )}
+
+          <SheepActionSheet target={menuFor} onClose={() => setMenuFor(null)} />
 
           {viewerIndex !== null && (
             <PhotoViewer

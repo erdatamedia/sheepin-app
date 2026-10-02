@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Baby,
@@ -10,6 +10,7 @@ import {
   CirclePlus,
   Heart,
   Share2,
+  Trash2,
   PencilLine,
   PawPrint,
   Sparkles,
@@ -40,6 +41,7 @@ import { ProgressTimeline } from '@/components/sheep/progress-timeline';
 import { WeightChart } from '@/components/sheep/weight-chart';
 import { averageDailyGainGrams, bcsLabel } from '@/lib/progress';
 import { AboutSheet } from '@/components/sheep/about-sheet';
+import { DeleteSheepSheet } from '@/components/sheep/delete-sheep-sheet';
 import { ShareSheet } from '@/components/share/share-sheet';
 import { renderSheepCard, type SheepCardData } from '@/lib/share-card';
 import { formatDiff, formatKg, labelTimeAgo } from '@/lib/format';
@@ -195,6 +197,8 @@ export default function SheepDetailPage() {
   const [showTraits, setShowTraits] = useState(false);
   const [showCard, setShowCard] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const aksi = useSearchParams().get('aksi');
   const [cardRange, setCardRange] = useState<'30' | '90' | 'all'>('90');
   const [cardFarmer, setCardFarmer] = useState(true);
   const [photos, setPhotos] = useState<SheepPhotoSlide[]>([]);
@@ -304,6 +308,14 @@ export default function SheepDetailPage() {
       void fetchAll();
     }
   }, [id, fetchAll]);
+
+  // Aksi cepat dari daftar (?aksi=ubah / ?aksi=hapus): buka lembarnya setelah data termuat, lalu bersihkan alamat.
+  useEffect(() => {
+    if (!sheep || !aksi) return;
+    if (aksi === 'ubah') setShowAbout(true);
+    if (aksi === 'hapus') setShowDelete(true);
+    router.replace(`/sheep/${sheep.id}`, { scroll: false });
+  }, [sheep, aksi, router]);
 
   const latestWeight = useMemo(() => weights[0], [weights]);
   const latestBcs = useMemo(() => bcs[0], [bcs]);
@@ -671,13 +683,33 @@ export default function SheepDetailPage() {
               </Badge>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCard(true)}
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/60 bg-primary-soft/80 px-4 text-[15px] font-semibold text-primary-strong active:brightness-95"
-          >
-            <Share2 size={18} aria-hidden="true" /> Kartu digital
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCard(true)}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/60 bg-primary-soft/80 px-4 text-[15px] font-semibold text-primary-strong active:brightness-95"
+            >
+              <Share2 size={18} aria-hidden="true" /> Kartu digital
+            </button>
+            {isFarmer && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowAbout(true)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/60 bg-primary-soft/80 px-4 text-[15px] font-semibold text-primary-strong active:brightness-95"
+                >
+                  <PencilLine size={18} aria-hidden="true" /> Ubah
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDelete(true)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/60 bg-danger-soft/85 px-4 text-[15px] font-semibold text-danger active:brightness-95"
+                >
+                  <Trash2 size={18} aria-hidden="true" /> Hapus
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -823,6 +855,23 @@ export default function SheepDetailPage() {
               )}
             </div>
           }
+        />
+      )}
+
+      {showDelete && (
+        <DeleteSheepSheet
+          sheepId={sheep.id}
+          code={sheep.sheepCode}
+          createdAt={sheep.createdAt}
+          recordCount={
+            (sheep._count?.weights ?? 0) +
+            (sheep._count?.bcsRecords ?? 0) +
+            (sheep._count?.healthRecords ?? 0) +
+            (sheep._count?.reproductions ?? 0)
+          }
+          isStaff={!isFarmer}
+          onClose={() => setShowDelete(false)}
+          onDeleted={() => router.push('/sheep')}
         />
       )}
 

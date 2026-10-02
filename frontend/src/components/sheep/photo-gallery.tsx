@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Maximize2 } from 'lucide-react';
+import { Camera, Ellipsis, Maximize2 } from 'lucide-react';
 import { SheepPhoto } from '@/components/sheep/sheep-photo';
 import type { SheepPhotoSlide } from '@/lib/sheep-photo';
 import { cn } from '@/lib/utils';
@@ -39,10 +39,13 @@ export function PhotoGrid({
   items,
   onOpen,
   onZoom,
+  onMenu,
 }: {
   items: GalleryItem[];
   onOpen: (index: number) => void;
   onZoom?: (index: number) => void;
+  /** Bila diisi, tiap foto punya tombol ⋯ untuk aksi cepat. */
+  onMenu?: (index: number) => void;
 }) {
   return (
     <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -96,6 +99,24 @@ export function PhotoGrid({
               </span>
             )}
           </button>
+
+          {onMenu && (
+            <button
+              type="button"
+              onClick={() => onMenu(index)}
+              aria-label={`Aksi untuk ${item.code}`}
+              className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center active:opacity-70"
+            >
+              <span
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-sm',
+                  item.photoUrl ? 'bg-black/50 text-white' : 'bg-white/70 text-ink',
+                )}
+              >
+                <Ellipsis size={16} aria-hidden="true" />
+              </span>
+            </button>
+          )}
 
           {onZoom && item.photoUrl && (
             <button

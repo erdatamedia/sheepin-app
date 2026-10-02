@@ -131,3 +131,14 @@ Tandai hasil; catat nomor baris dan layar yang bermasalah.
 - [ ] Staf melihat nama pemilik di daftar dan detail sehingga kode kembar antar-peternak tetap bisa dibedakan.
 
 Catatan deploy: ada migrasi `20261002090000_sheep_code_unique_per_owner` (hapus indeks unik global, tambah unik pemilik+kode). Aman pada data yang ada karena kode yang sebelumnya unik global otomatis unik per pemilik. Diuji pada database cadangan berisi kode kembar antar-pemilik.
+
+## Peternak: ubah dan hapus ternak sendiri
+
+- [ ] Ternak (daftar): tiap baris punya tombol ⋯ (di tampilan Foto, di pojok kanan bawah kartu). Lembar aksi: Catat perkembangan, Ubah data, Hapus ternak.
+- [ ] **Ubah data** membuka detail ternak dengan lembar "Ubah data ternak" (kode, jenis kelamin, nama, jenis, tanggal lahir, warna, lokasi, pejantan, induk). Simpan memperbarui tampilan; alamat kembali bersih tanpa `?aksi=`.
+- [ ] Mengubah kode ke kode yang sudah dipakai ternak lain milik peternak itu ditolak dengan pesan jelas; kode kosong ditolak.
+- [ ] Detail ternak (peternak): tombol **Ubah** dan **Hapus** di bawah nama.
+- [ ] Hapus ternak baru (<= 7 hari) atau yang belum punya catatan: lembar konfirmasi menyebut jumlah catatan yang ikut hilang; "Ya, hapus ternak" berhasil lalu kembali ke daftar.
+- [ ] Hapus ternak lama yang sudah berriwayat: tidak bisa; lembar menjelaskan dan menawarkan "Tandai terjual, mati, atau afkir".
+- [ ] Peternak tidak bisa menghapus/mengubah ternak orang lain (API 403).
+- [ ] Admin/petugas menghapus ternak: tidak lagi muncul "terjadi kesalahan pada server" (bug kunci asing log aktivitas).

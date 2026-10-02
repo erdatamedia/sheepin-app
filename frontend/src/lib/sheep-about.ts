@@ -1,6 +1,8 @@
 import { api } from '@/lib/api';
 
 export type SheepAbout = {
+  sheepCode?: string;
+  gender?: string;
   name?: string | null;
   breed: string;
   birthDate?: string | null;
@@ -14,6 +16,8 @@ export type SheepAbout = {
 export async function updateSheepAbout(
   sheepId: string,
   values: {
+    sheepCode?: string;
+    gender?: string;
     name?: string;
     breed?: string;
     birthDate?: string;

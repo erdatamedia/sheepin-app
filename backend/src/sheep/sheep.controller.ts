@@ -155,8 +155,11 @@ export class SheepController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.OFFICER)
-  remove(@Param('id') id: string, @CurrentUser() user: { id: string }) {
-    return this.sheepService.remove(id, user.id);
+  @Roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.FARMER)
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
+    return this.sheepService.remove(id, user);
   }
 }

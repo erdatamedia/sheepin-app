@@ -1,3 +1,4 @@
+import { Ellipsis } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ListRow } from '@/components/ui/list-group';
@@ -45,12 +46,32 @@ export function WeightWithTrend({ item }: { item: MySheepItem }) {
 }
 
 /** Satu ternak: nama, bobot + tren, kapan terakhir dicatat, dan status kesehatan. */
-export function SheepStatusRow({ item }: { item: MySheepItem }) {
+export function SheepStatusRow({
+  item,
+  onMenu,
+}: {
+  item: MySheepItem;
+  /** Bila diisi, tampil tombol ⋯ untuk aksi cepat (ubah, hapus). */
+  onMenu?: (item: MySheepItem) => void;
+}) {
   const health = item.latestHealth?.healthStatus;
 
   return (
     <ListRow
       href={`/sheep/${item.id}`}
+      chevron={onMenu ? false : undefined}
+      actions={
+        onMenu ? (
+          <button
+            type="button"
+            onClick={() => onMenu(item)}
+            aria-label={`Aksi untuk ${item.sheepCode}`}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-ink-muted active:bg-tint"
+          >
+            <Ellipsis size={22} aria-hidden="true" />
+          </button>
+        ) : undefined
+      }
       leading={<Avatar name={item.name || item.sheepCode} photoUrl={item.photoUrl} size="md" />}
       title={item.name ? `${item.sheepCode} · ${item.name}` : item.sheepCode}
       subtitle={

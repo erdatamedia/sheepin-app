@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
+import { SheepGender } from '@prisma/client';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -9,6 +16,17 @@ const trim = ({ value }: { value: unknown }) =>
  * string kosong menghapus isian, yang tidak dikirim tidak berubah.
  */
 export class UpdateSheepAboutDto {
+  /** Kode ternak; unik per pemilik. Kosong ditolak oleh layanan. */
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(50)
+  sheepCode?: string;
+
+  @IsOptional()
+  @IsEnum(SheepGender)
+  gender?: SheepGender;
+
   @IsOptional()
   @Transform(trim)
   @IsString()
