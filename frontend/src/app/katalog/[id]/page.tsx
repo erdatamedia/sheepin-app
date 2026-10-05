@@ -11,7 +11,7 @@ import { LoadError } from '@/components/ui/load-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getPublicCatalog, type CatalogResponse } from '@/lib/location';
 
-/** Katalog publik satu titik di peta sebaran: hanya ternak aktif, tanpa kontak maupun data catatan. */
+/** Katalog publik satu titik di peta sebaran: hanya ternak layak bibit yang sudah diverifikasi, tanpa kontak maupun data catatan. */
 export default function PublicCatalogPage() {
   const id = useParams().id as string;
   const [data, setData] = useState<CatalogResponse['data'] | null>(null);
@@ -76,10 +76,10 @@ export default function PublicCatalogPage() {
                 Katalog {data.farmer.name}
               </h1>
               <p className="mt-1.5 text-[15px] text-ink-muted lg:text-lg">
-                {[data.farmer.groupName, region, `${data.sheep.length} ternak aktif`].filter(Boolean).join(' · ')}
+                {[data.farmer.groupName, region, `${data.sheep.length} ternak layak bibit terverifikasi`].filter(Boolean).join(' · ')}
               </p>
             </div>
-            <CatalogView sheep={data.sheep} />
+            <CatalogView sheep={data.sheep} hrefFor={(item) => `/katalog/ternak/${item.id}`} verified />
           </>
         )}
       </main>

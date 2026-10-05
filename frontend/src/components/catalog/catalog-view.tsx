@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { PawPrint, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { VerifiedBadge } from '@/components/catalog/verified-badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { SheepPhoto } from '@/components/sheep/sheep-photo';
@@ -33,10 +34,13 @@ export function CatalogView({
   sheep,
   hrefFor,
   showStatusFilter = false,
+  verified = false,
 }: {
   sheep: CatalogSheep[];
   hrefFor?: (item: CatalogSheep) => string;
   showStatusFilter?: boolean;
+  /** Tampilkan tanda terverifikasi pada tiap kartu (katalog publik). */
+  verified?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [gender, setGender] = useState<'ALL' | 'MALE' | 'FEMALE'>('ALL');
@@ -107,8 +111,8 @@ export function CatalogView({
       {filtered.length === 0 ? (
         <EmptyState
           icon={PawPrint}
-          title={sheep.length === 0 ? 'Belum ada ternak' : 'Tidak ada yang cocok'}
-          description={sheep.length === 0 ? 'Peternak ini belum mendaftarkan ternak.' : 'Ubah kata kunci atau filter.'}
+          title={sheep.length === 0 ? (verified ? 'Belum ada ternak terverifikasi' : 'Belum ada ternak') : 'Tidak ada yang cocok'}
+          description={sheep.length === 0 ? (verified ? 'Ternak tampil di sini setelah memenuhi syarat layak bibit dan diverifikasi.' : 'Peternak ini belum mendaftarkan ternak.') : 'Ubah kata kunci atau filter.'}
         />
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5">
@@ -127,6 +131,11 @@ export function CatalogView({
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-primary/40">
                       <PawPrint size={48} aria-hidden="true" />
+                    </span>
+                  )}
+                  {verified && (
+                    <span className="absolute left-2 top-2">
+                      <VerifiedBadge compact />
                     </span>
                   )}
                   {s.status !== 'ACTIVE' && (

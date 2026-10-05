@@ -17,11 +17,25 @@ function build(farmer: object | null = { id: 'f1', name: 'Budi' }) {
       ),
     },
   };
-  return { service: new MapService(prisma as never, {} as never), prisma };
+  const evaluation = {
+    summarizeBreedingStatusesBySheepIds: jest.fn(() =>
+      Promise.resolve(
+        new Map([
+          ['s1', { breedingStatus: 'LAYAK_BIBIT' }],
+          ['s2', { breedingStatus: 'PERLU_PEMANTAUAN' }],
+        ]),
+      ),
+    ),
+  };
+  return {
+    service: new MapService(prisma as never, evaluation as never),
+    prisma,
+    evaluation,
+  };
 }
 
 describe('MapService.catalog', () => {
-  it('versi publik: hanya peternak di peta dan ternak aktif', async () => {
+  it('versi publik: hanya peternak di peta dan ternak aktif terverifikasi', async () => {
     const { service, prisma } = build();
     await service.catalog('f1', true);
     expect(prisma.user.findFirst).toHaveBeenCalledWith(
@@ -34,9 +48,19 @@ describe('MapService.catalog', () => {
     );
     expect(prisma.sheep.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { ownerUserId: 'f1', status: 'ACTIVE' },
+        where: {
+          ownerUserId: 'f1',
+          status: 'ACTIVE',
+          verifiedAt: { not: null },
+        },
       }),
     );
+  });
+
+  it('versi publik: ternak yang tidak lagi layak bibit disaring', async () => {
+    const { service } = build();
+    const { data } = await service.catalog('f1', true);
+    expect(data.sheep.map((item) => item.id)).toEqual(['s1']);
   });
 
   it('versi petugas: semua status', async () => {

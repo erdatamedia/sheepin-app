@@ -86,6 +86,7 @@ model User {
 
   sheepCreated        Sheep[]             @relation("SheepCreatedBy")
   sheepOwned          Sheep[]             @relation("SheepOwnedBy")
+  sheepVerified       Sheep[]             @relation("SheepVerifiedBy")
   weightCreated       SheepWeight[]
   bcsCreated          SheepBCS[]
   healthCreated       SheepHealth[]
@@ -116,9 +117,14 @@ model Sheep {
   photoUrl     String?
   createdById  String
   ownerUserId  String?
+  // Verifikasi katalog: dinyatakan layak oleh peneliti/dinas lewat admin atau petugas.
+  verifiedAt   DateTime?
+  verifiedById String?
+  verifiedNote String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  verifiedBy    User?               @relation("SheepVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
   createdBy     User                @relation("SheepCreatedBy", fields: [createdById], references: [id])
   ownerUser     User?               @relation("SheepOwnedBy", fields: [ownerUserId], references: [id])
   weights       SheepWeight[]
@@ -129,6 +135,7 @@ model Sheep {
   photos        SheepPhoto[]
 
   @@unique([ownerUserId, sheepCode])
+  @@index([verifiedAt])
   @@index([ownerUserId, status])
   @@index([createdById, createdAt])
 }

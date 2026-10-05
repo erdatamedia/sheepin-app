@@ -142,3 +142,14 @@ Catatan deploy: ada migrasi `20261002090000_sheep_code_unique_per_owner` (hapus 
 - [ ] Hapus ternak lama yang sudah berriwayat: tidak bisa; lembar menjelaskan dan menawarkan "Tandai terjual, mati, atau afkir".
 - [ ] Peternak tidak bisa menghapus/mengubah ternak orang lain (API 403).
 - [ ] Admin/petugas menghapus ternak: tidak lagi muncul "terjadi kesalahan pada server" (bug kunci asing log aktivitas).
+
+## Katalog layak bibit terverifikasi (landing)
+
+- [ ] Landing: tombol **Katalog** di bilah atas (HP dan laptop) dan tautan di hero membuka `/katalog` tanpa login. Di 360px bilah atas tidak meluap (teks "Sheep-In" disembunyikan di layar sangat sempit).
+- [ ] `/katalog` menampilkan hanya ternak aktif yang (1) diverifikasi staf dan (2) masih layak bibit menurut sistem. Setiap kartu ada tanda **Terverifikasi**, skor, bobot, wilayah. Pencarian dan filter jenis kelamin/jenis bekerja.
+- [ ] Ketuk kartu → `/katalog/ternak/<id>`: foto per sudut, bobot, BCS, skor, daftar "Mengapa layak bibit", wilayah, tanggal verifikasi dan pihak yang memverifikasi. Tidak ada nomor HP, alamat rinci, atau catatan kesehatan.
+- [ ] Admin/petugas: Akun → **Verifikasi katalog**: daftar ternak layak bibit yang belum diverifikasi; **Verifikasi** memunculkannya di katalog; **Cabut** menghapusnya (ada konfirmasi).
+- [ ] Ternak yang belum layak bibit tidak bisa diverifikasi (pesan jelas). Ternak yang sudah terverifikasi lalu kondisinya memburuk (mis. sakit) otomatis hilang dari katalog tanpa dicabut.
+- [ ] Peta publik → titik → Lihat Katalog Ternak: hanya ternak terverifikasi; titik tanpa ternak terverifikasi menampilkan "Belum ada ternak terverifikasi".
+
+Catatan deploy: ada migrasi `20261005090000_add_sheep_verification` (kolom verifiedAt/verifiedById/verifiedNote). Diuji pada database cadangan tanpa drift. Katalog kosong sampai ada ternak yang diverifikasi.

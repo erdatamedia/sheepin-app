@@ -11,6 +11,7 @@ import { BcsModule } from './bcs/bcs.module';
 import { HealthModule } from './health/health.module';
 import { ReproductionModule } from './reproduction/reproduction.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { ReportsModule } from './reports/reports.module';
 import { EvaluationModule } from './evaluation/evaluation.module';
 import { MapModule } from './map/map.module';
@@ -37,6 +38,7 @@ import { ObservabilityModule } from './observability/observability.module';
     ReproductionModule,
     DashboardModule,
     ReportsModule,
+    CatalogModule,
     EvaluationModule,
     MapModule,
     FarmersModule,

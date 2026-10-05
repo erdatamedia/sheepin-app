@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BadgeCheck } from 'lucide-react';
 import { buttonClassName } from '@/components/ui/button';
 import { LandingDistributionSection } from '@/components/map/landing-distribution-section';
 import { CursorField } from '@/components/landing/cursor-field';
@@ -144,7 +144,7 @@ const tabs: CarouselTab[] = [
   },
 ];
 
-function Brand({ className }: { className?: string }) {
+function Brand({ className, compactOnXs = false }: { className?: string; compactOnXs?: boolean }) {
   return (
     <Link href="/" className={cn('flex items-center gap-2.5', className)} aria-label="Sheep-In, beranda">
       <Image
@@ -156,7 +156,7 @@ function Brand({ className }: { className?: string }) {
         priority
         className="h-10 w-10 rounded-[12px] shadow-[var(--shadow-accent)] lg:h-11 lg:w-11"
       />
-      <span className="text-xl font-semibold tracking-tight text-ink lg:text-2xl">Sheep-In</span>
+      <span className={cn('text-xl font-semibold tracking-tight text-ink lg:text-2xl', compactOnXs && 'max-[420px]:hidden')}>Sheep-In</span>
     </Link>
   );
 }
@@ -222,14 +222,19 @@ export default function HomePage() {
       {/* Bilah atas */}
       <header className="sticky top-0 z-30 glass-bar-top border-b border-b-white/70 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-16 w-full max-w-[90rem] items-center justify-between gap-4 px-4 md:px-8 lg:h-[4.5rem] lg:px-12">
-          <Brand />
+          <Brand compactOnXs />
           <nav aria-label="Bagian halaman" className="hidden items-center gap-8 text-[15px] font-medium text-ink-soft lg:flex">
+            <Link href="/katalog" className="hover:text-primary">Katalog</Link>
             <a href="#masalah" className="hover:text-primary">Kenapa dicatat</a>
             <a href="#cara-kerja" className="hover:text-primary">Cara kerja</a>
             <a href="#sebaran" className="hover:text-primary">Sebaran</a>
             <a href="#pasang" className="hover:text-primary">Pasang &amp; masuk</a>
           </nav>
           <div className="flex items-center gap-2 md:gap-3">
+            <Link href="/katalog" className={buttonClassName({ variant: 'tinted' })}>
+              <BadgeCheck size={18} aria-hidden="true" className="mr-1.5" />
+              Katalog
+            </Link>
             <Link href="/login" className={buttonClassName({ variant: 'outline' })}>
               Masuk
             </Link>
@@ -277,6 +282,12 @@ export default function HomePage() {
                 className="text-[15px] font-medium text-ink-muted underline decoration-primary/30 underline-offset-[6px] transition hover:text-ink hover:decoration-primary"
               >
                 Tampilkan QR masuk
+              </Link>
+              <Link
+                href="/katalog"
+                className="text-[15px] font-medium text-ink-muted underline decoration-primary/30 underline-offset-[6px] transition hover:text-ink hover:decoration-primary"
+              >
+                Lihat katalog ternak layak bibit
               </Link>
             </div>
           </div>

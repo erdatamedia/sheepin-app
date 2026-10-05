@@ -170,7 +170,9 @@ export class MapService {
     const sheep = await this.prisma.sheep.findMany({
       where: {
         ownerUserId: userId,
-        ...(publicView ? { status: 'ACTIVE' } : {}),
+        ...(publicView
+          ? { status: 'ACTIVE' as const, verifiedAt: { not: null } }
+          : {}),
       },
       select: {
         id: true,
@@ -190,16 +192,29 @@ export class MapService {
       orderBy: [{ status: 'asc' }, { sheepCode: 'asc' }],
     });
 
+    // Katalog publik: hanya ternak terverifikasi yang saat ini masih layak bibit.
+    const shown = publicView ? await this.onlyEligible(sheep) : sheep;
+
     return {
       message: 'Katalog ternak berhasil diambil',
       data: {
         farmer,
-        sheep: sheep.map(({ weights, ...item }) => ({
+        sheep: shown.map(({ weights, ...item }) => ({
           ...item,
           latestWeightKg: weights[0]?.weightKg ?? null,
           latestWeightDate: weights[0]?.recordDate ?? null,
         })),
       },
     };
+  }
+
+  private async onlyEligible<T extends { id: string }>(sheep: T[]) {
+    const statuses =
+      await this.evaluationService.summarizeBreedingStatusesBySheepIds(
+        sheep.map((item) => item.id),
+      );
+    return sheep.filter(
+      (item) => statuses.get(item.id)?.breedingStatus === 'LAYAK_BIBIT',
+    );
   }
 }

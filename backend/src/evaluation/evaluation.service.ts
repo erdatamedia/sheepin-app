@@ -139,6 +139,32 @@ export class EvaluationService {
     };
   }
 
+  /** Evaluasi lengkap untuk banyak ternak sekaligus (skor, status, alasan), dikunci dengan id ternak. */
+  async evaluateByIds(sheepIds: string[]) {
+    if (sheepIds.length === 0) {
+      return new Map<
+        string,
+        ReturnType<EvaluationService['buildEvaluation']>['data']
+      >();
+    }
+
+    const sheepList = await this.prisma.sheep.findMany({
+      where: { id: { in: sheepIds } },
+      select: {
+        id: true,
+        sheepCode: true,
+        name: true,
+        breed: true,
+        gender: true,
+        status: true,
+        location: true,
+      },
+    });
+
+    const evaluations = await this.evaluateMany(sheepList);
+    return new Map(evaluations.map((item) => [item.data.sheep.id, item.data]));
+  }
+
   async summarizeBreedingStatusesBySheepIds(sheepIds: string[]) {
     if (sheepIds.length === 0) {
       return new Map<
