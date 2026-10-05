@@ -244,7 +244,7 @@ export default function SheepPage() {
   }
 
   const addButton = canCreateSheep && (
-    <Button variant="tinted" onClick={() => setShowCreateForm(true)}>
+    <Button variant="tinted" data-tour="add-sheep" onClick={() => setShowCreateForm(true)}>
       <Plus size={18} aria-hidden="true" />
       Tambah
     </Button>
@@ -336,15 +336,17 @@ export default function SheepPage() {
                   { value: 'ALL', label: 'Semua' },
                 ]}
               />
-              <Segmented
-                label="Tampilan"
-                value={view}
-                onChange={(value) => changeView(value as 'LIST' | 'PHOTO')}
-                options={[
-                  { value: 'LIST', label: 'Daftar' },
-                  { value: 'PHOTO', label: 'Foto' },
-                ]}
-              />
+              <div data-tour="view-toggle">
+                <Segmented
+                  label="Tampilan"
+                  value={view}
+                  onChange={(value) => changeView(value as 'LIST' | 'PHOTO')}
+                  options={[
+                    { value: 'LIST', label: 'Daftar' },
+                    { value: 'PHOTO', label: 'Foto' },
+                  ]}
+                />
+              </div>
             </div>
           </div>
 

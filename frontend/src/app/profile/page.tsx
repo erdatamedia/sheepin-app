@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Award, BadgeCheck, Download, FileBarChart, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
+import { Award, BadgeCheck, CircleHelp, Download, FileBarChart, History, KeyRound, LogOut, MapPin, PencilLine, Users } from 'lucide-react';
 import { LoadError } from '@/components/ui/load-error';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ListGroup, ListRow, RowIcon } from '@/components/ui/list-group';
 import { PageHeader } from '@/components/ui/page-header';
+import { tourStore } from '@/lib/tour';
 import { useInstall } from '@/components/pwa/install-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { removeToken } from '@/lib/auth';
@@ -145,6 +146,21 @@ export default function AccountPage() {
                   leadingSize="icon"
                   title="Riwayat rekording"
                   href="/history"
+                />
+              </ListGroup>
+            )}
+
+            {isFarmer && (
+              <ListGroup footer="Panduan langkah demi langkah cara mengisi data. Bisa diulang kapan saja.">
+                <ListRow
+                  leading={<RowIcon icon={CircleHelp} />}
+                  leadingSize="icon"
+                  title="Panduan penggunaan"
+                  subtitle="Pertama kali mengisi data"
+                  onClick={() => {
+                    tourStore.start();
+                    router.push('/dashboard');
+                  }}
                 />
               </ListGroup>
             )}

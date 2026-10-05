@@ -21,6 +21,8 @@ import { removeToken } from '@/lib/auth';
 import { getMe, type MeResponse } from '@/lib/me';
 import { labelPeran } from '@/lib/labels';
 import { Avatar } from '@/components/ui/avatar';
+import { TourRunner } from '@/components/tour/tour-runner';
+import { NAV_TOUR_KEY } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
 type Role = 'ADMIN' | 'OFFICER' | 'FARMER';
@@ -134,6 +136,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
+                  data-tour={NAV_TOUR_KEY[item.href]}
                   className={cn(
                     'flex min-h-11 items-center gap-3 rounded-[12px] px-3 text-[15px] font-medium transition',
                     active
@@ -165,6 +168,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
+      {isFarmer && <TourRunner />}
+
       {/* Bilah tab mobile: kapsul kaca mengambang, tombol Catat di tengah lebih besar dan menonjol */}
       <nav
         aria-label="Menu utama"
@@ -182,6 +187,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   aria-label="Catat"
                   aria-current={active ? 'page' : undefined}
+                  data-tour={NAV_TOUR_KEY[item.href]}
                   className="relative flex h-full flex-col items-center justify-end pb-1.5"
                 >
                   <span
@@ -210,6 +216,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                data-tour={NAV_TOUR_KEY[item.href]}
                 className={cn(
                   'flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors active:opacity-60',
                   active ? 'text-primary' : 'text-ink-muted',

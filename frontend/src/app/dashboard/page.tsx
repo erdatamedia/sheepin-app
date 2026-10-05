@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Award, ChevronRight, CirclePlus, PawPrint, RefreshCw } from 'lucide-react';
+import { Award, ChevronRight, CircleHelp, CirclePlus, PawPrint, RefreshCw } from 'lucide-react';
+import { TourPrompt } from '@/components/tour/tour-prompt';
+import { tourStore } from '@/lib/tour';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -220,7 +222,15 @@ export default function DashboardPage() {
         <PageHeader
           title={`Halo, ${me.name.split(' ')[0]}`}
           description={[dateLabel, me.groupName].filter(Boolean).join(' · ')}
+          actions={
+            <Button variant="tinted" onClick={() => tourStore.start()}>
+              <CircleHelp size={18} aria-hidden="true" />
+              Panduan
+            </Button>
+          }
         />
+
+        <TourPrompt />
 
         {failed && (
           <Card className="mb-4 flex flex-col gap-2 border-[color:var(--danger-border)] bg-danger-soft sm:flex-row sm:items-center sm:justify-between">
@@ -231,6 +241,7 @@ export default function DashboardPage() {
 
         <Link
           href="/recording"
+          data-tour="record-today"
           className={buttonClassName({ size: 'lg', className: 'mb-5 w-full' })}
         >
           <CirclePlus size={22} aria-hidden="true" />
@@ -239,6 +250,7 @@ export default function DashboardPage() {
 
         <Link
           href="/achievements"
+          data-tour="prestasi"
           className="glass mb-5 flex items-center gap-3 rounded-[var(--radius-card)] p-4 transition active:brightness-95"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-strong">

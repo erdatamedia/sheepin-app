@@ -161,3 +161,13 @@ Catatan deploy: ada migrasi `20261005090000_add_sheep_verification` (kolom verif
 - [ ] Tanpa SMTP di server: kartu menyatakan "Pengiriman berkala belum aktif" dan tombol Kirim sekarang tidak tampil.
 - [ ] Dengan SMTP + REPORT_RECIPIENTS: kartu menampilkan jadwal, penerima, dan "berikutnya"; admin menekan **Kirim sekarang** → email dengan lampiran Excel tiba; status "Terakhir: Terkirim..." tampil. Petugas tidak melihat tombol kirim.
 - [ ] Email yang salah konfigurasi menampilkan pesan galat yang jelas, bukan "terjadi kesalahan pada server".
+
+## Panduan pertama kali (peternak)
+
+- [ ] Beranda peternak: kartu **Baru pertama kali?** dengan tombol Mulai dan ✕; tombol **Panduan** di judul Beranda selalu ada; Akun → **Panduan penggunaan** juga memulai dari awal.
+- [ ] Panduan menyorot elemen satu per satu (latar gelap dengan lubang di elemen), kartu penjelasan di bawah/atas elemen, penghitung "Langkah x dari 9". Alur: Selamat datang → menu Ternak → Tambah → Daftar/Foto → titik tiga → Catat (pilih ternak) → tombol Catat di Beranda → Prestasi → Selesai.
+- [ ] Berpindah halaman otomatis (Beranda → Ternak → Catat → Beranda) dan lanjut menyorot tanpa mengulang; di HP yang disorot adalah tab bawah, di laptop item sidebar.
+- [ ] Peternak tanpa ternak: langkah Daftar/Foto, titik tiga, dan pilih ternak dilewati otomatis.
+- [ ] **Kembali** mundur satu langkah; **Lewati**/Escape menutup; ketukan di luar kartu tidak memicu tombol di bawahnya; **Selesai** menutup dan ajakan "Baru pertama kali?" hilang.
+- [ ] Panduan bisa dimulai lagi berulang kali lewat tombol Panduan; menutup browser/tab menghentikannya.
+- [ ] Admin/petugas tidak melihat panduan ini.

@@ -66,6 +66,7 @@ export function SheepStatusRow({
             type="button"
             onClick={() => onMenu(item)}
             aria-label={`Aksi untuk ${item.sheepCode}`}
+            data-tour="sheep-menu"
             className="flex h-11 w-11 items-center justify-center rounded-full text-ink-muted active:bg-tint"
           >
             <Ellipsis size={22} aria-hidden="true" />

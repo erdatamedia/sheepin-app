@@ -459,7 +459,7 @@ export default function RecordingPage() {
               />
             ) : (
               <>
-                <div className="relative mb-3">
+                <div className="relative mb-3" data-tour="pick-sheep">
                   <Search
                     size={18}
                     aria-hidden="true"
