@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Printer } from 'lucide-react';
+import { Download, FileSpreadsheet, Mail, Printer, Send } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,19 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/stat-tile';
 import { getFarmers, farmerLabel, type FarmerOption } from '@/lib/farmers';
-import { downloadCsv, getReportOverview, toCsv, type ReportOverview } from '@/lib/reports';
+import {
+  describeSchedule,
+  downloadCsv,
+  downloadReportExcel,
+  getReportOverview,
+  getReportSchedule,
+  sendReportNow,
+  toCsv,
+  type ReportOverview,
+  type ReportSchedule,
+} from '@/lib/reports';
+import { getApiErrorMessage } from '@/lib/api';
+import { getMe } from '@/lib/me';
 import {
   labelJenisKelamin,
   labelPeran,
@@ -101,6 +113,10 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<TabKey>('ringkasan');
+  const [schedule, setSchedule] = useState<ReportSchedule | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [busy, setBusy] = useState<'excel' | 'send' | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,6 +134,42 @@ export default function ReportsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    getReportSchedule()
+      .then(setSchedule)
+      .catch(() => undefined);
+    getMe()
+      .then((me) => setIsAdmin(me.role === 'ADMIN'))
+      .catch(() => undefined);
+  }, []);
+
+  const downloadExcel = async () => {
+    try {
+      setBusy('excel');
+      setNotice(null);
+      await downloadReportExcel({ farmerId });
+    } catch (error) {
+      setNotice({ tone: 'error', text: getApiErrorMessage(error, 'Gagal mengunduh laporan Excel') });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const sendNow = async () => {
+    if (!window.confirm(`Kirim laporan sekarang ke ${schedule?.recipients.length ?? 0} penerima?`)) return;
+    try {
+      setBusy('send');
+      setNotice(null);
+      const result = await sendReportNow();
+      setNotice({ tone: 'ok', text: result.message });
+      setSchedule(await getReportSchedule());
+    } catch (error) {
+      setNotice({ tone: 'error', text: getApiErrorMessage(error, 'Gagal mengirim laporan') });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   useEffect(() => {
     getFarmers()
@@ -241,6 +293,65 @@ export default function ReportsPage() {
             </div>
           }
         />
+
+        <Card className="print:hidden mb-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-strong">
+              <FileSpreadsheet size={22} aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[17px] font-semibold text-ink">Laporan untuk peneliti dan dinas</h2>
+              <p className="mt-0.5 text-[14px] leading-snug text-ink-muted">
+                Rekap Excel seluruh peternak dan ternak yang sudah terisi sampai saat ini (lembar Ringkasan, Peternak,
+                Ternak, Penimbangan, Kesehatan). Tanpa nomor HP dan alamat rinci.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button onClick={downloadExcel} disabled={busy !== null}>
+                  <Download size={18} aria-hidden="true" /> {busy === 'excel' ? 'Menyiapkan...' : 'Unduh rekap Excel'}
+                </Button>
+                {isAdmin && schedule?.smtpConfigured && schedule.recipients.length > 0 && (
+                  <Button variant="tinted" onClick={sendNow} disabled={busy !== null}>
+                    <Send size={18} aria-hidden="true" /> {busy === 'send' ? 'Mengirim...' : 'Kirim sekarang'}
+                  </Button>
+                )}
+              </div>
+              {notice && (
+                <p
+                  role="status"
+                  className={cn('mt-3 text-[14px] font-medium', notice.tone === 'ok' ? 'text-success' : 'text-danger')}
+                >
+                  {notice.text}
+                </p>
+              )}
+              {schedule && (
+                <div className="mt-4 flex items-start gap-2 border-t border-line pt-3 text-[14px] text-ink-muted">
+                  <Mail size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <div className="min-w-0">
+                    {schedule.active ? (
+                      <>
+                        <p className="text-ink">
+                          Dikirim otomatis: {describeSchedule(schedule.schedule)}
+                          {schedule.nextRun ? ` · berikutnya ${formatDayLong(schedule.nextRun.slice(0, 10))}` : ''}
+                        </p>
+                        <p className="break-words">Penerima: {schedule.recipients.join(', ')}</p>
+                      </>
+                    ) : (
+                      <p>
+                        Pengiriman berkala belum aktif. Atur <code>SMTP_HOST</code>, <code>SMTP_USER</code>,{' '}
+                        <code>SMTP_PASS</code>, dan <code>REPORT_RECIPIENTS</code> di server (lihat panduan deploy).
+                      </p>
+                    )}
+                    {schedule.lastRun && (
+                      <p className={schedule.lastRun.ok ? '' : 'text-danger'}>
+                        Terakhir: {schedule.lastRun.message} ({formatDayLong(schedule.lastRun.at.slice(0, 10))})
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
 
         <Card className="print:hidden mb-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

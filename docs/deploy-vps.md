@@ -48,6 +48,27 @@ cd sheepin && ./scripts/deploy.sh          # branch main
 Skrip menolak jalan jika `.env` belum ada atau ada perubahan lokal, memakai `git pull --ff-only`,
 menjalankan migrasi (`db:migrate:deploy`), build backend dan frontend berurutan, lalu `pm2 reload`.
 
+## Laporan berkala ke peneliti dan dinas (opsional)
+
+Laporan Excel (peternak + ternak, tanpa nomor HP dan alamat rinci) bisa diunduh admin/petugas dari halaman **Laporan**.
+Agar juga **dikirim otomatis lewat email**, tambahkan di `backend/.env` lalu `pm2 reload sheepin-backend`:
+
+```
+SMTP_HOST=smtp.contoh.com
+SMTP_PORT=587
+SMTP_USER=akun@contoh.com
+SMTP_PASS=<kata sandi atau app password>
+SMTP_FROM="Sheep-In <akun@contoh.com>"
+REPORT_RECIPIENTS=dinas@banyuwangi.go.id,peneliti@kampus.ac.id
+# opsional, bawaan: tanggal 1 tiap bulan pukul 07.00 WIB
+REPORT_CRON="0 7 1 * *"
+```
+
+Tanpa SMTP_* dan REPORT_RECIPIENTS, tidak ada yang dikirim dan halaman Laporan menampilkan "belum aktif".
+Tombol **Kirim sekarang** (admin) mengirim satu laporan saat itu juga untuk menguji. Log: `pm2 logs sheepin-backend | grep ReportMailService`.
+Jadwal berjalan di dalam proses backend; bila backend dijalankan lebih dari satu instans, setiap instans akan mengirim (jalankan satu saja).
+Gmail memerlukan "App password", bukan kata sandi akun.
+
 ## Rollback
 
 ```bash

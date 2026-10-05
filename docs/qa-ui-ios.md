@@ -153,3 +153,11 @@ Catatan deploy: ada migrasi `20261002090000_sheep_code_unique_per_owner` (hapus 
 - [ ] Peta publik → titik → Lihat Katalog Ternak: hanya ternak terverifikasi; titik tanpa ternak terverifikasi menampilkan "Belum ada ternak terverifikasi".
 
 Catatan deploy: ada migrasi `20261005090000_add_sheep_verification` (kolom verifiedAt/verifiedById/verifiedNote). Diuji pada database cadangan tanpa drift. Katalog kosong sampai ada ternak yang diverifikasi.
+
+## Laporan berkala untuk peneliti dan dinas
+
+- [ ] Laporan → kartu **Laporan untuk peneliti dan dinas**: **Unduh rekap Excel** mengunduh `laporan-sheepin-<tanggal>.xlsx` dengan lima lembar (Ringkasan, Peternak, Ternak, Penimbangan, Kesehatan); terbuka benar di Excel.
+- [ ] Periksa isi: tidak ada nomor HP, alamat rinci, atau koordinat; kolom Ternak memuat PBBH, penilaian sistem, skor, terverifikasi, kelengkapan data.
+- [ ] Tanpa SMTP di server: kartu menyatakan "Pengiriman berkala belum aktif" dan tombol Kirim sekarang tidak tampil.
+- [ ] Dengan SMTP + REPORT_RECIPIENTS: kartu menampilkan jadwal, penerima, dan "berikutnya"; admin menekan **Kirim sekarang** → email dengan lampiran Excel tiba; status "Terakhir: Terkirim..." tampil. Petugas tidak melihat tombol kirim.
+- [ ] Email yang salah konfigurasi menampilkan pesan galat yang jelas, bukan "terjadi kesalahan pada server".
